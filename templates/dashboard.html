@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>حسابي — كتاب التلوين</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font: 'Tajawal', sans-serif;
+    --bg: #fdfaf6;
+    --surface: #fff;
+    --border: #ece7e0;
+    --text: #1f1b24;
+    --muted: #7a7480;
+    --primary: #7c3aed;
+    --ok: #059669;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font); color: var(--text); background: var(--bg); min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 10% 0%, rgba(124,58,237,.12), transparent 35%),
+      radial-gradient(circle at 90% 10%, rgba(236,72,153,.10), transparent 35%);
+  }
+  .top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    padding: 16px 20px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.85);
+    backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 5;
+  }
+  .brand {
+    font-weight: 900; font-size: 18px; color: var(--text); text-decoration: none;
+  }
+  .brand span { color: var(--primary); }
+  .brand:hover { opacity: .85; }
+  .top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 14px; border-radius: 11px; border: 1px solid var(--border);
+    background: #fff; color: var(--text); text-decoration: none; font-family: inherit;
+    font-weight: 700; font-size: 13px; cursor: pointer;
+  }
+  .btn-primary {
+    border: 0; color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 18px 48px; }
+  .hello { margin: 0 0 6px; font-size: 28px; font-weight: 900; }
+  .sub { margin: 0 0 20px; color: var(--muted); }
+  .kpis {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;
+  }
+  .kpi {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px;
+  }
+  .kpi .l { margin: 0; color: var(--muted); font-size: 12px; font-weight: 700; }
+  .kpi .v { margin: 6px 0 0; font-size: 26px; font-weight: 900; }
+  .kpi .h { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+  .section-title {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin: 22px 0 12px;
+  }
+  .section-title h2 { margin: 0; font-size: 18px; font-weight: 800; }
+  .panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+  }
+  .book {
+    display: grid; grid-template-columns: 140px 1fr auto; gap: 14px; align-items: center;
+    padding: 14px; border-bottom: 1px solid var(--border);
+  }
+  .book:last-child { border-bottom: 0; }
+  .thumbs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+    width: 140px; aspect-ratio: 1; background: #f7f3ff; border-radius: 12px; overflow: hidden;
+  }
+  .thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumbs .empty {
+    grid-column: 1 / -1; display: grid; place-items: center; color: var(--muted); font-size: 12px; font-weight: 700;
+  }
+  .book h3 { margin: 0 0 4px; font-size: 15px; }
+  .book p { margin: 0; color: var(--muted); font-size: 13px; }
+  .badge {
+    display: inline-flex; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    background: #ecfdf5; color: var(--ok);
+  }
+  .badge.off { background: #f3f4f6; color: var(--muted); }
+  .book-actions { display: flex; flex-direction: column; gap: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-size: 11px; background: #faf8f5; }
+  tr:last-child td { border-bottom: 0; }
+  .empty { padding: 28px; text-align: center; color: var(--muted); }
+  .pay-box {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    padding: 16px; background: linear-gradient(135deg, #f5f3ff, #fdf2f8);
+    border: 1px solid #e9d5ff; border-radius: 16px; margin-bottom: 8px;
+  }
+  @media (max-width: 800px) {
+    .kpis { grid-template-columns: 1fr 1fr; }
+    .book { grid-template-columns: 1fr; }
+    .thumbs { width: 100%; max-width: 220px; }
+    .book-actions { flex-direction: row; flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="/">كتاب <span>التلوين</span></a>
+    <div class="top-actions">
+      <a class="btn" href="/">الرئيسية</a>
+      <a class="btn" href="/app">إنشاء كتاب</a>
+      <form method="post" action="/auth/logout" id="logout-form" style="margin:0">
+        <button type="button" class="btn" id="logout-btn">خروج</button>
+      </form>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1 class="hello">مرحبًا، {{ user.username }}</h1>
+    <p class="sub">{{ user.email }} · حسابك وكتبك في مكان واحد</p>
+
+    <div class="kpis">
+      <div class="kpi">
+        <p class="l">رصيد الكتب</p>
+        <p class="v">{{ credits }}</p>
+        <p class="h">كتب مدفوعة متبقية</p>
+      </div>
+      <div class="kpi">
+        <p class="l">كتب هذا الشهر</p>
+        <p class="v">{{ books_month }}</p>
+        <p class="h">مجاني: {{ free_left }} / {{ free_limit }} متبقي</p>
+      </div>
+      <div class="kpi">
+        <p class="l">إجمالي كتبك</p>
+        <p class="v">{{ books_total }}</p>
+        <p class="h">{{ pages_total }} صفحة مولّدة</p>
+      </div>
+      <div class="kpi">
+        <p class="l">باقة إضافية</p>
+        <p class="v" style="font-size:20px">{{ pack_credits }}</p>
+        <p class="h">بـ {{ pack_price }} جنيه</p>
+      </div>
+    </div>
+
+    {% if paymob_ready %}
+    <div class="pay-box">
+      <div>
+        <strong>محتاج كتب أكتر؟</strong>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px">
+          كارت أو محفظة موبايل · باقة {{ pack_credits }} كتب بـ {{ pack_price }} جنيه
+          {% if not wallet_ready %}<br><span style="color:#d97706">المحفظة هتتفعّل بعد إضافة Wallet Integration ID</span>{% endif %}
+        </div>
+        <input type="tel" id="dash-phone" placeholder="رقم الموبايل 01xxxxxxxxx" style="margin-top:10px;width:min(280px,100%);padding:10px 12px;border-radius:10px;border:1px solid var(--border);font-family:inherit">
+      </div>
+      <button type="button" class="btn btn-primary" id="buy-btn">شراء باقة</button>
+    </div>
+    <div id="pay-msg" style="color:#dc2626;font-size:13px;font-weight:700;min-height:18px;margin-bottom:12px"></div>
+    {% endif %}
+
+    <div class="section-title">
+      <h2>كتبي</h2>
+      <a class="btn btn-primary" href="/app">كتاب جديد</a>
+    </div>
+    <div class="panel">
+      {% if books %}
+        {% for b in books %}
+        <div class="book">
+          <div class="thumbs">
+            {% if b.thumbs %}
+              {% for t in b.thumbs %}
+              <img src="data:image/jpeg;base64,{{ t }}" alt="">
+              {% endfor %}
+            {% else %}
+              <div class="empty">انتهت صلاحية المعاينة</div>
+            {% endif %}
+          </div>
+          <div>
+            <h3>كتاب #{{ b.id }}</h3>
+            <p>{{ (b.created_at or '')[:19].replace('T', ' ') }} · {{ b.pages }} صفحة</p>
+            <div style="margin-top:8px">
+              {% if b.available %}
+              <span class="badge">متاح للتحميل</span>
+              {% else %}
+              <span class="badge off">انتهت الجلسة</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="book-actions">
+            {% if b.available and b.session_id %}
+            <a class="btn btn-primary" href="/pdf/{{ b.session_id }}">تنزيل PDF</a>
+            <a class="btn" href="/?restore={{ b.session_id }}">فتح الجلسة</a>
+            {% else %}
+            <span class="btn" style="opacity:.5;cursor:default">غير متاح</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="empty">لسة معملتش كتب. ابدأ أول كتاب دلوقتي.</p>
+      {% endif %}
+    </div>
+
+    <div class="section-title"><h2>المدفوعات</h2></div>
+    <div class="panel">
+      {% if payments %}
+      <table>
+        <thead>
+          <tr><th>التاريخ</th><th>المبلغ</th><th>كتب</th><th>الحالة</th></tr>
+        </thead>
+        <tbody>
+          {% for p in payments %}
+          <tr>
+            <td>{{ ((p.paid_at or p.created_at) or '')[:19].replace('T',' ') }}</td>
+            <td>{{ '%.0f'|format((p.amount_cents or 0) / 100) }} جنيه</td>
+            <td>{{ p.credits }}</td>
+            <td>
+              {% if p.status == 'paid' %}<span class="badge">مدفوع</span>
+              {% elif p.status == 'pending' %}<span class="badge off">قيد الانتظار</span>
+              {% else %}<span class="badge off">{{ p.status }}</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p class="empty">مفيش مدفوعات لسة.</p>
+      {% endif %}
+    </div>
+  </main>
+
+<script>
+document.getElementById('logout-btn').onclick = async () => {
+  await fetch('/auth/logout', { method: 'POST' });
+  location.href = '/';
+};
+
+const buyBtn = document.getElementById('buy-btn');
+if (buyBtn) {
+  buyBtn.onclick = async () => {
+    const msg = document.getElementById('pay-msg');
+    msg.textContent = '';
+    buyBtn.disabled = true;
+    try {
+      const phone = (document.getElementById('dash-phone')?.value || '').trim();
+      const res = await fetch('/pay/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, method: 'all' }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'فشل الدفع');
+      location.href = data.checkout_url;
+    } catch (e) {
+      msg.textContent = e.message || 'حصل خطأ';
+      buyBtn.disabled = false;
+    }
+  };
+}
+</script>
+</body>
+</html>

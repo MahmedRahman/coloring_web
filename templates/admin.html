@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — كتاب التلوين</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font: 'IBM Plex Sans Arabic', 'Tajawal', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --bg: #0b1220;
+    --bg-2: #111a2e;
+    --surface: #151f35;
+    --surface-2: #1a2540;
+    --border: rgba(148, 163, 184, 0.14);
+    --text: #e8eef9;
+    --muted: #8b9bb8;
+    --primary: #38bdf8;
+    --primary-2: #818cf8;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --danger: #f87171;
+    --sidebar-w: 248px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    color: var(--text);
+    background:
+      linear-gradient(180deg, rgba(56, 189, 248, 0.05), transparent 280px),
+      var(--bg);
+    min-height: 100vh;
+    line-height: 1.55;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; }
+
+  .shell { display: flex; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    width: var(--sidebar-w);
+    flex: 0 0 var(--sidebar-w);
+    background: rgba(17, 26, 46, 0.95);
+    border-left: 1px solid var(--border);
+    padding: 22px 16px;
+    position: sticky; top: 0; height: 100vh;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 10px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+  .logo-mark {
+    width: 38px; height: 38px; border-radius: 11px;
+    display: grid; place-items: center;
+    background: linear-gradient(145deg, #38bdf8, #6366f1);
+    font-weight: 700; font-size: 14px; color: #04101f;
+  }
+  .logo-text { font-weight: 700; font-size: 15px; line-height: 1.25; }
+  .logo-text small { display: block; color: var(--muted); font-weight: 500; font-size: 11px; }
+  .nav-label {
+    color: var(--muted); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.04em; padding: 12px 12px 6px; text-transform: uppercase;
+  }
+  .nav a, .nav button {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 10px 12px; border-radius: 10px;
+    border: 0; background: transparent; color: var(--muted);
+    font-size: 14px; font-weight: 600; cursor: pointer; text-align: right;
+  }
+  .nav a:hover, .nav button:hover { background: rgba(56, 189, 248, 0.08); color: var(--text); }
+  .nav a.active {
+    background: linear-gradient(90deg, rgba(56, 189, 248, 0.16), rgba(99, 102, 241, 0.08));
+    color: var(--text);
+    box-shadow: inset 3px 0 0 var(--primary);
+  }
+  .nav .ico { width: 18px; text-align: center; opacity: 0.9; }
+  .sidebar-foot { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border); }
+  .sidebar-foot .meta { font-size: 11px; color: var(--muted); padding: 0 12px 10px; }
+
+  /* Main */
+  .main { flex: 1; min-width: 0; padding: 22px 28px 48px; }
+  .topbar {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 22px;
+  }
+  .topbar h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .topbar p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  .top-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 14px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .btn:hover { border-color: rgba(56, 189, 248, 0.35); }
+  .btn-primary {
+    background: linear-gradient(135deg, #0ea5e9, #6366f1);
+    border: 0; color: white;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 999px;
+    background: rgba(52, 211, 153, 0.12); color: var(--ok);
+    font-size: 12px; font-weight: 600;
+  }
+  .chip .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
+  }
+
+  /* KPI cards */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .kpi {
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi::after {
+    content: '';
+    position: absolute; inset: auto -20% -40% auto;
+    width: 120px; height: 120px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.12), transparent 70%);
+    pointer-events: none;
+  }
+  .kpi .label { margin: 0; color: var(--muted); font-size: 12px; font-weight: 600; }
+  .kpi .value {
+    margin: 8px 0 6px; font-size: 30px; font-weight: 700;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.03em;
+  }
+  .kpi .hint { margin: 0; font-size: 12px; color: var(--muted); }
+  .kpi .hint.up { color: var(--ok); }
+  .kpi .hint.down { color: var(--danger); }
+  .kpi .hint.flat { color: var(--warn); }
+
+  /* Panels */
+  .row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+  }
+  .panel-head h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .panel-head .sub { color: var(--muted); font-size: 12px; }
+  .panel-body { padding: 14px 16px; }
+  .panel-body.flush { padding: 0; }
+
+  /* Chart */
+  .chart-wrap { height: 220px; display: flex; align-items: flex-end; gap: 8px; padding: 8px 4px 0; }
+  .bar-col {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0;
+  }
+  .bar-col .bar {
+    width: 100%; max-width: 28px; border-radius: 8px 8px 4px 4px;
+    background: linear-gradient(180deg, #38bdf8, #6366f1);
+    min-height: 4px;
+    transition: height 0.35s ease;
+  }
+  .bar-col .bar:hover { filter: brightness(1.12); }
+  .bar-col .d {
+    font-size: 10px; color: var(--muted); font-family: var(--mono);
+    white-space: nowrap;
+  }
+  .bar-col .c {
+    font-size: 11px; font-weight: 700; font-family: var(--mono); color: var(--text);
+    min-height: 14px;
+  }
+
+  /* Job bars */
+  .job {
+    display: grid; grid-template-columns: 1fr auto; gap: 6px 12px;
+    align-items: center; padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .job:last-child { border-bottom: 0; }
+  .job-name { font-size: 13px; font-weight: 600; }
+  .job-count { font-family: var(--mono); font-size: 12px; color: var(--primary); font-weight: 600; }
+  .job-track {
+    grid-column: 1 / -1; height: 6px; border-radius: 999px;
+    background: rgba(15, 23, 42, 0.8); overflow: hidden;
+  }
+  .job-fill {
+    height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, #38bdf8, #818cf8);
+  }
+
+  /* Mini stats */
+  .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mini {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px;
+  }
+  .mini .l { margin: 0; color: var(--muted); font-size: 11px; font-weight: 600; }
+  .mini .v { margin: 4px 0 0; font-size: 20px; font-weight: 700; font-family: var(--mono); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; background: rgba(11, 18, 32, 0.45); }
+  tr:last-child td { border-bottom: 0; }
+  tr:hover td { background: rgba(56, 189, 248, 0.04); }
+  .mono { font-family: var(--mono); font-size: 12px; }
+  .muted { color: var(--muted); }
+  .user-cell { display: flex; flex-direction: column; gap: 2px; }
+  .user-cell strong { font-weight: 600; }
+  .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 28px; padding: 3px 8px; border-radius: 999px;
+    background: rgba(56, 189, 248, 0.12); color: var(--primary);
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+  }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 9px;
+    display: inline-grid; place-items: center;
+    background: linear-gradient(145deg, rgba(56,189,248,0.25), rgba(99,102,241,0.25));
+    color: var(--text); font-size: 12px; font-weight: 700; margin-left: 8px;
+  }
+  .user-row { display: flex; align-items: center; }
+  .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+  .section { display: none; }
+  .section.active { display: block; animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .mobile-bar {
+    display: none; position: sticky; top: 0; z-index: 20;
+    padding: 12px 16px; background: rgba(17, 26, 46, 0.95);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+
+  @media (max-width: 1100px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 860px) {
+    .sidebar { display: none; }
+    .mobile-bar { display: flex; align-items: center; justify-content: space-between; }
+    .main { padding: 16px; }
+    .kpis { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 520px) {
+    .kpis { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+{% set max_daily = stats.max_daily %}
+{% set max_job = stats.top_scenes[0].count if stats.top_scenes else 1 %}
+{% set delta = stats.books_today - stats.books_yesterday %}
+
+<div class="mobile-bar">
+  <strong>Dashboard</strong>
+  <form method="post" action="{{ url_for('admin_logout') }}" style="margin:0">
+    <button class="btn btn-primary" type="submit">خروج</button>
+  </form>
+</div>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">CB</div>
+      <div class="logo-text">
+        كتاب التلوين
+        <small>Admin Console</small>
+      </div>
+    </div>
+
+    <div class="nav-label">القائمة</div>
+    <nav class="nav">
+      <a href="#overview" class="nav-link active" data-section="overview"><span class="ico">◆</span> نظرة عامة</a>
+      <a href="#books" class="nav-link" data-section="books"><span class="ico">▤</span> الكتب</a>
+      <a href="#users" class="nav-link" data-section="users"><span class="ico">◎</span> المستخدمون</a>
+      <a href="#jobs" class="nav-link" data-section="jobs"><span class="ico">✦</span> الوظائف</a>
+    </nav>
+
+    <div class="nav-label">اختصارات</div>
+    <nav class="nav">
+      <a href="/" target="_blank"><span class="ico">↗</span> فتح الموقع</a>
+      <a href="/analytics" target="_blank"><span class="ico">{ }</span> API JSON</a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="meta">آخر تحديث<br>{{ stats.generated_at }}</div>
+      <form method="post" action="{{ url_for('admin_logout') }}">
+        <button type="submit" class="btn" style="width:100%">تسجيل الخروج</button>
+      </form>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="page-title">نظرة عامة</h1>
+        <p>متابعة الأداء والمستخدمين والكتب المولّدة</p>
+      </div>
+      <div class="top-actions">
+        <span class="chip"><span class="dot"></span> النظام يعمل</span>
+        <button type="button" class="btn" onclick="location.reload()">تحديث</button>
+        <a class="btn btn-primary" href="/" target="_blank">الموقع</a>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section class="section active" id="section-overview">
+      <div class="kpis">
+        <div class="kpi">
+          <p class="label">كتب اليوم</p>
+          <p class="value">{{ stats.books_today }}</p>
+          {% if delta > 0 %}
+          <p class="hint up">▲ +{{ delta }} عن أمس</p>
+          {% elif delta < 0 %}
+          <p class="hint down">▼ {{ delta }} عن أمس</p>
+          {% else %}
+          <p class="hint flat">═ نفس أمس ({{ stats.books_yesterday }})</p>
+          {% endif %}
+        </div>
+        <div class="kpi">
+          <p class="label">آخر 7 أيام</p>
+          <p class="value">{{ stats.books_week }}</p>
+          <p class="hint">هذا الشهر: {{ stats.books_month }}</p>
+        </div>
+        <div class="kpi">
+          <p class="label">المستخدمون</p>
+          <p class="value">{{ stats.users_total }}</p>
+          <p class="hint up">+{{ stats.users_week }} هذا الأسبوع</p>
+        </div>
+        <div class="kpi">
+          <p class="label">صفحات مولّدة</p>
+          <p class="value">{{ stats.pages_total }}</p>
+          <p class="hint">متوسط {{ stats.avg_pages }} صفحة / كتاب</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>نشاط الكتب — 14 يوم</h2>
+            <span class="sub">عدد الكتب يوميًا</span>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap">
+              {% for d in stats.daily %}
+              {% set h = ((d.count / max_daily) * 170)|round|int %}
+              <div class="bar-col" title="{{ d.day }}: {{ d.count }}">
+                <div class="c">{{ d.count if d.count else '' }}</div>
+                <div class="bar" style="height: {{ [h, 4]|max }}px"></div>
+                <div class="d">{{ d.label }}</div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>ملخص سريع</h2>
+            <span class="sub">حالة النظام</span>
+          </div>
+          <div class="panel-body">
+            <div class="mini-grid">
+              <div class="mini"><p class="l">إجمالي الكتب</p><p class="v">{{ stats.books_total }}</p></div>
+              <div class="mini"><p class="l">مستخدمون اليوم</p><p class="v">{{ stats.users_today }}</p></div>
+              <div class="mini"><p class="l">جلسات نشطة</p><p class="v">{{ stats.sessions_active }}</p></div>
+              <div class="mini"><p class="l">روابط مشاركة</p><p class="v">{{ stats.shares_active }}</p></div>
+            </div>
+            <p class="muted" style="margin:14px 0 0;font-size:12px">
+              الحد المجاني: <strong style="color:var(--text)">{{ stats.free_books_per_month }}</strong> كتب / شهر لكل IP
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>آخر الكتب</h2>
+            <a href="#books" class="sub nav-jump" data-section="books">عرض الكل ←</a>
+          </div>
+          <div class="panel-body flush">
+            {% if stats.recent_books[:6] %}
+            <table>
+              <thead><tr><th>المستخدم</th><th>صفحات</th><th>الوقت</th></tr></thead>
+              <tbody>
+              {% for b in stats.recent_books[:6] %}
+                <tr>
+                  <td>
+                    <div class="user-row">
+                      <span class="avatar">{{ (b.username or '?')[0]|upper }}</span>
+                      <div class="user-cell">
+                        <strong>{{ b.username or 'زائر' }}</strong>
+                        <span class="muted mono">{{ b.ip or '—' }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="badge">{{ b.pages }}</span></td>
+                  <td class="muted mono">{{ (b.created_at or '')[11:16] }} · {{ (b.created_at or '')[5:10] }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+            <p class="empty">لسة مفيش كتب.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>أكثر الوظائف</h2>
+            <a href="#jobs" class="sub nav-jump" data-section="jobs">التفاصيل ←</a>
+          </div>
+          <div class="panel-body">
+            {% if stats.top_scenes[:5] %}
+              {% for s in stats.top_scenes[:5] %}
+              <div class="job">
+                <div class="job-name">{{ s.title }}</div>
+                <div class="job-count">{{ s.count }}</div>
+                <div class="job-track"><div class="job-fill" style="width:{{ (s.count / max_job * 100)|round(1) }}%"></div></div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <p class="empty">لسة مفيش اختيارات.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BOOKS -->
+    <section class="section" id="section-books">
+      <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi"><p class="label">إجمالي الكتب</p><p class="value">{{ stats.books_total }}</p><p class="hint">كل الفترات</p></div>
+        <div class="kpi"><p class="label">هذا الشهر</p><p class="value">{{ stats.books_month }}</p><p class="hint">آخر 7 أيام: {{ stats.books_week }}</p></div>
+        <div class="kpi"><p class="label">متوسط الصفحات</p><p class="value">{{ stats.avg_pages }}</p><p class="hint">من أصل {{ stats.pages_total }} صفحة</p></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>سجل الكتب</h2><span class="sub">آخر {{ stats.recent_books|length }} كتاب</span></div>
+        <div class="panel-body flush">
+          {% if stats.recent_books %}
+          <table>
+            <thead>
+              <tr><th>#</th><th>المستخدم</th><th>الإيميل</th><th>صفحات</th><th>IP</th><th>التاريخ</th></tr>
+            </thead>
+            <tbody>
+              {% for b in stats.recent_books %}
+              <tr>
+                <td class="mono">{{ b.id }}</td>
+                <td>{{ b.username or '—' }}</td>
+                <td class="muted">{{ b.email or '—' }}</td>
+                <td><span class="badge">{{ b.pages }}</span></td>
+                <td class="mono muted">{{ b.ip or '—' }}</td>
+                <td class="mono muted">{{ (b.created_at or '')[:19].replace('T',' ') }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p class="empty">لسة مفيش كتب.</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- USERS -->
+    <section class="section" id="section-users">
+      <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi"><p class="label">كل المستخدمين</p><p class="value">{{ stats.users_total }}</p><p class="hint">حسابات مسجّلة</p></div>
+        <div class="kpi"><p class="label">اليوم</p><p class="value">{{ stats.users_today }}</p><p class="hint">تسجيلات جديدة</p></div>
+        <div class="kpi"><p class="label">هذا الأسبوع</p><p class="value">{{ stats.users_week }}</p><p class="hint">آخر 7 أيام</p></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>المستخدمون</h2><span class="sub">آخر {{ stats.recent_users|length }}</span></div>
+        <div class="panel-body flush">
+          {% if stats.recent_users %}
+          <table>
+            <thead><tr><th>#</th><th>المستخدم</th><th>الإيميل</th><th>تاريخ التسجيل</th></tr></thead>
+            <tbody>
+              {% for u in stats.recent_users %}
+              <tr>
+                <td class="mono">{{ u.id }}</td>
+                <td>
+                  <div class="user-row">
+                    <span class="avatar">{{ u.username[0]|upper }}</span>
+                    <strong>{{ u.username }}</strong>
+                  </div>
+                </td>
+                <td>{{ u.email }}</td>
+                <td class="mono muted">{{ (u.created_at or '')[:19].replace('T',' ') }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p class="empty">لسة مفيش مستخدمين.</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- JOBS -->
+    <section class="section" id="section-jobs">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>ترتيب الوظائف</h2>
+          <span class="sub">حسب عدد مرات الاختيار</span>
+        </div>
+        <div class="panel-body">
+          {% if stats.top_scenes %}
+            {% for s in stats.top_scenes %}
+            <div class="job">
+              <div class="job-name">{{ loop.index }}. {{ s.title }}</div>
+              <div class="job-count">{{ s.count }}</div>
+              <div class="job-track"><div class="job-fill" style="width:{{ (s.count / max_job * 100)|round(1) }}%"></div></div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="empty">لسة مفيش بيانات.</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const titles = {
+  overview: 'نظرة عامة',
+  books: 'الكتب',
+  users: 'المستخدمون',
+  jobs: 'الوظائف',
+};
+
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+  const sec = document.getElementById('section-' + id);
+  if (sec) sec.classList.add('active');
+  document.querySelectorAll('.nav-link[data-section="' + id + '"]').forEach(a => a.classList.add('active'));
+  const title = document.getElementById('page-title');
+  if (title) title.textContent = titles[id] || 'Dashboard';
+  history.replaceState(null, '', '#' + id);
+}
+
+document.querySelectorAll('.nav-link, .nav-jump').forEach(el => {
+  el.addEventListener('click', e => {
+    const id = el.dataset.section;
+    if (!id) return;
+    e.preventDefault();
+    showSection(id);
+  });
+});
+
+const hash = (location.hash || '#overview').slice(1);
+showSection(titles[hash] ? hash : 'overview');
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>دخول الأدمن</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font: 'Tajawal', -apple-system, "SF Arabic", "Segoe UI", Tahoma, sans-serif;
+    --bg: #0f0b1a;
+    --surface: #1a1428;
+    --border: #2d2440;
+    --text: #f5f0ff;
+    --muted: #a89bb8;
+    --primary: #a78bfa;
+    --danger: #f87171;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(124, 58, 237, 0.35), transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(236, 72, 153, 0.25), transparent 45%),
+      var(--bg);
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 400px;
+    background: rgba(26, 20, 40, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px 28px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+  }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--primary);
+    background: rgba(167, 139, 250, 0.15);
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  h1 { margin: 0 0 8px; font-size: 28px; font-weight: 900; }
+  .sub { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
+  label { display: block; font-size: 13px; font-weight: 700; margin: 0 0 6px; }
+  input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #120e1c;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    outline: none;
+    margin-bottom: 14px;
+  }
+  input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2); }
+  .btn {
+    width: 100%;
+    margin-top: 8px;
+    border: 0;
+    border-radius: 12px;
+    padding: 13px;
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    color: white;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+  }
+  .btn:hover { filter: brightness(1.05); }
+  .error {
+    color: var(--danger);
+    font-size: 13px;
+    font-weight: 700;
+    min-height: 20px;
+    margin: 0 0 8px;
+  }
+  .back {
+    display: block;
+    text-align: center;
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+  }
+  .back:hover { color: var(--primary); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <span class="badge">لوحة التحكم</span>
+    <h1>دخول الأدمن</h1>
+    <p class="sub">سجّل دخول عشان تشوف الإحصائيات والمستخدمين</p>
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% else %}
+    <p class="error"></p>
+    {% endif %}
+    <form method="post" action="{{ url_for('admin_login') }}">
+      <label for="username">اسم المستخدم</label>
+      <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+      <label for="password">كلمة المرور</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+      <button type="submit" class="btn">دخول</button>
+    </form>
+    <a class="back" href="/">← الرجوع للموقع</a>
+  </div>
+</body>
+</html>

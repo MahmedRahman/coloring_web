@@ -1,0 +1,1362 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لونّي — اصنع كتاب التلوين</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font: 'Tajawal', -apple-system, "SF Arabic", "Segoe UI", Tahoma, sans-serif;
+    --bg: #fdfaf6;
+    --surface: #ffffff;
+    --border: #ece7e0;
+    --text: #1f1b24;
+    --muted: #7a7480;
+    --primary: #7c3aed;
+    --accent: #ec4899;
+    --success: #10b981;
+    --danger: #ef4444;
+    --shadow-sm: 0 1px 3px rgba(31, 27, 36, 0.06);
+    --shadow-md: 0 4px 12px rgba(31, 27, 36, 0.08);
+    --shadow-lg: 0 20px 40px rgba(124, 58, 237, 0.15);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .emoji, .scene-emoji, .result-label, .upload-icon {
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", var(--font);
+  }
+  body::before, body::after {
+    content: ''; position: fixed; border-radius: 50%;
+    filter: blur(80px); opacity: 0.35; pointer-events: none; z-index: 0;
+  }
+  body::before {
+    width: 380px; height: 380px; top: -100px; right: -80px;
+    background: linear-gradient(135deg, #a78bfa, #ec4899);
+  }
+  body::after {
+    width: 420px; height: 420px; bottom: -120px; left: -100px;
+    background: linear-gradient(135deg, #fbbf24, #f472b6);
+  }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 12px 20px;
+    background: rgba(255,255,255,.92);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .topbar-brand {
+    font-family: var(--font); font-weight: 900; font-size: 22px;
+    letter-spacing: -0.03em; line-height: 1; color: var(--text);
+    text-decoration: none; flex-shrink: 0;
+  }
+  .topbar-brand span { color: #e85d4c; }
+  .topbar-actions {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end;
+  }
+  .lang-toggle {
+    display: inline-flex; gap: 4px; background: #fafafa; border: 1px solid var(--border);
+    border-radius: 12px; padding: 3px;
+  }
+  .lang-toggle button {
+    border: 0; background: transparent; padding: 6px 10px; border-radius: 10px;
+    font-family: var(--font); font-weight: 700; font-size: 12px; cursor: pointer; color: var(--muted);
+  }
+  .lang-toggle button.active { background: var(--text); color: white; }
+  .auth-user {
+    background: white; border: 1px solid var(--border); border-radius: 12px;
+    padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--text);
+  }
+  .auth-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .auth-tabs button {
+    flex: 1; border: 1px solid var(--border); background: #fafafa; border-radius: 10px;
+    padding: 10px; font-family: var(--font); font-weight: 700; cursor: pointer; color: var(--muted);
+  }
+  .auth-tabs button.active {
+    background: linear-gradient(135deg, #7c3aed, #ec4899); color: white; border-color: transparent;
+  }
+  .auth-form label { display: block; font-size: 13px; font-weight: 700; margin: 10px 0 6px; }
+  .auth-form input {
+    width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
+    font-family: var(--font); font-size: 15px; outline: none;
+  }
+  .auth-form input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,0.12); }
+  .auth-error { color: var(--danger); font-size: 13px; font-weight: 700; min-height: 20px; margin-top: 10px; }
+  .auth-form .btn { width: 100%; margin-top: 14px; }
+  .modal-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    margin-bottom: 4px;
+  }
+  .modal-head h3 { margin: 0; flex: 1; }
+  .modal-close-x {
+    flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px;
+    border: 1px solid var(--border); background: white; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 22px; line-height: 1; color: var(--muted); font-family: var(--font);
+  }
+  .modal-close-x:hover { background: #f5f3ff; color: var(--primary); border-color: #e9d5ff; }
+
+  .page-intro {
+    position: relative; z-index: 1; text-align: center;
+    padding: 36px 24px 20px;
+  }
+  .page-intro h1 {
+    margin: 0 0 10px; font-size: 36px; font-weight: 900;
+    color: var(--text); line-height: 1.25;
+  }
+  .page-intro p { margin: 0 auto; font-size: 16px; color: var(--muted); max-width: 540px; }
+  .container { max-width: 920px; margin: 0 auto; padding: 0 20px 60px; position: relative; z-index: 1; }
+
+  /* Wizard progress */
+  .wizard-progress {
+    display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .wizard-chip {
+    flex: 1; min-width: 120px; text-align: center;
+    padding: 10px 8px; border-radius: 12px; border: 1px solid var(--border);
+    background: white; color: var(--muted); font-size: 13px; font-weight: 700;
+  }
+  .wizard-chip.active {
+    border-color: transparent;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: white; box-shadow: 0 8px 16px rgba(124, 58, 237, 0.25);
+  }
+  .wizard-chip.done { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
+  .wizard-chip .n { display: inline-block; margin-inline-end: 4px; opacity: 0.85; }
+
+  .card {
+    background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--shadow-md); padding: 28px; margin-bottom: 16px;
+    border: 1px solid var(--border); overflow: visible;
+  }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto; width: 36px; height: 36px; border-radius: 12px;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: white; font-size: 16px; font-weight: 800;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+  }
+  .step-heading { flex: 1; min-width: 0; }
+  .step-title { font-size: 20px; font-weight: 800; margin: 0; line-height: 1.3; }
+  .step-sub { display: block; color: var(--muted); font-size: 13px; font-weight: 500; margin-top: 4px; }
+  .counter-badge {
+    background: linear-gradient(135deg, #f5f3ff, #fdf2f8);
+    color: var(--primary); font-weight: 700; font-size: 13px;
+    padding: 6px 12px; border-radius: 999px; border: 1px solid #e9d5ff;
+    white-space: nowrap; align-self: center;
+  }
+
+  .upload-zone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100%; min-height: 168px; box-sizing: border-box;
+    border: 2px dashed #d4c9e0; border-radius: var(--radius);
+    padding: 32px 20px; text-align: center; cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    background: #faf7ff;
+  }
+  .upload-zone:hover { border-color: var(--primary); background: #f5f0ff; }
+  .upload-zone.dragover { border-color: var(--primary); background: #ede4ff; }
+  .upload-zone.has-file {
+    align-items: stretch; min-height: 0; padding: 16px; text-align: start;
+    border-style: solid; border-color: var(--success); background: #f0fdf4;
+  }
+  .upload-icon { font-size: 42px; line-height: 1; margin-bottom: 10px; }
+  .upload-title { font-size: 16px; font-weight: 700; margin: 0 0 4px; }
+  .upload-hint { font-size: 13px; color: var(--muted); margin: 0; }
+  .preview-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .preview-img {
+    width: 72px; height: 72px; border-radius: 12px; object-fit: cover;
+    border: 2px solid white; box-shadow: var(--shadow-md);
+  }
+  .change-btn {
+    background: white; color: var(--text); border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer;
+    font-family: var(--font); font-weight: 600; font-size: 13px;
+  }
+  input[type=file] { display: none; }
+  .name-field { margin-top: 0; padding-top: 0; border-top: 0; }
+  .name-field-top { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .name-field label, .custom-box label, .style-grid label {
+    display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px;
+  }
+  .name-field input, .custom-box input, .style-grid select {
+    display: block; width: 100%; max-width: 420px; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--border); background: #fff;
+    font-family: var(--font); font-size: 15px; color: var(--text); outline: none;
+  }
+  .name-field input:focus, .custom-box input:focus, .style-grid select:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+  }
+  .name-field .hint, .custom-box .hint { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+
+  .scene-actions { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .chip-btn {
+    background: #f5f3ff; border: 1px solid #e9d5ff; color: var(--primary);
+    padding: 6px 14px; border-radius: 999px; font-family: var(--font);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .scenes {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;
+  }
+  .scene-card {
+    position: relative; border-radius: var(--radius); padding: 18px 10px;
+    text-align: center; cursor: pointer; user-select: none;
+    border: 3px solid transparent; overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .scene-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--g1), var(--g2)); opacity: 0.8;
+  }
+  .scene-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+  .scene-card.selected { border-color: var(--primary); box-shadow: 0 8px 24px rgba(124, 58, 237, 0.25); }
+  .scene-check {
+    position: absolute; top: 8px; left: 8px; z-index: 2;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: white; border: 2px solid rgba(0,0,0,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: transparent;
+  }
+  .scene-card.selected .scene-check { background: var(--primary); border-color: var(--primary); color: white; }
+  .scene-emoji { position: relative; z-index: 1; font-size: 40px; margin-bottom: 6px; }
+  .scene-title {
+    position: relative; z-index: 1; font-size: 14px; font-weight: 800;
+    color: rgba(31, 27, 36, 0.88);
+  }
+  .custom-box {
+    margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border);
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+  }
+  .custom-box .field { flex: 1; min-width: 200px; }
+  .style-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;
+  }
+  .style-grid select { max-width: none; }
+
+  .nav-row {
+    display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap;
+    margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border);
+  }
+  .step-alert {
+    display: none; flex: 1 1 100%; order: -1; margin-bottom: 4px; padding: 10px 14px;
+    border-radius: 10px; background: #fef2f2; border: 1px solid #fecaca;
+    color: var(--danger); font-size: 13px; font-weight: 700;
+  }
+  .step-alert.show { display: block; }
+  .actions-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    color: white; border: 0; padding: 12px 22px;
+    font-size: 15px; border-radius: 12px; cursor: pointer;
+    font-weight: 800; font-family: var(--font);
+    box-shadow: 0 8px 16px rgba(124, 58, 237, 0.28);
+  }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
+  .btn-success { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 8px 16px rgba(16,185,129,0.28); }
+  .btn-outline {
+    background: white; color: var(--primary); border: 1px solid #e9d5ff; box-shadow: none;
+  }
+  .btn-sm { padding: 8px 12px; font-size: 12px; border-radius: 8px; box-shadow: none; }
+  .progress-wrap {
+    margin-top: 16px; background: #f3f4f6; border-radius: 999px; height: 8px; overflow: hidden; display: none;
+  }
+  .progress-wrap.active { display: block; }
+  .progress-bar {
+    height: 100%; width: 0%; border-radius: 999px;
+    background: linear-gradient(90deg, #7c3aed, #ec4899); transition: width 0.4s ease;
+  }
+  #status { margin-top: 12px; font-size: 14px; color: var(--muted); min-height: 22px; font-weight: 500; }
+  #status.error { color: var(--danger); font-weight: 700; }
+  .results-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px; margin-top: 16px;
+  }
+  .result {
+    background: white; border-radius: var(--radius); overflow: hidden;
+    border: 1px solid var(--border); aspect-ratio: 210 / 297;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; box-shadow: var(--shadow-sm);
+  }
+  .result img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+  .result-label {
+    position: absolute; top: 10px; right: 10px;
+    background: white; padding: 5px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; box-shadow: var(--shadow-sm);
+  }
+  .regen-btn { position: absolute; bottom: 10px; left: 10px; z-index: 2; }
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid #f0e7ff;
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .result .err { color: var(--danger); font-size: 13px; font-weight: 700; padding: 12px; text-align: center; }
+  .session-banner {
+    display: none; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    background: #f5f3ff; border: 1px solid #e9d5ff; border-radius: var(--radius);
+    padding: 14px 18px; margin-bottom: 16px;
+  }
+  .session-banner.show { display: flex; }
+  .session-banner p { margin: 0; font-size: 14px; font-weight: 600; color: var(--primary); }
+  .share-box {
+    display: none; margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+    background: #f5f3ff; border: 1px solid #e9d5ff; font-size: 13px; word-break: break-all;
+  }
+  .share-box.show { display: block; }
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(31,27,36,0.55);
+    z-index: 50; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: white; border-radius: 20px; width: min(900px, 100%);
+    max-height: 90vh; overflow: auto; padding: 24px; box-shadow: var(--shadow-lg);
+  }
+  .modal h3 { margin: 0 0 8px; font-size: 22px; font-weight: 900; }
+  .modal-sub { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+  .preview-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .preview-item {
+    border: 1px solid var(--border); border-radius: 12px; padding: 8px;
+    background: #fafafa; cursor: grab;
+  }
+  .preview-item.dragging { opacity: 0.5; }
+  .preview-item img { width: 100%; aspect-ratio: 210 / 297; object-fit: contain; border-radius: 8px; background: white; }
+  .preview-item .label { font-size: 12px; font-weight: 700; margin-top: 6px; text-align: center; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .foot { text-align: center; margin-top: 24px; color: var(--muted); font-size: 13px; }
+  @media (max-width: 600px) {
+    .page-intro h1 { font-size: 28px; }
+    .topbar { padding: 10px 14px; }
+    .card { padding: 20px; }
+    .scenes { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="topbar-brand" href="/">لونّ<span>ي</span></a>
+  <div class="topbar-actions">
+    <div class="lang-toggle" aria-label="Language">
+      <button type="button" id="lang-ar" class="active">عربي</button>
+      <button type="button" id="lang-en">EN</button>
+    </div>
+    <a class="auth-user" id="auth-user" href="/dashboard" style="display:none;text-decoration:none"></a>
+    <a class="btn btn-sm btn-outline" id="dash-btn" href="/dashboard" style="display:none" data-i18n="dashboard">حسابي</a>
+    <button type="button" class="btn btn-sm btn-outline" id="auth-open-btn" data-i18n="login">تسجيل الدخول</button>
+    <button type="button" class="btn btn-sm btn-outline" id="auth-logout-btn" data-i18n="logout" style="display:none">خروج</button>
+  </div>
+</header>
+
+<div class="page-intro">
+  <h1 data-i18n-html="hero_title">كتاب تلوين لطفلك<br>في دقايق</h1>
+  <p data-i18n="hero_sub">ارفع صورة طفلك، اختار الوظائف اللي يحلم بيها، وهنجهزلك كتاب تلوين PDF جاهز للطباعة</p>
+</div>
+
+<div class="container">
+  <div class="session-banner" id="session-banner">
+    <p data-i18n="session_msg">عندك جلسة سابقة محفوظة — تقدر تكمّل عليها.</p>
+    <div class="actions-row">
+      <button type="button" class="btn btn-sm" id="restore-btn" data-i18n="restore">استرجاع الجلسة</button>
+      <button type="button" class="btn btn-sm btn-outline" id="dismiss-session-btn" data-i18n="dismiss">تجاهل</button>
+    </div>
+  </div>
+
+  <div class="wizard-progress" id="wizard-progress">
+    <div class="wizard-chip active" data-step="1"><span class="n">1</span> <span data-i18n="chip1">الصورة</span></div>
+    <div class="wizard-chip" data-step="2"><span class="n">2</span> <span data-i18n="chip2">الوظائف</span></div>
+    <div class="wizard-chip" data-step="3"><span class="n">3</span> <span data-i18n="chip3">التوليد</span></div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="card panel active" data-panel="1">
+    <div class="step-header">
+      <span class="step-num">1</span>
+      <div class="step-heading">
+        <h2 class="step-title" data-i18n="step1_title">ارفع صورة الطفل</h2>
+        <span class="step-sub" data-i18n="step1_sub">اكتب الاسم الأول، بعدين ارفع الصور</span>
+      </div>
+    </div>
+    <div class="name-field name-field-top">
+      <label for="child-name" data-i18n="name_label">اسم الطفل (للغلاف)</label>
+      <input type="text" id="child-name" maxlength="40" placeholder="مثال: سارة" data-i18n-placeholder="name_ph" autocomplete="off">
+      <p class="hint" data-i18n="name_hint">هيظهر على أول صفحة في الـ PDF</p>
+    </div>
+    <div class="upload-zone" id="dropzone" role="button" tabindex="0" aria-label="رفع صورة">
+      <span class="upload-icon emoji">📸</span>
+      <p class="upload-title" data-i18n="upload_title">اسحب الصور هنا أو دوس للاختيار</p>
+      <p class="upload-hint" data-i18n="upload_hint">JPG أو PNG — هنتصغّر تلقائي لو كبيرة</p>
+    </div>
+    <input type="file" id="photo" accept="image/*" multiple>
+    <div class="nav-row">
+      <div class="step-alert" id="alert-step-1"></div>
+      <span style="flex:1"></span>
+      <button type="button" class="btn" id="to-step-2" data-i18n="next">التالي</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card panel" data-panel="2">
+    <div class="step-header">
+      <span class="step-num">2</span>
+      <div class="step-heading">
+        <h2 class="step-title" data-i18n="step2_title">اختار الوظائف</h2>
+        <span class="step-sub" data-i18n="step2_sub">كل وظيفة هتبقى صفحة — أقصى 8 صفحات</span>
+      </div>
+      <span class="counter-badge" id="counter">0</span>
+    </div>
+    <div class="scene-actions">
+      <button type="button" class="chip-btn" id="select-all-btn" data-i18n="select_all">اختيار 8</button>
+      <button type="button" class="chip-btn" id="clear-all-btn" data-i18n="clear_all">إلغاء الكل</button>
+    </div>
+    <div class="scenes" id="scenes">
+      {% for s in scenes %}
+      <div class="scene-card" data-id="{{ s.id }}"
+           style="--g1: {{ s.grad[0] }}; --g2: {{ s.grad[1] }};"
+           data-title-ar="{{ s.title }}" data-title-en="{{ s.title_en }}">
+        <span class="scene-check">✓</span>
+        <span class="scene-emoji">{{ s.emoji }}</span>
+        <span class="scene-title">{{ s.title }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="custom-box">
+      <div class="field">
+        <label for="custom-text" data-i18n="custom_label">وظيفة مخصصة (بالعربي)</label>
+        <input type="text" id="custom-text" maxlength="120" placeholder="مثال: محامي في المحكمة" data-i18n-placeholder="custom_ph">
+        <p class="hint" data-i18n="custom_hint">هنترجم الوصف ونضيفه كوظيفة جديدة</p>
+      </div>
+      <button type="button" class="btn btn-sm" id="add-custom-btn" data-i18n="custom_btn">إضافة وظيفة</button>
+    </div>
+    <div class="nav-row">
+      <div class="step-alert" id="alert-step-2"></div>
+      <button type="button" class="btn btn-outline" data-goto="1" data-i18n="back">رجوع</button>
+      <button type="button" class="btn" id="to-step-3" data-i18n="start_btn">ابدأ التوليد</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: GENERATE -->
+  <div class="card panel" data-panel="3">
+    <div class="step-header">
+      <span class="step-num">3</span>
+      <div class="step-heading">
+        <h2 class="step-title" data-i18n="step3_title">توليد الكتاب</h2>
+        <span class="step-sub" data-i18n="step3_sub">الصفحات بتتولد مع بعض… استنى شوية</span>
+      </div>
+    </div>
+    <div class="actions-row">
+      <button class="btn" id="start-btn"><span class="emoji">🎨</span> <span data-i18n="start_btn">ابدأ التوليد</span></button>
+      <button class="btn btn-outline" id="preview-btn" style="display:none"><span class="emoji">👀</span> <span data-i18n="preview_btn">معاينة وترتيب</span></button>
+      <button class="btn btn-success" id="pdf-btn" style="display:none"><span class="emoji">📄</span> <span data-i18n="pdf_btn">تنزيل PDF</span></button>
+      <button class="btn btn-outline" id="share-btn" style="display:none"><span class="emoji">🔗</span> <span data-i18n="share_btn">شارك (24 ساعة)</span></button>
+    </div>
+    <div class="share-box" id="share-box"></div>
+    <div class="progress-wrap" id="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <div id="status"></div>
+    <div class="results-grid" id="results"></div>
+    <div class="nav-row">
+      <button type="button" class="btn btn-outline" data-goto="2" data-i18n="back">رجوع</button>
+      <button type="button" class="btn btn-outline" data-goto="1" data-i18n="restart">من الأول</button>
+    </div>
+  </div>
+
+  <div class="foot" data-i18n="footer">صُمّم بحب للأطفال</div>
+</div>
+
+<div class="modal-backdrop" id="preview-modal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3 data-i18n="preview_title">معاينة الكتاب</h3>
+    <p class="modal-sub" data-i18n="preview_sub">اسحب الصفحات لإعادة الترتيب، بعدين نزّل الـ PDF</p>
+    <div class="preview-list" id="preview-list"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-success" id="modal-pdf-btn" data-i18n="pdf_btn">تنزيل PDF</button>
+      <button type="button" class="btn btn-outline" id="close-preview-btn" data-i18n="close">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="auth-modal" role="dialog" aria-modal="true">
+  <div class="modal" style="width:min(420px,100%)">
+    <div class="modal-head">
+      <h3 data-i18n="auth_title">تسجيل الدخول مطلوب</h3>
+      <button type="button" class="modal-close-x" id="close-auth-btn" aria-label="Close">×</button>
+    </div>
+    <p class="modal-sub" data-i18n="auth_sub">عشان تولّد الكتاب، سجّل دخول أو اعمل حساب جديد بالإيميل</p>
+    <div class="auth-tabs">
+      <button type="button" class="active" id="tab-login" data-i18n="login">تسجيل الدخول</button>
+      <button type="button" id="tab-register" data-i18n="register">حساب جديد</button>
+    </div>
+    <form class="auth-form" id="auth-form">
+      <div id="reg-extra" style="display:none">
+        <label for="auth-username" data-i18n="username">اسم المستخدم</label>
+        <input type="text" id="auth-username" maxlength="30" autocomplete="username">
+      </div>
+      <label for="auth-email" data-i18n="email">الإيميل</label>
+      <input type="email" id="auth-email" required autocomplete="email">
+      <label for="auth-password" data-i18n="password">كلمة المرور</label>
+      <input type="password" id="auth-password" required minlength="6" autocomplete="current-password">
+      <div class="auth-error" id="auth-error"></div>
+      <button type="submit" class="btn" id="auth-submit" data-i18n="login">تسجيل الدخول</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="pay-modal" role="dialog" aria-modal="true">
+  <div class="modal" style="width:min(460px,100%)">
+    <div class="modal-head">
+      <h3 id="pay-title">خلّصت الكتب المجانية</h3>
+      <button type="button" class="modal-close-x" id="close-pay-btn" aria-label="Close">×</button>
+    </div>
+    <p class="modal-sub" id="pay-sub">ادفع بالكارت أو محفظة الموبايل (فودافون كاش / أورانج / إتصالات / وي)</p>
+    <div style="background:#f8f5ff;border:1px solid #e9d5ff;border-radius:14px;padding:14px;margin-bottom:14px">
+      <div style="font-weight:800;font-size:18px" id="pay-pack-label">{{ book_pack_credits }} كتب · {{ book_pack_price }} جنيه</div>
+      <div style="color:#7a7480;font-size:13px;margin-top:4px">دفع آمن عبر Paymob · مناسب لعملاء مصر</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px" id="pay-method-row">
+      <button type="button" class="chip-btn pay-method active" data-method="all">الكل</button>
+      <button type="button" class="chip-btn pay-method" data-method="card">كارت</button>
+      <button type="button" class="chip-btn pay-method" data-method="wallet" id="pay-method-wallet">محفظة</button>
+    </div>
+    <p class="hint" id="wallet-hint" style="margin:-4px 0 12px;font-size:12px;color:#7a7480">
+      {% if wallet_ready %}
+      للمحفظة: اكتب رقم فودافون كاش / أورانج / إتصالات / وي ثم ادفع
+      {% else %}
+      المحفظة جاهزة في الكود — فعّل Wallet Integration من لوحة Paymob
+      {% endif %}
+    </p>
+    <label for="pay-phone" style="display:block;font-size:13px;font-weight:700;margin-bottom:6px">رقم الموبايل (مطلوب للمحفظة)</label>
+    <input type="tel" id="pay-phone" placeholder="01xxxxxxxxx" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid #ece7e0;font-family:inherit;font-size:15px;margin-bottom:10px">
+    <div class="auth-error" id="pay-error"></div>
+    <button type="button" class="btn" id="pay-start-btn" style="width:100%">ادفع الآن</button>
+  </div>
+</div>
+
+<script>
+const BASE_SCENES = {{ scenes|tojson }};
+const BOOK_PACK_PRICE = {{ book_pack_price|tojson }};
+const BOOK_PACK_CREDITS = {{ book_pack_credits|tojson }};
+const PAYMOB_READY = {{ paymob_ready|tojson }};
+const WALLET_READY = {{ wallet_ready|tojson }};
+let payMethod = 'all';
+let allScenes = [...BASE_SCENES];
+const selected = new Set();
+let sessionId = null;
+let pageOrder = [];
+let pageImages = {};
+let currentStep = 1;
+let lang = localStorage.getItem('coloring_lang') || 'ar';
+let currentUser = null;
+let authMode = 'login'; // login | register
+let pendingGenerate = false;
+const STORAGE_KEY = 'coloring_book_session_v2';
+const FETCH_TIMEOUT_MS = 190000;
+const MAX_UPLOAD_SIDE = 1600;
+const MAX_PAGES = 8;
+
+const I18N = {
+  ar: {
+    hero_title: 'كتاب تلوين لطفلك<br>في دقايق',
+    hero_sub: 'ارفع صورة طفلك، اختار الوظائف اللي يحلم بيها، وهنجهزلك كتاب تلوين PDF جاهز للطباعة',
+    chip1: 'الصورة', chip2: 'الوظائف', chip3: 'التوليد',
+    step1_title: 'ارفع صورة الطفل', step1_sub: 'اكتب الاسم الأول، بعدين ارفع الصور',
+    upload_title: 'اسحب الصور هنا أو دوس للاختيار',
+    upload_hint: 'JPG أو PNG — هنتصغّر تلقائي لو كبيرة',
+    name_label: 'اسم الطفل (للغلاف)', name_ph: 'مثال: سارة', name_hint: 'هيظهر على أول صفحة في الـ PDF',
+    step2_title: 'اختار الوظائف', step2_sub: 'كل وظيفة هتبقى صفحة — أقصى 8 صفحات',
+    select_all: 'اختيار 8', clear_all: 'إلغاء الكل',
+    custom_label: 'وظيفة مخصصة (بالعربي)', custom_ph: 'مثال: محامي في المحكمة',
+    custom_hint: 'هنترجم الوصف ونضيفه كوظيفة جديدة', custom_btn: 'إضافة وظيفة',
+    step3_title: 'توليد الكتاب', step3_sub: 'الصفحات بتتولد مع بعض… استنى شوية',
+    start_btn: 'ابدأ التوليد', preview_btn: 'معاينة وترتيب', pdf_btn: 'تنزيل PDF',
+    share_btn: 'شارك (24 ساعة)', next: 'التالي', back: 'رجوع', restart: 'من الأول',
+    close: 'إغلاق', preview_title: 'معاينة الكتاب', preview_sub: 'اسحب الصفحات لإعادة الترتيب',
+    footer: 'صُمّم بحب للأطفال',
+    pages: 'وظيفة', regen: 'إعادة توليد',
+    session_msg: 'عندك جلسة سابقة محفوظة — تقدر تكمّل عليها.',
+    restore: 'استرجاع الجلسة', dismiss: 'تجاهل',
+    need_photo: 'ارفع صورة الأول من فضلك.',
+    need_jobs: 'اختار وظيفة واحدة على الأقل.',
+    max_pages: 'أقصى عدد للصفحات هو 8.',
+    need_pay: 'محتاج تدفع عشان تكمل.',
+    pay_title: 'خلّصت الكتب المجانية',
+    pay_sub: 'ادفع بالكارت أو محفظة الموبايل (فودافون كاش / أورانج / إتصالات / وي)',
+    pay_btn: 'ادفع الآن',
+    pay_phone: 'رقم الموبايل',
+    dashboard: 'حسابي',
+    login: 'تسجيل الدخول', logout: 'خروج', register: 'حساب جديد',
+    auth_title: 'تسجيل الدخول مطلوب',
+    auth_sub: 'عشان تولّد الكتاب، سجّل دخول أو اعمل حساب جديد بالإيميل',
+    email: 'الإيميل', password: 'كلمة المرور', username: 'اسم المستخدم',
+  },
+  en: {
+    hero_title: 'A coloring book<br>for your child',
+    hero_sub: 'Upload a photo, pick dream jobs, and get a printable PDF coloring book',
+    chip1: 'Photo', chip2: 'Jobs', chip3: 'Generate',
+    step1_title: 'Upload a photo', step1_sub: 'Enter the name first, then upload photos',
+    upload_title: 'Drop images here or click to browse',
+    upload_hint: 'JPG or PNG — large images are resized automatically',
+    name_label: 'Child name (cover)', name_ph: 'e.g. Sara', name_hint: 'Shown on the first PDF page',
+    step2_title: 'Choose jobs', step2_sub: 'Each job becomes one page — max 8',
+    select_all: 'Select 8', clear_all: 'Clear all',
+    custom_label: 'Custom job (Arabic text)', custom_ph: 'e.g. a lawyer in court',
+    custom_hint: 'We translate it and add it as a new job', custom_btn: 'Add job',
+    step3_title: 'Generate book', step3_sub: 'Pages generate in parallel… please wait',
+    start_btn: 'Start generating', preview_btn: 'Preview & reorder', pdf_btn: 'Download PDF',
+    share_btn: 'Share (24h)', next: 'Next', back: 'Back', restart: 'Start over',
+    close: 'Close', preview_title: 'Book preview', preview_sub: 'Drag pages to reorder',
+    footer: 'Made with love for kids',
+    pages: 'jobs', regen: 'Regenerate',
+    session_msg: 'You have a saved session — you can continue.',
+    restore: 'Restore', dismiss: 'Dismiss',
+    need_photo: 'Please upload a photo first.',
+    need_jobs: 'Pick at least one job.',
+    max_pages: 'Maximum is 8 pages.',
+    need_pay: 'Payment required to continue.',
+    pay_title: 'Free books used up',
+    pay_sub: 'Pay by card or mobile wallet (Vodafone Cash / Orange / Etisalat / We)',
+    pay_btn: 'Pay now',
+    pay_phone: 'Mobile number',
+    dashboard: 'My account',
+    login: 'Log in', logout: 'Log out', register: 'Sign up',
+    auth_title: 'Login required',
+    auth_sub: 'Log in or create an account with email to generate the book',
+    email: 'Email', password: 'Password', username: 'Username',
+  }
+};
+
+const photoInput = document.getElementById('photo');
+const dropzone = document.getElementById('dropzone');
+const childNameInput = document.getElementById('child-name');
+const counter = document.getElementById('counter');
+const startBtn = document.getElementById('start-btn');
+const pdfBtn = document.getElementById('pdf-btn');
+const previewBtn = document.getElementById('preview-btn');
+const shareBtn = document.getElementById('share-btn');
+const shareBox = document.getElementById('share-box');
+const statusEl = document.getElementById('status');
+const results = document.getElementById('results');
+const progressWrap = document.getElementById('progress-wrap');
+const progressBar = document.getElementById('progress-bar');
+const customText = document.getElementById('custom-text');
+const addCustomBtn = document.getElementById('add-custom-btn');
+const previewModal = document.getElementById('preview-modal');
+const previewList = document.getElementById('preview-list');
+const sessionBanner = document.getElementById('session-banner');
+
+function t(key) { return (I18N[lang] && I18N[lang][key]) || I18N.ar[key] || key; }
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.getElementById('lang-ar').classList.toggle('active', lang === 'ar');
+  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.querySelectorAll('.scene-card').forEach(el => {
+    const title = el.querySelector('.scene-title');
+    if (!title) return;
+    title.textContent = lang === 'en' ? (el.dataset.titleEn || el.dataset.titleAr) : (el.dataset.titleAr || title.textContent);
+  });
+  updateCounter();
+  localStorage.setItem('coloring_lang', lang);
+}
+
+document.getElementById('lang-ar').onclick = () => { lang = 'ar'; applyLang(); };
+document.getElementById('lang-en').onclick = () => { lang = 'en'; applyLang(); };
+
+function goToStep(step) {
+  currentStep = step;
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.toggle('active', Number(p.dataset.panel) === step);
+  });
+  document.querySelectorAll('.wizard-chip').forEach(chip => {
+    const n = Number(chip.dataset.step);
+    chip.classList.toggle('active', n === step);
+    chip.classList.toggle('done', n < step);
+  });
+  showStepAlert(1, '');
+  showStepAlert(2, '');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.querySelectorAll('[data-goto]').forEach(btn => {
+  btn.addEventListener('click', () => goToStep(Number(btn.dataset.goto)));
+});
+
+function showStepAlert(step, text) {
+  document.querySelectorAll('.step-alert').forEach(el => {
+    el.classList.remove('show');
+    el.textContent = '';
+  });
+  if (!text) return;
+  const el = document.getElementById('alert-step-' + step);
+  if (!el) return;
+  el.textContent = text;
+  el.classList.add('show');
+}
+
+document.getElementById('to-step-2').onclick = () => {
+  showStepAlert(1, '');
+  const name = (childNameInput.value || '').trim();
+  if (!name) {
+    showStepAlert(1, lang === 'en' ? 'Please enter the child name first.' : 'اكتب اسم الطفل الأول.');
+    childNameInput.focus();
+    return;
+  }
+  if (!photoInput.files.length && !sessionId) {
+    showStepAlert(1, t('need_photo'));
+    return;
+  }
+  goToStep(2);
+};
+
+document.getElementById('to-step-3').onclick = async () => {
+  showStepAlert(2, '');
+  if (selected.size === 0) {
+    showStepAlert(2, t('need_jobs'));
+    return;
+  }
+  const ok = await ensureAuth();
+  if (!ok) return;
+  goToStep(3);
+  startGeneration();
+};
+
+function humanSize(bytes) {
+  const kb = bytes / 1024;
+  return kb < 1024 ? kb.toFixed(0) + ' KB' : (kb / 1024).toFixed(1) + ' MB';
+}
+function saveLocal() {
+  if (!sessionId) return;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    sessionId, childName: childNameInput.value || '', order: pageOrder, selected: [...selected], step: currentStep,
+  }));
+}
+function loadLocal() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; }
+}
+function clearLocal() { localStorage.removeItem(STORAGE_KEY); }
+
+function showFilePreview(files) {
+  const list = [...files].slice(0, 4);
+  if (!list.length) return;
+  const thumbs = list.map(f => `<img src="${URL.createObjectURL(f)}" class="preview-img" alt="">`).join('');
+  const total = list.reduce((s, f) => s + f.size, 0);
+  dropzone.className = 'upload-zone has-file';
+  dropzone.innerHTML = `
+    <div class="preview-row">${thumbs}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div><strong>${list.length} ${lang === 'en' ? 'photos' : 'صورة'}</strong><br><span style="color:var(--muted);font-size:13px">${humanSize(total)}</span></div>
+      <button type="button" class="change-btn">${lang === 'en' ? 'Change' : 'تغيير'}</button>
+    </div>`;
+}
+
+function resizeImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) return resolve(file);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, MAX_UPLOAD_SIDE / Math.max(img.width, img.height));
+      if (scale >= 1 && file.size < 2.5 * 1024 * 1024) return resolve(file);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        if (!blob) return reject(new Error('resize failed'));
+        resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+      }, 'image/jpeg', 0.9);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+async function prepareUploadFiles(fileList) {
+  return Promise.all([...fileList].slice(0, 4).map(resizeImageFile));
+}
+
+photoInput.onchange = () => { if (photoInput.files.length) showFilePreview(photoInput.files); };
+dropzone.addEventListener('click', e => {
+  if (e.target.closest('.change-btn')) { photoInput.click(); return; }
+  photoInput.click();
+});
+['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('dragover'); }));
+dropzone.addEventListener('drop', e => {
+  const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/')).slice(0, 4);
+  if (!files.length) return;
+  const dt = new DataTransfer();
+  files.forEach(f => dt.items.add(f));
+  photoInput.files = dt.files;
+  showFilePreview(files);
+});
+
+function updateCounter() {
+  counter.textContent = selected.size + ' / ' + MAX_PAGES + ' ' + t('pages');
+}
+function toggle(id) {
+  const el = document.querySelector(`.scene-card[data-id="${id}"]`);
+  if (!el) return;
+  if (selected.has(id)) { selected.delete(id); el.classList.remove('selected'); }
+  else if (selected.size >= MAX_PAGES) {
+    showStepAlert(2, t('max_pages'));
+    return;
+  } else { selected.add(id); el.classList.add('selected'); }
+  updateCounter(); saveLocal();
+}
+document.getElementById('scenes').addEventListener('click', e => {
+  const card = e.target.closest('.scene-card');
+  if (card) toggle(card.dataset.id);
+});
+document.getElementById('select-all-btn').onclick = () => {
+  selected.clear();
+  document.querySelectorAll('.scene-card').forEach(el => el.classList.remove('selected'));
+  [...document.querySelectorAll('.scene-card')].slice(0, MAX_PAGES).forEach(el => {
+    selected.add(el.dataset.id);
+    el.classList.add('selected');
+  });
+  updateCounter(); saveLocal();
+};
+document.getElementById('clear-all-btn').onclick = () => {
+  selected.clear();
+  document.querySelectorAll('.scene-card').forEach(el => el.classList.remove('selected'));
+  updateCounter(); saveLocal();
+};
+
+function currentStyle() {
+  return {
+    variant: 'b',
+    line_weight: 'normal',
+    detail: 'normal',
+    art_style: 'cartoon',
+  };
+}
+function addSceneCard(scene, autoSelect = true) {
+  if (document.querySelector(`.scene-card[data-id="${scene.id}"]`)) return;
+  allScenes.push(scene);
+  const div = document.createElement('div');
+  div.className = 'scene-card' + (autoSelect ? ' selected' : '');
+  div.dataset.id = scene.id;
+  div.dataset.titleAr = scene.title || '';
+  div.dataset.titleEn = scene.title_en || scene.title || '';
+  div.style.setProperty('--g1', (scene.grad && scene.grad[0]) || '#e9d5ff');
+  div.style.setProperty('--g2', (scene.grad && scene.grad[1]) || '#fbcfe8');
+  const label = lang === 'en' ? (scene.title_en || scene.title) : scene.title;
+  div.innerHTML = `<span class="scene-check">✓</span><span class="scene-emoji">${scene.emoji || '✨'}</span><span class="scene-title">${label}</span>`;
+  document.getElementById('scenes').appendChild(div);
+  if (autoSelect) {
+    if (selected.size < MAX_PAGES) selected.add(scene.id);
+    else {
+      div.classList.remove('selected');
+      showStepAlert(2, t('max_pages'));
+    }
+  }
+  updateCounter();
+}
+function sceneMeta(id) { return allScenes.find(s => s.id === id) || { id, title: id, title_en: id, emoji: '🎨' }; }
+function sceneLabel(scene) { return lang === 'en' ? (scene.title_en || scene.title) : scene.title; }
+
+function makeSlot(scene) {
+  const div = document.createElement('div');
+  div.className = 'result';
+  div.id = 'slot-' + scene.id;
+  div.innerHTML = `<div class="spinner"></div><span class="result-label emoji">${scene.emoji || '✨'} ${sceneLabel(scene)}</span>`;
+  results.appendChild(div);
+}
+function fillSlot(scene, b64) {
+  pageImages[scene.id] = b64;
+  const slot = document.getElementById('slot-' + scene.id);
+  if (!slot) return;
+  slot.innerHTML = `
+    <img src="data:image/jpeg;base64,${b64}" alt="">
+    <span class="result-label emoji">${scene.emoji || '✨'} ${sceneLabel(scene)}</span>
+    <button type="button" class="btn btn-sm regen-btn" data-regen="${scene.id}">${t('regen')}</button>`;
+  slot.querySelector('[data-regen]').onclick = e => { e.stopPropagation(); regenerateOne(scene.id); };
+}
+function showReadyButtons(order) {
+  pageOrder = order.filter(id => pageImages[id]);
+  const show = pageOrder.length > 0;
+  pdfBtn.style.display = show ? 'inline-flex' : 'none';
+  previewBtn.style.display = show ? 'inline-flex' : 'none';
+  shareBtn.style.display = show ? 'inline-flex' : 'none';
+  saveLocal();
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try { return await fetch(url, { ...options, signal: controller.signal }); }
+  finally { clearTimeout(timer); }
+}
+async function readJsonSafe(res) { try { return await res.json(); } catch { return {}; } }
+function mapClientError(err) {
+  if (err && err.name === 'AbortError') {
+    return lang === 'en' ? 'Timed out. Try again.' : 'انتهى وقت الانتظار. جرّب تاني.';
+  }
+  return (err && err.message) || (lang === 'en' ? 'Unexpected error' : 'حصل خطأ غير متوقع');
+}
+function setStatus(text, isError = false) {
+  statusEl.textContent = text || '';
+  statusEl.className = isError ? 'error' : '';
+}
+function pdfUrl(order) {
+  const name = encodeURIComponent((childNameInput.value || '').trim());
+  return `/pdf/${sessionId}?order=${order.join(',')}&name=${name}`;
+}
+
+async function regenerateOne(sceneId) {
+  if (!sessionId) return;
+  const scene = sceneMeta(sceneId);
+  const slot = document.getElementById('slot-' + sceneId);
+  if (slot) slot.innerHTML = `<div class="spinner"></div><span class="result-label emoji">${scene.emoji} ${sceneLabel(scene)}</span>`;
+  const qs = new URLSearchParams({ force: '1', ...currentStyle() }).toString();
+  try {
+    const res = await fetchWithTimeout(`/generate/${sessionId}/${sceneId}?${qs}`);
+    const data = await readJsonSafe(res);
+    if (!res.ok || data.error) throw new Error(data.error || 'failed');
+    fillSlot(scene, data.image_b64);
+    if (!pageOrder.includes(sceneId)) pageOrder.push(sceneId);
+    showReadyButtons(pageOrder);
+    setStatus(lang === 'en' ? 'Regenerated' : 'تم إعادة التوليد');
+  } catch (e) {
+    if (slot) slot.innerHTML = `<span class="err">${mapClientError(e)}</span>`;
+    setStatus(mapClientError(e), true);
+  }
+}
+
+function openPreview() {
+  previewList.innerHTML = '';
+  pageOrder.forEach(id => {
+    const scene = sceneMeta(id);
+    const b64 = pageImages[id];
+    if (!b64) return;
+    const item = document.createElement('div');
+    item.className = 'preview-item';
+    item.draggable = true;
+    item.dataset.id = id;
+    item.innerHTML = `<img src="data:image/jpeg;base64,${b64}" alt=""><div class="label">${scene.emoji || ''} ${sceneLabel(scene)}</div>`;
+    previewList.appendChild(item);
+  });
+  let dragEl = null;
+  previewList.querySelectorAll('.preview-item').forEach(item => {
+    item.addEventListener('dragstart', () => { dragEl = item; item.classList.add('dragging'); });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging'); dragEl = null;
+      pageOrder = [...previewList.querySelectorAll('.preview-item')].map(el => el.dataset.id);
+      showReadyButtons(pageOrder);
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!dragEl || dragEl === item) return;
+      const after = (e.clientX - item.getBoundingClientRect().left) > item.getBoundingClientRect().width / 2;
+      previewList.insertBefore(dragEl, after ? item.nextSibling : item);
+    });
+  });
+  previewModal.classList.add('open');
+}
+
+previewBtn.onclick = openPreview;
+document.getElementById('close-preview-btn').onclick = () => previewModal.classList.remove('open');
+previewModal.onclick = e => { if (e.target === previewModal) previewModal.classList.remove('open'); };
+document.getElementById('modal-pdf-btn').onclick = () => { if (sessionId && pageOrder.length) location.href = pdfUrl(pageOrder); };
+pdfBtn.onclick = () => { if (sessionId && pageOrder.length) location.href = pdfUrl(pageOrder); };
+
+shareBtn.onclick = async () => {
+  if (!sessionId || !pageOrder.length) return;
+  shareBtn.disabled = true;
+  try {
+    const res = await fetchWithTimeout(`/share/${sessionId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order: pageOrder, name: childNameInput.value || '' }),
+    }, 60000);
+    const data = await readJsonSafe(res);
+    if (!res.ok || data.error) throw new Error(data.error || 'share failed');
+    shareBox.classList.add('show');
+    shareBox.innerHTML = `${lang === 'en' ? 'Link:' : 'اللينك:'} <a href="${data.url}" target="_blank" rel="noopener">${data.url}</a>`;
+    try { await navigator.clipboard.writeText(data.url); } catch {}
+  } catch (e) { setStatus(mapClientError(e), true); }
+  finally { shareBtn.disabled = false; }
+};
+
+addCustomBtn.onclick = async () => {
+  const text = (customText.value || '').trim();
+  if (text.length < 3) { setStatus(lang === 'en' ? 'Write a job description.' : 'اكتب وصف الوظيفة.', true); return; }
+  if (!sessionId) {
+    if (!photoInput.files[0]) { setStatus(t('need_photo'), true); return; }
+    const prepared = await prepareUploadFiles(photoInput.files);
+    const fd = new FormData();
+    prepared.forEach(f => fd.append('photos', f));
+    const up = await fetchWithTimeout('/upload', { method: 'POST', body: fd }, 60000);
+    const upData = await readJsonSafe(up);
+    if (!up.ok || upData.error) { setStatus(upData.error || 'upload failed', true); return; }
+    sessionId = upData.session_id; saveLocal();
+  }
+  addCustomBtn.disabled = true;
+  try {
+    const res = await fetchWithTimeout(`/custom-scene/${sessionId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    }, 60000);
+    const data = await readJsonSafe(res);
+    if (!res.ok || data.error) throw new Error(data.error || 'failed');
+    addSceneCard(data, true);
+    customText.value = '';
+    setStatus(lang === 'en' ? 'Job added' : 'تمت إضافة الوظيفة');
+  } catch (e) { setStatus(mapClientError(e), true); }
+  finally { addCustomBtn.disabled = false; }
+};
+
+async function startGeneration() {
+  const hasFiles = photoInput.files.length > 0;
+  if (!hasFiles && !sessionId) { setStatus(t('need_photo'), true); goToStep(1); return; }
+  if (selected.size === 0) { setStatus(t('need_jobs'), true); goToStep(2); return; }
+
+  startBtn.disabled = true;
+  pdfBtn.style.display = 'none';
+  previewBtn.style.display = 'none';
+  shareBtn.style.display = 'none';
+  shareBox.classList.remove('show');
+  results.innerHTML = '';
+  pageImages = {};
+  progressWrap.classList.add('active');
+  progressBar.style.width = '10%';
+  setStatus(lang === 'en' ? 'Uploading & generating...' : 'جاري الرفع والتوليد...');
+
+  try {
+    if (hasFiles) {
+      const prepared = await prepareUploadFiles(photoInput.files);
+      const fd = new FormData();
+      prepared.forEach(f => fd.append('photos', f));
+      const up = await fetchWithTimeout('/upload', { method: 'POST', body: fd }, 60000);
+      const upData = await readJsonSafe(up);
+      if (up.status === 402 || upData.payment_required || upData.freemium) {
+        openPayModal(upData);
+        throw new Error(upData.error || t('need_pay'));
+      }
+      if (!up.ok || upData.error) throw new Error(upData.error || 'upload failed');
+      sessionId = upData.session_id; saveLocal();
+    }
+    if (selected.size > MAX_PAGES) {
+      setStatus(t('max_pages'), true);
+      goToStep(2);
+      startBtn.disabled = false;
+      progressWrap.classList.remove('active');
+      return;
+    }
+    const chosen = allScenes.filter(s => selected.has(s.id)).slice(0, MAX_PAGES);
+    chosen.forEach(makeSlot);
+    progressBar.style.width = '25%';
+    const res = await fetchWithTimeout(`/generate-batch/${sessionId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenes: chosen.map(s => s.id), ...currentStyle() }),
+    });
+    const data = await readJsonSafe(res);
+    if (res.status === 402 || data.payment_required || data.freemium) {
+      openPayModal(data);
+      throw new Error(data.error || t('need_pay'));
+    }
+    if (!res.ok || data.error) throw new Error(data.error || 'failed');
+    let done = 0, lastError = '', order = [];
+    for (const page of (data.pages || [])) {
+      const scene = sceneMeta(page.scene_id);
+      if (page.error) {
+        lastError = page.error;
+        const slot = document.getElementById('slot-' + page.scene_id);
+        if (slot) slot.innerHTML = `<span class="err">${page.error}</span>`;
+      } else {
+        fillSlot(scene, page.image_b64);
+        order.push(page.scene_id);
+        done++;
+      }
+    }
+    progressBar.style.width = '100%';
+    setStatus(done === 0
+      ? (lastError || (lang === 'en' ? 'No pages generated' : 'مفيش صفحات اتولدت'))
+      : ((lang === 'en' ? `Done! ${done} pages` : `تمّ! ${done} صفحة`) + (lastError ? (lang === 'en' ? ' (some failed)' : ' (بعضها فشل)') : '')),
+      done === 0);
+    showReadyButtons(order);
+  } catch (e) {
+    const msg = mapClientError(e);
+    if (String(msg).includes('تسجّل') || String(msg).includes('log in') || e.message?.includes('auth')) {
+      await ensureAuth();
+    }
+    setStatus(msg, true);
+  } finally {
+    startBtn.disabled = false;
+  }
+}
+
+startBtn.onclick = async () => {
+  const ok = await ensureAuth();
+  if (!ok) return;
+  startGeneration();
+};
+childNameInput.onchange = saveLocal;
+
+/* -------- Auth -------- */
+const authModal = document.getElementById('auth-modal');
+const authError = document.getElementById('auth-error');
+const authUserEl = document.getElementById('auth-user');
+const authOpenBtn = document.getElementById('auth-open-btn');
+const authLogoutBtn = document.getElementById('auth-logout-btn');
+const regExtra = document.getElementById('reg-extra');
+const authSubmit = document.getElementById('auth-submit');
+
+function setAuthMode(mode) {
+  authMode = mode;
+  document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+  document.getElementById('tab-register').classList.toggle('active', mode === 'register');
+  regExtra.style.display = mode === 'register' ? 'block' : 'none';
+  authSubmit.textContent = mode === 'register' ? t('register') : t('login');
+  document.getElementById('auth-password').autocomplete = mode === 'register' ? 'new-password' : 'current-password';
+  authError.textContent = '';
+}
+
+function updateAuthUI() {
+  const dashBtn = document.getElementById('dash-btn');
+  if (currentUser) {
+    authUserEl.style.display = 'inline-flex';
+    const credits = currentUser.book_credits || 0;
+    authUserEl.textContent = credits > 0 ? (currentUser.username + ' · ' + credits + (lang==='en'?' credits':' رصيد')) : currentUser.username;
+    authOpenBtn.style.display = 'none';
+    authLogoutBtn.style.display = 'inline-flex';
+    if (dashBtn) dashBtn.style.display = 'inline-flex';
+  } else {
+    authUserEl.style.display = 'none';
+    authOpenBtn.style.display = 'inline-flex';
+    authLogoutBtn.style.display = 'none';
+    if (dashBtn) dashBtn.style.display = 'none';
+  }
+}
+
+function openAuthModal() {
+  setAuthMode(authMode || 'login');
+  authModal.classList.add('open');
+}
+function closeAuthModal() {
+  authModal.classList.remove('open');
+  pendingGenerate = false;
+}
+
+async function refreshAuth() {
+  try {
+    const res = await fetch('/auth/me');
+    const data = await readJsonSafe(res);
+    currentUser = data.authenticated ? data.user : null;
+  } catch {
+    currentUser = null;
+  }
+  updateAuthUI();
+  return !!currentUser;
+}
+
+function ensureAuth() {
+  return new Promise(async (resolve) => {
+    const ok = await refreshAuth();
+    if (ok) { resolve(true); return; }
+    pendingGenerate = true;
+    openAuthModal();
+    // Resolve after login via form handler
+    window.__authResolve = resolve;
+  });
+}
+
+document.getElementById('tab-login').onclick = () => setAuthMode('login');
+document.getElementById('tab-register').onclick = () => setAuthMode('register');
+authOpenBtn.onclick = () => { pendingGenerate = false; openAuthModal(); };
+document.getElementById('close-auth-btn').onclick = () => {
+  closeAuthModal();
+  if (window.__authResolve) { window.__authResolve(false); window.__authResolve = null; }
+};
+authModal.onclick = e => {
+  if (e.target === authModal) {
+    closeAuthModal();
+    if (window.__authResolve) { window.__authResolve(false); window.__authResolve = null; }
+  }
+};
+
+document.getElementById('auth-form').onsubmit = async (e) => {
+  e.preventDefault();
+  authError.textContent = '';
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const username = document.getElementById('auth-username').value.trim();
+  const payload = authMode === 'register'
+    ? { email, password, username }
+    : { email, password };
+  const url = authMode === 'register' ? '/auth/register' : '/auth/login';
+  authSubmit.disabled = true;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await readJsonSafe(res);
+    if (!res.ok || data.error) throw new Error(data.error || 'auth failed');
+    currentUser = data.user;
+    updateAuthUI();
+    authModal.classList.remove('open');
+    pendingGenerate = false;
+    if (window.__authResolve) { window.__authResolve(true); window.__authResolve = null; }
+  } catch (err) {
+    authError.textContent = mapClientError(err);
+  } finally {
+    authSubmit.disabled = false;
+  }
+};
+
+authLogoutBtn.onclick = async () => {
+  await fetch('/auth/logout', { method: 'POST' });
+  currentUser = null;
+  updateAuthUI();
+};
+
+/* -------- Paymob -------- */
+const payModal = document.getElementById('pay-modal');
+const payError = document.getElementById('pay-error');
+const payStartBtn = document.getElementById('pay-start-btn');
+document.getElementById('close-pay-btn').onclick = () => payModal.classList.remove('open');
+payModal.onclick = e => { if (e.target === payModal) payModal.classList.remove('open'); };
+document.querySelectorAll('.pay-method').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.method === 'wallet' && !WALLET_READY) {
+      payError.textContent = lang === 'en'
+        ? 'Enable Wallet Integration ID in Paymob first.'
+        : 'فعّل تكامل المحفظة من Paymob الأول (Integration ID).';
+      return;
+    }
+    payMethod = btn.dataset.method || 'all';
+    document.querySelectorAll('.pay-method').forEach(b => b.classList.toggle('active', b === btn));
+    payError.textContent = '';
+  });
+});
+
+function openPayModal(data) {
+  const pack = (data && data.pack) || { price_egp: BOOK_PACK_PRICE, credits: BOOK_PACK_CREDITS };
+  document.getElementById('pay-title').textContent = t('pay_title');
+  document.getElementById('pay-sub').textContent = t('pay_sub');
+  document.getElementById('pay-pack-label').textContent =
+    `${pack.credits} ${lang === 'en' ? 'books' : 'كتب'} · ${pack.price_egp} ${lang === 'en' ? 'EGP' : 'جنيه'}`;
+  payStartBtn.textContent = t('pay_btn');
+  payError.textContent = '';
+  payMethod = WALLET_READY ? 'all' : 'card';
+  document.querySelectorAll('.pay-method').forEach(b => b.classList.toggle('active', b.dataset.method === payMethod));
+  if (!PAYMOB_READY && data && data.paymob_ready === false) {
+    payError.textContent = lang === 'en' ? 'Payments are not configured yet.' : 'الدفع لسة مش متفعّل.';
+    payStartBtn.disabled = true;
+  } else {
+    payStartBtn.disabled = false;
+  }
+  payModal.classList.add('open');
+}
+
+payStartBtn.onclick = async () => {
+  payError.textContent = '';
+  payStartBtn.disabled = true;
+  try {
+    const ok = await ensureAuth();
+    if (!ok) return;
+    const phone = (document.getElementById('pay-phone').value || '').trim();
+    const method = payMethod === 'all' ? 'card' : payMethod;
+    if (method === 'wallet') {
+      const local = phone.replace(/\s|-/g, '');
+      if (!/^01[0125][0-9]{8}$/.test(local) && !/^\+201[0125][0-9]{8}$/.test(local)) {
+        throw new Error(lang === 'en' ? 'Enter wallet mobile number (01xxxxxxxxx).' : 'اكتب رقم المحفظة (01xxxxxxxxx).');
+      }
+    }
+    payStartBtn.textContent = method === 'wallet'
+      ? (lang === 'en' ? 'Paying…' : 'جاري الدفع بالمحفظة…')
+      : (lang === 'en' ? 'Redirecting…' : 'جاري التحويل…');
+    const res = await fetchWithTimeout('/pay/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, method }),
+    }, 90000);
+    const data = await readJsonSafe(res);
+    if (!res.ok || data.error) throw new Error(data.error || 'payment failed');
+    if (!data.checkout_url) throw new Error(lang === 'en' ? 'Missing checkout URL' : 'مفيش رابط دفع');
+    location.href = data.checkout_url;
+  } catch (err) {
+    payError.textContent = mapClientError(err);
+    payStartBtn.disabled = false;
+    payStartBtn.textContent = t('pay_btn');
+  }
+};
+
+async function restoreSession(saved) {
+  try {
+    const res = await fetchWithTimeout(`/session/${saved.sessionId}`, {}, 60000);
+    const data = await readJsonSafe(res);
+    if (!res.ok || data.error) throw new Error(data.error || 'missing');
+    sessionId = data.session_id;
+    childNameInput.value = saved.childName || '';
+    (data.custom_scenes || []).forEach(s => addSceneCard(s, false));
+    (saved.selected || []).slice(0, MAX_PAGES).forEach(id => {
+      selected.add(id);
+      const el = document.querySelector(`.scene-card[data-id="${id}"]`);
+      if (el) el.classList.add('selected');
+    });
+    updateCounter();
+    results.innerHTML = '';
+    pageImages = {};
+    const order = [];
+    (data.pages || []).forEach(p => {
+      const scene = sceneMeta(p.scene_id);
+      makeSlot(scene); fillSlot(scene, p.image_b64); order.push(p.scene_id);
+    });
+    const preferred = (saved.order || []).filter(id => pageImages[id]);
+    showReadyButtons(preferred.length ? preferred : order);
+    goToStep(order.length ? 3 : (saved.step === 4 ? 3 : (saved.step || 2)));
+    sessionBanner.classList.remove('show');
+  } catch (e) {
+    clearLocal();
+    sessionBanner.classList.remove('show');
+    setStatus(mapClientError(e), true);
+  }
+}
+
+document.getElementById('restore-btn').onclick = () => { const s = loadLocal(); if (s) restoreSession(s); };
+document.getElementById('dismiss-session-btn').onclick = () => { clearLocal(); sessionBanner.classList.remove('show'); };
+
+(function init() {
+  const saved = loadLocal();
+  if (saved && saved.sessionId) sessionBanner.classList.add('show');
+  applyLang();
+  goToStep(1);
+  refreshAuth().then(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('login') === '1' && !currentUser) openAuthModal();
+    const restoreId = params.get('restore');
+    if (restoreId && /^[a-f0-9]+$/i.test(restoreId)) {
+      restoreSession({ sessionId: restoreId, childName: '', selected: [], order: [], step: 3 });
+    }
+  });
+})();
+</script>
+</body>
+</html>

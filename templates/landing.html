@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لونّي — كتاب تلوين باسم طفلك</title>
+<meta name="description" content="ارفع صورة طفلك واطلع كتاب تلوين PDF جاهز للطباعة بوظائف يحلم بيها.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --display: "Baloo Bhaijaan 2", "SF Arabic", sans-serif;
+    --font: "IBM Plex Sans Arabic", "SF Arabic", Tahoma, sans-serif;
+    --ink: #12263a;
+    --muted: #5b6b7c;
+    --paper: #f3f8fc;
+    --sea: #2f6f8f;
+    --lemon: #f2c14e;
+    --coral: #e85d4c;
+    --mint: #7eb8a2;
+    --line: rgba(18, 38, 58, 0.12);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; display: block; }
+
+  .nav {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding: 14px 28px;
+    background: rgba(255,255,255,.88);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  .nav-brand {
+    font-family: var(--display); font-weight: 800; font-size: 26px;
+    letter-spacing: -0.03em; line-height: 1;
+  }
+  .nav-brand span { color: var(--coral); }
+  .nav-links {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .nav-links a:not(.btn) {
+    padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--muted);
+    border-radius: 10px; transition: color .15s ease, background .15s ease;
+  }
+  .nav-links a:not(.btn):hover { color: var(--ink); background: rgba(18,38,58,.04); }
+  .nav .btn { padding: 10px 16px; font-size: 14px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 14px 22px; border-radius: 12px; font-family: var(--font);
+    font-weight: 700; font-size: 15px; border: 0; cursor: pointer;
+    transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--ink); color: #fff; }
+  .btn-primary:hover { background: #0c1a28; }
+  .btn-lemon {
+    background: var(--lemon); color: var(--ink);
+    box-shadow: 0 10px 28px rgba(242, 193, 78, .35);
+  }
+  .btn-ghost {
+    background: rgba(255,255,255,.55); color: var(--ink);
+    border: 1.5px solid rgba(18,38,58,.16);
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    min-height: calc(100vh - 64px);
+    min-height: calc(100dvh - 64px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    align-items: stretch;
+    overflow: hidden;
+    background: #eaf3f8;
+  }
+  .hero-copy {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: clamp(40px, 8vh, 88px) clamp(24px, 5vw, 72px);
+    background:
+      linear-gradient(120deg, #f7fbff 0%, #f7fbff 55%, rgba(247,251,255,.55) 100%);
+  }
+  .hero-brand {
+    font-family: var(--display);
+    font-size: clamp(72px, 12vw, 120px);
+    font-weight: 800; line-height: .88; margin: 0 0 22px;
+    letter-spacing: -0.04em;
+    animation: riseIn .7s ease both;
+  }
+  .hero-brand span { color: var(--coral); }
+  .hero h1 {
+    font-family: var(--display); font-weight: 700;
+    font-size: clamp(26px, 3.4vw, 38px); line-height: 1.28;
+    margin: 0 0 14px; max-width: 12ch;
+    color: var(--ink);
+    animation: riseIn .7s ease .06s both;
+  }
+  .hero .lead {
+    margin: 0 0 30px; color: var(--muted); font-size: clamp(16px, 1.5vw, 18px);
+    max-width: 32ch; line-height: 1.7;
+    animation: riseIn .7s ease .12s both;
+  }
+  .hero-cta {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    animation: riseIn .7s ease .18s both;
+  }
+  .hero-stage {
+    position: relative;
+    background:
+      radial-gradient(circle at 30% 20%, #ffe9a8 0%, transparent 42%),
+      radial-gradient(circle at 80% 80%, #c9ebe0 0%, transparent 45%),
+      linear-gradient(160deg, #cfe4f0 0%, #f3efe4 50%, #f8d7c8 100%);
+    display: grid; place-items: center;
+    padding: clamp(24px, 5vw, 56px);
+    overflow: hidden;
+  }
+  .hero-stage::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath d='M10 90c15-30 30-30 45 0s30 30 45 0' fill='none' stroke='%2312263a' stroke-opacity='.06' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-size: 140px;
+    animation: paperDrift 32s linear infinite;
+  }
+  .hero-page {
+    position: relative; z-index: 1;
+    width: min(100%, 420px);
+    aspect-ratio: 210 / 297;
+    background: #fff;
+    border: 2px solid rgba(18,38,58,.14);
+    box-shadow:
+      18px 24px 0 rgba(18,38,58,.06),
+      0 30px 60px rgba(18, 38, 58, .12);
+    padding: 8%;
+    animation: pageIn 1s ease .15s both;
+  }
+  .hero-page svg { width: 100%; height: 100%; }
+  @keyframes pageIn {
+    from { opacity: 0; transform: translateY(28px) rotate(-2deg); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes paperDrift {
+    from { background-position: 0 0; }
+    to { background-position: 140px 70px; }
+  }
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  section { padding: 88px 28px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  .sec-kicker {
+    font-size: 13px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--sea); margin: 0 0 10px;
+  }
+  .sec-title {
+    font-family: var(--display); font-size: clamp(30px, 4vw, 44px);
+    font-weight: 800; margin: 0 0 12px; line-height: 1.2; letter-spacing: -0.02em;
+  }
+  .sec-lead {
+    margin: 0; color: var(--muted); font-size: 17px; max-width: 46ch;
+  }
+
+  .idea {
+    background: #fff;
+    border-block: 1px solid var(--line);
+  }
+  .idea-grid {
+    display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center;
+  }
+  .idea-visual {
+    aspect-ratio: 4/3;
+    background:
+      linear-gradient(160deg, #fff7d6, #e8f6f1 55%, #fde8e2);
+    border: 1px solid var(--line);
+    position: relative; overflow: hidden;
+  }
+  .idea-visual svg {
+    position: absolute; inset: 8% 10%; width: 80%; height: 84%;
+  }
+
+  .how { background: var(--paper); }
+  .steps {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;
+    margin-top: 40px; counter-reset: step;
+  }
+  .step { position: relative; padding-top: 8px; }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    font-family: var(--display); font-size: 64px; font-weight: 800;
+    color: rgba(47, 111, 143, .18); line-height: 1; display: block; margin-bottom: 8px;
+  }
+  .step h3 {
+    font-family: var(--display); font-size: 24px; margin: 0 0 8px; font-weight: 700;
+  }
+  .step p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .results {
+    background: var(--ink); color: #f5f9fc;
+  }
+  .results .sec-kicker { color: var(--lemon); }
+  .results .sec-lead { color: rgba(245,249,252,.72); }
+  .gallery {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 36px;
+  }
+  .shot {
+    aspect-ratio: 210/297;
+    background: #fff; color: var(--ink);
+    border: 0; padding: 14px 12px 10px;
+    display: flex; flex-direction: column; gap: 8px;
+    transform: translateY(12px); opacity: 0;
+    transition: transform .5s ease, opacity .5s ease;
+  }
+  .shot.in { transform: none; opacity: 1; }
+  .shot svg { flex: 1; width: 100%; }
+  .shot span {
+    font-size: 13px; font-weight: 700; text-align: center;
+  }
+
+  .proof {
+    background: #fff;
+  }
+  .quotes {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 36px;
+  }
+  .quote {
+    border-inline-start: 3px solid var(--lemon);
+    padding-inline-start: 18px;
+  }
+  .quote p {
+    margin: 0 0 12px; font-size: 18px; font-weight: 500; line-height: 1.7;
+  }
+  .quote cite {
+    font-style: normal; color: var(--muted); font-size: 14px; font-weight: 600;
+  }
+
+  .stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--line);
+  }
+  .stat strong {
+    display: block; font-family: var(--display); font-size: 40px; font-weight: 800;
+    line-height: 1; margin-bottom: 6px;
+  }
+  .stat span { color: var(--muted); font-size: 14px; font-weight: 600; }
+
+  .cta {
+    background:
+      radial-gradient(circle at 20% 30%, rgba(242,193,78,.45), transparent 40%),
+      radial-gradient(circle at 85% 70%, rgba(126,184,162,.35), transparent 40%),
+      #eaf4fa;
+    text-align: center;
+  }
+  .cta .sec-title { margin-inline: auto; }
+  .cta .sec-lead { margin: 0 auto 28px; }
+  .cta-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+
+  footer {
+    position: relative;
+    padding: 48px 28px 32px;
+    border-top: 1px solid var(--line);
+    background:
+      linear-gradient(180deg, #eef6fb 0%, #f7fbff 55%, #fff 100%);
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .footer-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 36px 48px;
+    align-items: end;
+  }
+  .footer-brand {
+    font-family: var(--display); font-weight: 800; font-size: 32px;
+    letter-spacing: -0.03em; line-height: 1; color: var(--ink);
+  }
+  .footer-brand span { color: var(--coral); }
+  .footer-tag {
+    margin: 12px 0 0; max-width: 34ch;
+    color: var(--muted); font-size: 15px; line-height: 1.6;
+  }
+  .footer-nav {
+    display: flex; flex-wrap: wrap; gap: 8px 4px;
+    justify-content: flex-end;
+  }
+  .footer-nav a {
+    padding: 8px 12px; border-radius: 10px;
+    font-size: 14px; font-weight: 600; color: var(--muted);
+    transition: color .15s ease, background .15s ease;
+  }
+  .footer-nav a:hover { color: var(--ink); background: rgba(18,38,58,.05); }
+  .footer-bottom {
+    max-width: 1100px; margin: 28px auto 0;
+    padding-top: 20px; border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .footer-bottom a { font-weight: 600; color: var(--sea); }
+  .footer-bottom a:hover { color: var(--ink); }
+
+  .reveal {
+    opacity: 0; transform: translateY(20px);
+    transition: opacity .6s ease, transform .6s ease;
+  }
+  .reveal.in { opacity: 1; transform: none; }
+
+  @media (max-width: 900px) {
+    .hero {
+      grid-template-columns: 1fr;
+      min-height: auto;
+    }
+    .hero-stage {
+      min-height: 52vh;
+      order: -1;
+    }
+    .hero-page { width: min(72%, 320px); }
+    .idea-grid, .steps, .gallery, .quotes, .stats { grid-template-columns: 1fr; }
+    .gallery { grid-template-columns: 1fr 1fr; }
+    .nav-links a:not(.btn) { display: none; }
+    .footer-inner { grid-template-columns: 1fr; gap: 24px; }
+    .footer-nav { justify-content: flex-start; }
+  }
+  @media (max-width: 560px) {
+    .nav { padding: 12px 16px; }
+    section { padding: 64px 16px; }
+    .gallery { gap: 10px; }
+    .hero-copy { padding: 36px 20px 48px; }
+    footer { padding: 40px 16px 28px; }
+  }
+</style>
+</head>
+<body>
+  <header class="nav">
+    <a class="nav-brand" href="/">لونّ<span>ي</span></a>
+    <nav class="nav-links" aria-label="القائمة">
+      <a href="#idea">الفكرة</a>
+      <a href="#how">الخطوات</a>
+      <a href="#results">النتائج</a>
+      <a class="btn btn-primary" href="/app">اصنع كتابك</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="hero-brand">لونّ<span>ي</span></p>
+      <h1>كتاب تلوين باسم طفلك</h1>
+      <p class="lead">ارفع الصورة، اختار الوظائف، وخذ PDF بمقاس A4 جاهز للطباعة.</p>
+      <div class="hero-cta">
+        <a class="btn btn-lemon" href="/app">ابدأ الكتاب</a>
+        <a class="btn btn-ghost" href="#results">شوف النتائج</a>
+      </div>
+    </div>
+    <div class="hero-stage" aria-hidden="true">
+      <div class="hero-page">
+        <svg viewBox="0 0 280 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="140" cy="118" r="52" stroke="#12263a" stroke-width="3.2"/>
+          <path d="M118 112c8 14 28 18 44 0" stroke="#12263a" stroke-width="2.8" stroke-linecap="round"/>
+          <circle cx="124" cy="104" r="4.5" fill="#12263a"/>
+          <circle cx="156" cy="104" r="4.5" fill="#12263a"/>
+          <path d="M95 185h90v95H95z" stroke="#12263a" stroke-width="3.2"/>
+          <path d="M110 210h28M110 235h48M110 260h36" stroke="#12263a" stroke-width="2.8" stroke-linecap="round"/>
+          <path d="M185 200l48-28v130l-48-28V200z" stroke="#12263a" stroke-width="3.2"/>
+          <circle cx="220" cy="78" r="22" stroke="#e85d4c" stroke-width="2.8"/>
+          <path d="M48 300c28-18 56-18 84 0s56 18 84 0" stroke="#2f6f8f" stroke-width="2.8" stroke-linecap="round"/>
+          <path d="M60 70l18 28H42z" stroke="#f2c14e" stroke-width="2.6"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="idea" id="idea">
+    <div class="wrap idea-grid reveal">
+      <div>
+        <p class="sec-kicker">الفكرة</p>
+        <h2 class="sec-title">مش صفحات عامة… ده كتاب فيه وش طفلك</h2>
+        <p class="sec-lead">
+          لونّي بيحوّل صورة الطفل لصفحات تلوين واضحة الخطوط: طبيب، مهندس، طيار، رائد فضاء…
+          بنفس ملامحه، جاهزة تتطبع وتتلون في البيت.
+        </p>
+      </div>
+      <div class="idea-visual" aria-hidden="true">
+        <svg viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="30" y="24" width="150" height="210" fill="#fff" stroke="#12263a" stroke-width="2.5"/>
+          <circle cx="105" cy="95" r="28" stroke="#12263a" stroke-width="2.5"/>
+          <path d="M70 150h70v50H70z" stroke="#12263a" stroke-width="2.5"/>
+          <rect x="210" y="50" width="150" height="210" fill="#fff" stroke="#12263a" stroke-width="2.5"/>
+          <path d="M250 120h70M250 150h50M250 180h60" stroke="#12263a" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="285" cy="90" r="18" stroke="#e85d4c" stroke-width="2.5"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="how" id="how">
+    <div class="wrap reveal">
+      <p class="sec-kicker">إزاي بيشتغل</p>
+      <h2 class="sec-title">ثلاث خطوات… والكتاب عندك</h2>
+      <p class="sec-lead">من غير تعقيد: صورة، وظائف، توليد.</p>
+      <div class="steps">
+        <div class="step">
+          <h3>ارفع الصورة</h3>
+          <p>صورة واضحة لوجه الطفل. تقدر ترفع أكتر من صورة عشان الشبه يبقى أدق.</p>
+        </div>
+        <div class="step">
+          <h3>اختار الوظائف</h3>
+          <p>طبيب، طاهي، شرطي، فنان… أو اكتب وظيفة مخصصة بالعربي.</p>
+        </div>
+        <div class="step">
+          <h3>نزّل الـ PDF</h3>
+          <p>صفحات A4 جاهزة للطباعة، مع غلاف باسم الطفل وترتيب تقدر تعدّله.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="results" id="results">
+    <div class="wrap">
+      <p class="sec-kicker reveal">النتائج</p>
+      <h2 class="sec-title reveal">صفحات تلوين نضيفة… وسهلة للطفل</h2>
+      <p class="sec-lead reveal">خطوط واضحة، خلفية بيضا، ومقاس طباعة A4 عمودي.</p>
+      <div class="gallery">
+        <div class="shot" style="transition-delay:.05s">
+          <svg viewBox="0 0 200 260" fill="none"><circle cx="100" cy="90" r="36" stroke="#12263a" stroke-width="2.5"/><path d="M70 140h60v55H70z" stroke="#12263a" stroke-width="2.5"/><path d="M55 155h20M145 155h20" stroke="#12263a" stroke-width="2.5"/><path d="M85 80h8M108 80h8M90 100c6 8 16 8 22 0" stroke="#12263a" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>طبيب</span>
+        </div>
+        <div class="shot" style="transition-delay:.12s">
+          <svg viewBox="0 0 200 260" fill="none"><path d="M70 70h60l20 30H50z" stroke="#12263a" stroke-width="2.5"/><rect x="60" y="100" width="80" height="70" stroke="#12263a" stroke-width="2.5"/><circle cx="100" cy="200" r="28" stroke="#12263a" stroke-width="2.5"/><path d="M40 230h120" stroke="#2f6f8f" stroke-width="2.5"/></svg>
+          <span>مهندس</span>
+        </div>
+        <div class="shot" style="transition-delay:.19s">
+          <svg viewBox="0 0 200 260" fill="none"><circle cx="100" cy="95" r="34" stroke="#12263a" stroke-width="2.5"/><path d="M55 150c20-25 70-25 90 0v40H55v-40z" stroke="#12263a" stroke-width="2.5"/><path d="M30 120c20-10 40 0 50 15" stroke="#e85d4c" stroke-width="2.5" stroke-linecap="round"/><circle cx="155" cy="55" r="16" stroke="#f2c14e" stroke-width="2.5"/></svg>
+          <span>طيار</span>
+        </div>
+        <div class="shot" style="transition-delay:.26s">
+          <svg viewBox="0 0 200 260" fill="none"><circle cx="100" cy="100" r="40" stroke="#12263a" stroke-width="2.5"/><path d="M70 150h60v20H70z" stroke="#12263a" stroke-width="2.5"/><path d="M85 180v40M115 180v40M60 220h80" stroke="#12263a" stroke-width="2.5"/><circle cx="55" cy="60" r="8" stroke="#7eb8a2" stroke-width="2"/><circle cx="150" cy="70" r="6" stroke="#7eb8a2" stroke-width="2"/></svg>
+          <span>رائد فضاء</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="proof" id="proof">
+    <div class="wrap reveal">
+      <p class="sec-kicker">آراء ونتائج</p>
+      <h2 class="sec-title">الأهالي بيحبّوا اللحظة دي</h2>
+      <div class="quotes">
+        <blockquote class="quote">
+          <p>«طبعت الكتاب لسارة… قعدت تلوّن نفسها وهي دكتورة لساعة كاملة.»</p>
+          <cite>— نورا، أم لطفلة ٦ سنين</cite>
+        </blockquote>
+        <blockquote class="quote">
+          <p>«الشبه واضح والخطوط مريحة للطباعة. وفّرت عليّا لفّ المكتبات.»</p>
+          <cite>— أحمد، أب لطفل ٤ سنين</cite>
+        </blockquote>
+      </div>
+      <div class="stats">
+        <div class="stat"><strong>A4</strong><span>مقاس طباعة جاهز</span></div>
+        <div class="stat"><strong>٨</strong><span>صفحات في الكتاب الواحد</span></div>
+        <div class="stat"><strong>٣</strong><span>خطوات من الصورة للـ PDF</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="start">
+    <div class="wrap reveal">
+      <p class="sec-kicker">ابدأ</p>
+      <h2 class="sec-title">خلّي أول كتاب لطفلك جاهز النهاردة</h2>
+      <p class="sec-lead">ادخل على الأداة، ارفع الصورة، واختار الوظائف. الباقي علينا.</p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="/app">ادخل على الأداة</a>
+        <a class="btn btn-ghost" href="/dashboard">حسابي</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-inner">
+      <div>
+        <a class="footer-brand" href="/">لونّ<span>ي</span></a>
+        <p class="footer-tag">كتاب تلوين باسم طفلك… صورة، وظائف، وPDF جاهز للطباعة.</p>
+      </div>
+      <nav class="footer-nav" aria-label="روابط الفوتر">
+        <a href="#idea">الفكرة</a>
+        <a href="#how">الخطوات</a>
+        <a href="#results">النتائج</a>
+        <a href="/app">اصنع كتابك</a>
+        <a href="/dashboard">حسابي</a>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 لونّي</span>
+      <a href="/app">ابدأ دلوقتي</a>
+    </div>
+  </footer>
+
+<script>
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('in');
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.18 });
+document.querySelectorAll('.reveal, .shot').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
