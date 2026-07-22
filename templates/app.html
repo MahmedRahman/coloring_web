@@ -96,6 +96,21 @@
   .auth-form input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,0.12); }
   .auth-error { color: var(--danger); font-size: 13px; font-weight: 700; min-height: 20px; margin-top: 10px; }
   .auth-form .btn { width: 100%; margin-top: 14px; }
+  .auth-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 16px 0 12px; color: var(--muted); font-size: 12px; font-weight: 700;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ""; flex: 1; height: 1px; background: var(--border);
+  }
+  .btn-google {
+    width: 100%; gap: 10px;
+    background: #fff; color: var(--text);
+    border: 1.5px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-google:hover { background: #fafafa; transform: translateY(-1px); }
+  .btn-google svg { flex: 0 0 auto; }
   .modal-head {
     display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
     margin-bottom: 4px;
@@ -502,7 +517,19 @@
       <h3 data-i18n="auth_title">تسجيل الدخول مطلوب</h3>
       <button type="button" class="modal-close-x" id="close-auth-btn" aria-label="Close">×</button>
     </div>
-    <p class="modal-sub" data-i18n="auth_sub">عشان تولّد الكتاب، سجّل دخول أو اعمل حساب جديد بالإيميل</p>
+    <p class="modal-sub" data-i18n="auth_sub">عشان تولّد الكتاب، سجّل دخول أو اعمل حساب جديد بالإيميل أو Google</p>
+    {% if google_ready %}
+    <a class="btn btn-google" id="google-login-btn" href="/auth/google">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/>
+        <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.1 29.4 4 24 4 16.1 4 9.2 8.5 6.3 14.7z"/>
+        <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.2C29.3 35.3 26.8 36 24 36c-5.3 0-9.7-3.1-11.3-7.5l-6.5 5C9.1 39.4 16 44 24 44z"/>
+        <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.1-3.5 5.5-6.6 6.6l.1.1 6.3 5.2C36.8 41.3 44 36 44 24c0-1.2-.1-2.3-.4-3.5z"/>
+      </svg>
+      <span data-i18n="google_continue">المتابعة مع Google</span>
+    </a>
+    <div class="auth-divider"><span data-i18n="or_email">أو بالإيميل</span></div>
+    {% endif %}
     <div class="auth-tabs">
       <button type="button" class="active" id="tab-login" data-i18n="login">تسجيل الدخول</button>
       <button type="button" id="tab-register" data-i18n="register">حساب جديد</button>
@@ -606,7 +633,12 @@ const I18N = {
     dashboard: 'حسابي',
     login: 'تسجيل الدخول', logout: 'خروج', register: 'حساب جديد',
     auth_title: 'تسجيل الدخول مطلوب',
-    auth_sub: 'عشان تولّد الكتاب، سجّل دخول أو اعمل حساب جديد بالإيميل',
+    auth_sub: 'عشان تولّد الكتاب، سجّل دخول أو اعمل حساب جديد بالإيميل أو Google',
+    google_continue: 'المتابعة مع Google',
+    or_email: 'أو بالإيميل',
+    google_off: 'تسجيل Google مش مفعّل حالياً.',
+    google_failed: 'فشل الدخول بجوجل. جرّب تاني.',
+    google_unverified: 'لازم إيميل Google يكون موثّق.',
     email: 'الإيميل', password: 'كلمة المرور', username: 'اسم المستخدم',
   },
   en: {
@@ -640,7 +672,12 @@ const I18N = {
     dashboard: 'My account',
     login: 'Log in', logout: 'Log out', register: 'Sign up',
     auth_title: 'Login required',
-    auth_sub: 'Log in or create an account with email to generate the book',
+    auth_sub: 'Log in or create an account with email or Google to generate the book',
+    google_continue: 'Continue with Google',
+    or_email: 'or with email',
+    google_off: 'Google sign-in is not configured yet.',
+    google_failed: 'Google sign-in failed. Please try again.',
+    google_unverified: 'Your Google email must be verified.',
     email: 'Email', password: 'Password', username: 'Username',
   }
 };
@@ -1351,6 +1388,12 @@ document.getElementById('dismiss-session-btn').onclick = () => { clearLocal(); s
   refreshAuth().then(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('login') === '1' && !currentUser) openAuthModal();
+    const authErr = params.get('auth_error');
+    if (authErr && !currentUser) {
+      openAuthModal();
+      const msg = t(authErr) || authErr;
+      authError.textContent = msg;
+    }
     const restoreId = params.get('restore');
     if (restoreId && /^[a-f0-9]+$/i.test(restoreId)) {
       restoreSession({ sessionId: restoreId, childName: '', selected: [], order: [], step: 3 });

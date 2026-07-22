@@ -37,6 +37,7 @@ import arabic_reshaper
 import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
 from bidi.algorithm import get_display
+from authlib.integrations.flask_client import OAuth
 from flask import Flask, jsonify, render_template, request, send_file, abort, session, redirect, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -67,6 +68,19 @@ TRANSLATE_MODEL = "@cf/meta/m2m100-1.2b"
 FREE_BOOKS_PER_MONTH = int(os.environ.get("FREE_BOOKS_PER_MONTH", "3"))
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin")
+GOOGLE_CLIENT_ID = (os.environ.get("GOOGLE_CLIENT_ID") or "").strip()
+GOOGLE_CLIENT_SECRET = (os.environ.get("GOOGLE_CLIENT_SECRET") or "").strip()
+APP_URL = (os.environ.get("APP_URL") or "").rstrip("/")
+
+
+def google_ready() -> bool:
+    return bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+
+
+def app_base_url() -> str:
+    if APP_URL:
+        return APP_URL
+    return request.url_root.rstrip("/")
 
 # A4 portrait ratio 210:297 — dimensions are multiples of 16 (model-friendly)
 # and stay within Workers AI max 1920px
@@ -175,6 +189,18 @@ app.jinja_env.auto_reload = True
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+if APP_URL.startswith("https://"):
+    app.config["SESSION_COOKIE_SECURE"] = True
+
+oauth = OAuth(app)
+if google_ready():
+    oauth.register(
+        name="google",
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
 
 limiter = Limiter(
     get_remote_address,
@@ -210,8 +236,11 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT NOT NULL UNIQUE,
                 username TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL,
-                created_at TEXT NOT NULL
+                password_hash TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                book_credits INTEGER DEFAULT 0,
+                google_id TEXT UNIQUE,
+                auth_provider TEXT DEFAULT 'email'
             );
             CREATE TABLE IF NOT EXISTS books (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -247,6 +276,15 @@ def init_db():
         user_cols = {r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
         if "book_credits" not in user_cols:
             conn.execute("ALTER TABLE users ADD COLUMN book_credits INTEGER DEFAULT 0")
+        if "google_id" not in user_cols:
+            conn.execute("ALTER TABLE users ADD COLUMN google_id TEXT")
+        if "auth_provider" not in user_cols:
+            conn.execute("ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT 'email'")
+        # Unique index for google_id (ignore NULLs / duplicates safely)
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) "
+            "WHERE google_id IS NOT NULL"
+        )
         conn.commit()
         conn.close()
 
@@ -262,7 +300,8 @@ def current_user():
     with _db_lock:
         conn = db_connect()
         row = conn.execute(
-            "SELECT id, email, username, created_at, book_credits FROM users WHERE id = ?",
+            "SELECT id, email, username, created_at, book_credits, auth_provider, google_id "
+            "FROM users WHERE id = ?",
             (uid,),
         ).fetchone()
         conn.close()
@@ -439,7 +478,96 @@ def user_public(user: dict) -> dict:
         "email": user["email"],
         "username": user["username"],
         "book_credits": int(user.get("book_credits") or 0),
+        "auth_provider": user.get("auth_provider") or "email",
     }
+
+
+def _slug_username(raw: str) -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9_\u0600-\u06FF]", "", (raw or "").strip())
+    if len(cleaned) < 3:
+        cleaned = "user" + secrets.token_hex(3)
+    return cleaned[:30]
+
+
+def _next_username(conn: sqlite3.Connection, preferred: str) -> str:
+    base = _slug_username(preferred)
+    candidate = base
+    n = 0
+    while True:
+        row = conn.execute(
+            "SELECT id FROM users WHERE username = ?", (candidate,)
+        ).fetchone()
+        if not row:
+            return candidate
+        n += 1
+        suffix = str(n)
+        candidate = (base[: max(1, 30 - len(suffix))] + suffix)[:30]
+
+
+def upsert_google_user(google_id: str, email: str, name: str) -> int:
+    email = (email or "").strip().lower()
+    google_id = (google_id or "").strip()
+    if not google_id or not email or not EMAIL_RE.match(email):
+        raise ValueError("invalid google profile")
+
+    now = datetime.now(timezone.utc).isoformat()
+    with _db_lock:
+        conn = db_connect()
+        by_google = conn.execute(
+            "SELECT id FROM users WHERE google_id = ?", (google_id,)
+        ).fetchone()
+        if by_google:
+            user_id = int(by_google["id"])
+            conn.execute(
+                "UPDATE users SET auth_provider = CASE "
+                "WHEN auth_provider IS NULL OR auth_provider = 'email' THEN 'email+google' "
+                "ELSE auth_provider END "
+                "WHERE id = ?",
+                (user_id,),
+            )
+            conn.commit()
+            conn.close()
+            return user_id
+
+        by_email = conn.execute(
+            "SELECT id, auth_provider FROM users WHERE email = ?",
+            (email,),
+        ).fetchone()
+        if by_email:
+            user_id = int(by_email["id"])
+            provider = by_email["auth_provider"] or "email"
+            if provider == "email":
+                provider = "email+google"
+            elif "google" not in provider:
+                provider = f"{provider}+google"
+            conn.execute(
+                "UPDATE users SET google_id = ?, auth_provider = ? WHERE id = ?",
+                (google_id, provider, user_id),
+            )
+            conn.commit()
+            conn.close()
+            return user_id
+
+        preferred = name or email.split("@")[0]
+        last_err: Optional[Exception] = None
+        for _ in range(8):
+            username = _next_username(conn, preferred)
+            try:
+                cur = conn.execute(
+                    "INSERT INTO users (email, username, password_hash, created_at, "
+                    "book_credits, google_id, auth_provider) VALUES (?, ?, '', ?, 0, ?, 'google')",
+                    (email, username, now, google_id),
+                )
+                user_id = int(cur.lastrowid)
+                conn.commit()
+                conn.close()
+                return user_id
+            except sqlite3.IntegrityError as e:
+                last_err = e
+                preferred = (email.split("@")[0] or "user") + secrets.token_hex(2)
+                continue
+        conn.close()
+        raise RuntimeError(f"could not create google user: {last_err}")
 
 
 def get_user_credits(user_id: int) -> int:
@@ -1052,6 +1180,7 @@ def tool_app():
         book_pack_credits=BOOK_PACK_CREDITS,
         paymob_ready=paymob_configured(),
         wallet_ready=wallet_enabled(),
+        google_ready=google_ready(),
     )
 
 
@@ -1076,7 +1205,8 @@ def auth_register():
         with _db_lock:
             conn = db_connect()
             cur = conn.execute(
-                "INSERT INTO users (email, username, password_hash, created_at) VALUES (?, ?, ?, ?)",
+                "INSERT INTO users (email, username, password_hash, created_at, auth_provider) "
+                "VALUES (?, ?, ?, ?, 'email')",
                 (email, username, pw_hash, now),
             )
             user_id = cur.lastrowid
@@ -1106,18 +1236,72 @@ def auth_login():
     with _db_lock:
         conn = db_connect()
         row = conn.execute(
-            "SELECT id, email, username, password_hash FROM users WHERE email = ?",
+            "SELECT id, email, username, password_hash, book_credits, auth_provider "
+            "FROM users WHERE email = ?",
             (email,),
         ).fetchone()
         conn.close()
 
-    if not row or not check_password_hash(row["password_hash"], password):
+    if not row:
+        return jsonify({"error": "الإيميل أو كلمة المرور غلط."}), 401
+
+    pw_hash = row["password_hash"] or ""
+    if not pw_hash:
+        return jsonify({
+            "error": "الحساب ده متسجل بجوجل. دوس على «المتابعة مع Google».",
+            "error_en": "This account uses Google. Continue with Google.",
+        }), 401
+    if not check_password_hash(pw_hash, password):
         return jsonify({"error": "الإيميل أو كلمة المرور غلط."}), 401
 
     session.clear()
     session["user_id"] = row["id"]
     session.permanent = True
     return jsonify({"ok": True, "user": user_public(dict(row))})
+
+
+@app.route("/auth/google")
+@limiter.limit("30 per hour")
+def auth_google_start():
+    if not google_ready():
+        return redirect(url_for("tool_app", login="1", auth_error="google_off"))
+    redirect_uri = f"{app_base_url()}/auth/google/callback"
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@app.route("/auth/google/callback")
+def auth_google_callback():
+    if not google_ready():
+        return redirect(url_for("tool_app", login="1", auth_error="google_off"))
+    try:
+        token = oauth.google.authorize_access_token()
+    except Exception:
+        return redirect(url_for("tool_app", login="1", auth_error="google_failed"))
+
+    info = token.get("userinfo") if isinstance(token, dict) else None
+    if not info:
+        try:
+            info = oauth.google.userinfo(token=token)
+        except Exception:
+            info = None
+    if not info:
+        return redirect(url_for("tool_app", login="1", auth_error="google_failed"))
+
+    google_id = str(info.get("sub") or "").strip()
+    email = (info.get("email") or "").strip().lower()
+    name = (info.get("name") or info.get("given_name") or "").strip()
+    if not info.get("email_verified", True):
+        return redirect(url_for("tool_app", login="1", auth_error="google_unverified"))
+
+    try:
+        user_id = upsert_google_user(google_id, email, name)
+    except Exception:
+        return redirect(url_for("tool_app", login="1", auth_error="google_failed"))
+
+    session.clear()
+    session["user_id"] = user_id
+    session.permanent = True
+    return redirect(url_for("tool_app"))
 
 
 @app.route("/auth/logout", methods=["POST"])
