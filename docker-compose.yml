@@ -1,0 +1,16 @@
+services:
+  web:
+    build: .
+    container_name: coloring_web
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    env_file:
+      - .env
+    volumes:
+      - coloring_data:/app/data
+    environment:
+      - COLORING_DATA_DIR=/app/data
+
+volumes:
+  coloring_data:
