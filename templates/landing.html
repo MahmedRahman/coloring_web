@@ -37,17 +37,27 @@ img{max-width:100%;display:block}
 .nav{
   position:sticky;top:0;z-index:50;
   display:flex;align-items:center;justify-content:space-between;
-  gap:16px;padding:12px 28px;
-  background:rgba(255,255,255,.96);
+  gap:16px;padding:14px 32px;
+  background:rgba(255,255,255,.97);
   border-bottom:1px solid var(--border);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  min-height:60px;
 }
-.nav-brand{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.02em;color:var(--ink);flex-shrink:0}
+.nav-brand{
+  font-family:var(--display);font-weight:800;font-size:26px;
+  letter-spacing:-.03em;color:var(--ink);flex-shrink:0;
+  line-height:1;
+}
 .nav-brand span{color:var(--coral)}
-.nav-links{display:flex;align-items:center;gap:4px;flex:1;justify-content:center}
-.nav-links a{padding:8px 14px;font-size:14px;font-weight:600;color:var(--muted);border-radius:8px;transition:color .15s,background .15s}
-.nav-links a:hover{color:var(--ink);background:rgba(0,0,0,.04)}
-.nav-auth{display:flex;align-items:center;gap:8px}
+.nav-links{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
+.nav-links a{
+  padding:8px 16px;font-size:14px;font-weight:600;
+  color:var(--muted);border-radius:8px;
+  transition:color .15s,background .15s;
+  white-space:nowrap;
+}
+.nav-links a:hover{color:var(--ink);background:rgba(0,0,0,.05)}
+.nav-auth{display:flex;align-items:center;gap:8px;flex-shrink:0}
 
 /* ====== BUTTONS ====== */
 .btn{
@@ -77,57 +87,118 @@ img{max-width:100%;display:block}
 
 /* ====== HERO ====== */
 .hero-section{
-  background:linear-gradient(135deg,#fff8f5 0%,#fef0ed 45%,#f5f0ff 100%);
-  position:relative;overflow:hidden;padding:64px 28px 80px;
+  background:linear-gradient(135deg,#fff8f5 0%,#fef0ed 40%,#f8f0ff 80%,#f0f4ff 100%);
+  position:relative;overflow:hidden;padding:72px 32px 88px;
+}
+/* Decorative blobs */
+.hero-section::before{
+  content:'';position:absolute;
+  width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,rgba(232,93,76,.12) 0%,transparent 70%);
+  top:-200px;left:-200px;pointer-events:none;
+}
+.hero-section::after{
+  content:'';position:absolute;
+  width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,rgba(139,92,246,.1) 0%,transparent 70%);
+  bottom:-150px;right:-150px;pointer-events:none;
 }
 .hero-inner{
-  max-width:1200px;margin:0 auto;
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:56px;align-items:center;
+  max-width:1160px;margin:0 auto;
+  display:grid;grid-template-columns:1.1fr 1fr;
+  gap:64px;align-items:center;position:relative;z-index:1;
 }
 .hero-text h1{
   font-family:var(--display);
-  font-size:clamp(34px,5.5vw,60px);
-  font-weight:800;line-height:1.2;
-  color:var(--ink);margin-bottom:18px;
+  font-size:clamp(36px,5.5vw,64px);
+  font-weight:800;line-height:1.15;
+  color:var(--ink);margin-bottom:20px;
+  letter-spacing:-.02em;
 }
-.hero-text h1 .hl{color:var(--coral);position:relative}
+.hero-text h1 .hl{
+  color:var(--coral);position:relative;
+  display:inline-block;
+}
 .hero-text h1 .hl::after{
-  content:'';position:absolute;bottom:-2px;left:0;right:0;
-  height:4px;border-radius:2px;
+  content:'';position:absolute;bottom:-3px;left:0;right:0;
+  height:5px;border-radius:3px;
   background:linear-gradient(90deg,var(--coral),#f97316);
-  opacity:.5;
+  opacity:.4;
 }
-.hero-sub{font-size:17px;color:var(--muted);line-height:1.75;margin-bottom:32px;max-width:42ch}
-.hero-cta{display:flex;gap:12px;flex-wrap:wrap}
+.hero-sub{
+  font-size:18px;color:var(--muted);line-height:1.75;
+  margin-bottom:36px;max-width:44ch;
+}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap}
 .hero-visual{display:flex;align-items:center;justify-content:center;position:relative}
 
 /* Floating decorations */
-.hero-deco{position:absolute;animation:floaty 4s ease-in-out infinite;pointer-events:none;font-size:28px;opacity:.8}
-@keyframes floaty{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-12px) rotate(12deg)}}
+.hero-deco{
+  position:absolute;animation:floaty 4s ease-in-out infinite;
+  pointer-events:none;font-size:28px;opacity:.85;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.15));
+}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-14px) rotate(12deg)}}
 
-/* Book illustration */
+/* Book card illustration */
 .hero-book{
-  width:100%;max-width:320px;border-radius:22px;
-  background:linear-gradient(145deg,#9333ea 0%,#ec4899 100%);
-  padding:28px 22px 24px;
-  box-shadow:0 32px 80px rgba(147,51,234,.35),10px 10px 0 rgba(0,0,0,.07);
+  width:100%;max-width:310px;
+  border-radius:24px;
+  background:linear-gradient(155deg,#9333ea 0%,#c026d3 50%,#ec4899 100%);
+  padding:30px 24px 26px;
+  box-shadow:
+    0 40px 100px rgba(147,51,234,.4),
+    16px 16px 0 rgba(0,0,0,.07),
+    inset 0 1px 0 rgba(255,255,255,.2);
   position:relative;overflow:hidden;text-align:center;
   color:#fff;font-family:var(--display);
+  transform:rotate(-2deg);
+  transition:transform .3s ease;
 }
+.hero-book:hover{transform:rotate(0deg) scale(1.02)}
 .hero-book::before{
   content:'';position:absolute;inset:0;
-  background:radial-gradient(circle at 20% 80%,rgba(255,255,255,.15) 0%,transparent 60%),
-             radial-gradient(circle at 80% 10%,rgba(255,255,255,.1) 0%,transparent 50%);
+  background:
+    radial-gradient(circle at 15% 85%,rgba(255,255,255,.18) 0%,transparent 55%),
+    radial-gradient(circle at 85% 10%,rgba(255,255,255,.12) 0%,transparent 50%);
 }
-.hero-book-kicker{font-size:12px;opacity:.8;margin-bottom:4px;position:relative}
-.hero-book-name{font-size:44px;font-weight:800;color:#fef08a;margin-bottom:18px;position:relative;text-shadow:0 2px 12px rgba(0,0,0,.25)}
+/* Spine effect */
+.hero-book::after{
+  content:'';position:absolute;
+  top:0;right:0;bottom:0;width:12px;
+  background:rgba(0,0,0,.15);
+  border-radius:0 24px 24px 0;
+}
+.hero-book-stars{
+  font-size:14px;letter-spacing:2px;margin-bottom:6px;
+  position:relative;opacity:.9;
+}
+.hero-book-kicker{
+  font-size:13px;opacity:.75;margin-bottom:6px;
+  position:relative;font-weight:600;
+}
+.hero-book-name{
+  font-size:46px;font-weight:800;color:#fef08a;
+  margin-bottom:20px;position:relative;
+  text-shadow:0 3px 14px rgba(0,0,0,.3);
+  letter-spacing:-.02em;
+}
 .hero-book-char{
-  width:130px;height:130px;border-radius:50%;margin:0 auto;position:relative;
-  background:rgba(255,255,255,.15);border:3px solid rgba(255,255,255,.35);
-  display:flex;align-items:center;justify-content:center;font-size:72px;
+  width:140px;height:140px;border-radius:50%;margin:0 auto;
+  position:relative;
+  background:rgba(255,255,255,.18);
+  border:3px solid rgba(255,255,255,.4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:78px;
+  box-shadow:0 8px 24px rgba(0,0,0,.2);
 }
-.hero-book-bottom{position:relative;margin-top:18px;font-size:14px;font-weight:700;opacity:.85}
+.hero-book-badge{
+  position:relative;margin-top:20px;
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);
+  border-radius:999px;padding:6px 16px;
+  font-size:14px;font-weight:700;letter-spacing:.02em;
+}
 
 /* ====== SECTION COMMONS ====== */
 .sec{padding:72px 28px}
@@ -276,21 +347,51 @@ img{max-width:100%;display:block}
 .trust-info strong{display:block;font-size:13px;font-weight:800;color:var(--ink)}
 .trust-info span{font-size:12px;color:var(--muted)}
 
-/* ====== FOOTER FB BAR ====== */
-.footer-fb-bar{
-  background:#fff;border-top:1px solid var(--border);
-  padding:16px 28px;
-  display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;
+/* ====== SITE FOOTER ====== */
+.site-footer{
+  background:var(--ink);color:rgba(255,255,255,.85);
+  padding:56px 32px 0;
 }
-.footer-fb-bar .copy{font-size:13px;color:var(--muted)}
-.btn-fb{
+.footer-inner{
+  max-width:1160px;margin:0 auto;
+  display:grid;grid-template-columns:2fr 1fr 1fr;
+  gap:48px;padding-bottom:48px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.footer-logo{
+  font-family:var(--display);font-weight:800;font-size:28px;
+  letter-spacing:-.03em;color:#fff;display:inline-block;margin-bottom:14px;
+}
+.footer-logo span{color:var(--coral)}
+.footer-tagline{
+  font-size:14px;color:rgba(255,255,255,.6);line-height:1.7;margin-bottom:22px;
+}
+.footer-social{display:flex;gap:10px;flex-wrap:wrap}
+.btn-social-fb{
   display:inline-flex;align-items:center;gap:8px;
-  padding:8px 18px;border-radius:10px;
+  padding:10px 18px;border-radius:10px;
   background:#1877f2;color:#fff;
   font-size:13px;font-weight:700;
   transition:background .2s,transform .15s;
 }
-.btn-fb:hover{background:#166fe5;transform:translateY(-1px)}
+.btn-social-fb:hover{background:#166fe5;transform:translateY(-2px)}
+.footer-links-col h4{
+  font-size:12px;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(255,255,255,.45);margin-bottom:16px;
+}
+.footer-links-col a{
+  display:block;font-size:14px;font-weight:600;
+  color:rgba(255,255,255,.7);padding:5px 0;
+  transition:color .15s;
+}
+.footer-links-col a:hover{color:#fff}
+.footer-bottom{
+  max-width:1160px;margin:0 auto;
+  padding:18px 0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:rgba(255,255,255,.35);
+}
 
 /* ====== AUTH MODAL ====== */
 .lnd-modal-backdrop{
@@ -367,6 +468,8 @@ img{max-width:100%;display:block}
   .testi-grid{grid-template-columns:1fr}
   .trust-inner{grid-template-columns:1fr 1fr}
   .nav-links a:not(.btn){display:none}
+  .footer-inner{grid-template-columns:1fr 1fr}
+  .footer-brand-col{grid-column:1/-1}
 }
 @media(max-width:560px){
   .sec{padding:48px 16px}
@@ -375,6 +478,9 @@ img{max-width:100%;display:block}
   .trust-inner{grid-template-columns:1fr 1fr;gap:12px}
   .prof-grid{grid-template-columns:repeat(4,1fr)}
   .testi-grid{grid-template-columns:1fr}
+  .footer-inner{grid-template-columns:1fr;gap:28px}
+  .footer-brand-col{grid-column:auto}
+  .site-footer{padding:40px 20px 0}
 }
 </style>
 </head>
@@ -387,7 +493,7 @@ img{max-width:100%;display:block}
     <a href="#idea">الفكرة</a>
     <a href="#how">الخطوات</a>
     <a href="#results">النتائج</a>
-    <a class="btn btn-primary" href="/app" style="font-size:14px;padding:9px 18px;border-radius:10px">اصنع كتابك</a>
+    <a class="btn btn-primary" href="/app" style="font-size:14px;padding:9px 20px;border-radius:10px">اصنع كتابك</a>
   </nav>
   <div class="nav-auth">
     <span class="nav-user-label" id="lnd-user-label"></span>
@@ -409,15 +515,16 @@ img{max-width:100%;display:block}
       </div>
     </div>
     <div class="hero-visual">
-      <span class="hero-deco" style="top:-14px;right:28px;animation-delay:0s">⭐</span>
-      <span class="hero-deco" style="bottom:16px;right:-12px;font-size:22px;animation-delay:1s">💛</span>
-      <span class="hero-deco" style="top:44px;left:-12px;font-size:18px;animation-delay:2s">✨</span>
-      <span class="hero-deco" style="bottom:60px;left:20px;font-size:16px;animation-delay:.5s">🌟</span>
+      <span class="hero-deco" style="top:-18px;right:24px;font-size:34px;animation-delay:0s">⭐</span>
+      <span class="hero-deco" style="bottom:12px;right:-16px;font-size:24px;animation-delay:1.2s">💛</span>
+      <span class="hero-deco" style="top:50px;left:-14px;font-size:20px;animation-delay:2.4s">✨</span>
+      <span class="hero-deco" style="bottom:70px;left:24px;font-size:16px;animation-delay:.6s">🌟</span>
       <div class="hero-book">
+        <div class="hero-book-stars">★★★★★</div>
         <div class="hero-book-kicker">كتاب التلوين للبطل</div>
         <div class="hero-book-name">يوسف</div>
         <div class="hero-book-char">🧑‍🚀</div>
-        <div class="hero-book-bottom">🚀 رائد فضاء</div>
+        <div class="hero-book-badge">🚀 <span>رائد فضاء</span></div>
       </div>
     </div>
   </div>
@@ -670,28 +777,28 @@ img{max-width:100%;display:block}
 <div class="trust-bar">
   <div class="trust-inner">
     <div class="trust-item">
-      <div class="trust-ico">🖨️</div>
+      <div class="trust-ico" style="background:linear-gradient(135deg,#eff6ff,#dbeafe)">🖨️</div>
       <div class="trust-info">
         <strong>جاهز للطباعة</strong>
         <span>A4 بجودة PDF</span>
       </div>
     </div>
     <div class="trust-item">
-      <div class="trust-ico">🛡️</div>
+      <div class="trust-ico" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5)">🛡️</div>
       <div class="trust-info">
         <strong>أمن الأطفال</strong>
         <span>بدون أي بيانات</span>
       </div>
     </div>
     <div class="trust-item">
-      <div class="trust-ico">⭐</div>
+      <div class="trust-ico" style="background:linear-gradient(135deg,#fdf4ff,#f5d0fe)">⭐</div>
       <div class="trust-info">
         <strong>تصميم احترافي</strong>
         <span>جودة عالية</span>
       </div>
     </div>
     <div class="trust-item">
-      <div class="trust-ico">⚡</div>
+      <div class="trust-ico" style="background:linear-gradient(135deg,#fff7ed,#fed7aa)">⚡</div>
       <div class="trust-info">
         <strong>في دقائق فقط</strong>
         <span>نتيجة فورية</span>
@@ -701,15 +808,36 @@ img{max-width:100%;display:block}
 </div>
 
 <!-- ====== FOOTER ====== -->
-<div class="footer-fb-bar">
-  <span class="copy">© 2026 لونّي</span>
-  <a href="https://www.facebook.com/Lawenyapp" target="_blank" rel="noopener noreferrer" class="btn-fb">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-    </svg>
-    تابعنا على فيسبوك
-  </a>
-</div>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand-col">
+      <a class="footer-logo" href="/">لونّ<span>ي</span></a>
+      <p class="footer-tagline">حوّل صورة طفلك إلى كتاب تلوين باسمه،<br>جاهز للطباعة في دقائق.</p>
+      <div class="footer-social">
+        <a href="https://www.facebook.com/Lawenyapp" target="_blank" rel="noopener noreferrer" class="btn-social-fb" aria-label="فيسبوك">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          تابعنا على فيسبوك
+        </a>
+      </div>
+    </div>
+    <div class="footer-links-col">
+      <h4>الصفحات</h4>
+      <a href="#idea">الفكرة</a>
+      <a href="#how">كيف يشتغل</a>
+      <a href="#results">النتائج</a>
+      <a href="/app">اصنع كتابك</a>
+      <a href="/dashboard">حسابي</a>
+    </div>
+    <div class="footer-links-col">
+      <h4>تواصل</h4>
+      <a href="https://www.facebook.com/Lawenyapp" target="_blank" rel="noopener noreferrer">📱 فيسبوك</a>
+      <a href="/app">ابدأ مجاناً</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 لونّي — جميع الحقوق محفوظة</span>
+  </div>
+</footer>
 
 <!-- ====== AUTH MODAL ====== -->
 <div class="lnd-modal-backdrop" id="lnd-auth-modal" role="dialog" aria-modal="true">
