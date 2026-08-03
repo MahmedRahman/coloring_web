@@ -98,19 +98,30 @@
   .auth-form .btn { width: 100%; margin-top: 14px; }
   .auth-divider {
     display: flex; align-items: center; gap: 12px;
-    margin: 16px 0 12px; color: var(--muted); font-size: 12px; font-weight: 700;
+    margin: 18px 0 14px; color: var(--muted); font-size: 12px; font-weight: 700;
   }
   .auth-divider::before, .auth-divider::after {
     content: ""; flex: 1; height: 1px; background: var(--border);
   }
   .btn-google {
-    width: 100%; gap: 10px;
-    background: #fff; color: var(--text);
-    border: 1.5px solid var(--border);
-    box-shadow: var(--shadow-sm);
+    display: flex; width: 100%; align-items: center; justify-content: center;
+    gap: 12px; min-height: 52px; padding: 12px 16px;
+    border-radius: 12px; border: 1.5px solid #dadce0;
+    background: #fff; color: #1f1b24;
+    font-family: var(--font); font-size: 16px; font-weight: 700;
+    text-decoration: none; box-shadow: 0 1px 2px rgba(60,64,67,.12);
+    transition: background .15s ease, box-shadow .15s ease, border-color .15s ease;
   }
-  .btn-google:hover { background: #fafafa; transform: translateY(-1px); }
-  .btn-google svg { flex: 0 0 auto; }
+  .btn-google:hover {
+    background: #f8f9fa; border-color: #c5c8cd;
+    box-shadow: 0 2px 6px rgba(60,64,67,.16);
+    transform: none;
+  }
+  .btn-google:active { background: #f1f3f4; }
+  .btn-google-icon {
+    flex: 0 0 auto; width: 22px; height: 22px; display: block;
+  }
+  .btn-google-label { line-height: 1.2; }
   .modal-head {
     display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
     margin-bottom: 4px;
@@ -294,15 +305,91 @@
   }
   .btn-sm { padding: 8px 12px; font-size: 12px; border-radius: 8px; box-shadow: none; }
   .progress-wrap {
-    margin-top: 16px; background: #f3f4f6; border-radius: 999px; height: 8px; overflow: hidden; display: none;
+    margin-top: 16px; background: #f3f4f6; border-radius: 999px; height: 10px; overflow: hidden; display: none;
   }
   .progress-wrap.active { display: block; }
   .progress-bar {
     height: 100%; width: 0%; border-radius: 999px;
     background: linear-gradient(90deg, #7c3aed, #ec4899); transition: width 0.4s ease;
   }
+  .progress-label {
+    display: none; margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--muted);
+  }
+  .progress-wrap.active + .progress-label,
+  .progress-label.show { display: block; }
   #status { margin-top: 12px; font-size: 14px; color: var(--muted); min-height: 22px; font-weight: 500; }
   #status.error { color: var(--danger); font-weight: 700; }
+  #status.ok { color: #047857; font-weight: 800; font-size: 15px; }
+  .done-screen {
+    display: none; margin-top: 8px; padding: 22px 20px 20px;
+    border-radius: 18px; border: 1.5px solid #a7f3d0;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(16,185,129,.14), transparent 42%),
+      linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 55%, #fff 100%);
+  }
+  .done-screen.show { display: block; animation: fadeIn .35s ease; }
+  .done-kicker {
+    margin: 0 0 6px; font-size: 12px; font-weight: 800; letter-spacing: .06em;
+    text-transform: uppercase; color: #059669;
+  }
+  .done-screen h2 {
+    margin: 0 0 8px; font-size: clamp(26px, 5vw, 34px); font-weight: 900;
+    color: #065f46; line-height: 1.2;
+  }
+  .done-lead {
+    margin: 0 0 18px; font-size: 15px; color: #047857; font-weight: 600; line-height: 1.6;
+    max-width: 42ch;
+  }
+  .done-stats {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+    margin-bottom: 18px;
+  }
+  .done-stat {
+    background: rgba(255,255,255,.9); border: 1px solid #bbf7d0;
+    border-radius: 14px; padding: 12px 10px; text-align: center;
+  }
+  .done-stat strong {
+    display: block; font-size: 22px; font-weight: 900; color: #065f46; line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .done-stat span {
+    display: block; font-size: 12px; font-weight: 700; color: #047857; line-height: 1.35;
+  }
+  .done-actions {
+    display: grid; gap: 10px;
+  }
+  .btn-pdf-main {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; min-height: 54px; padding: 14px 22px; border: 0; border-radius: 14px;
+    background: linear-gradient(135deg, #059669, #047857); color: #fff;
+    font-family: var(--font); font-size: 17px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 12px 28px rgba(5, 150, 105, .32);
+  }
+  .btn-pdf-main:hover { filter: brightness(1.05); transform: translateY(-1px); }
+  .done-secondary {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .done-secondary .btn {
+    width: 100%; min-height: 46px; justify-content: center;
+  }
+  .done-again {
+    margin-top: 12px; width: 100%;
+  }
+  .gen-work-only { display: block; }
+  .show-done .gen-work-only { display: none !important; }
+  .actions-row.gen-work-only,
+  .nav-row.gen-work-only { display: flex; }
+  .show-done .actions-row.gen-work-only,
+  .show-done .nav-row.gen-work-only { display: none !important; }
+  .progress-wrap.gen-work-only { display: none; }
+  .progress-wrap.gen-work-only.active { display: block; }
+  .show-done .progress-wrap.gen-work-only,
+  .show-done .progress-label.gen-work-only,
+  .show-done #status.gen-work-only { display: none !important; }
+  @media (max-width: 700px) {
+    .done-stats { grid-template-columns: 1fr 1fr; }
+    .done-secondary { grid-template-columns: 1fr; }
+  }
   .results-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 14px; margin-top: 16px;
@@ -472,25 +559,68 @@
   </div>
 
   <!-- STEP 3: GENERATE -->
-  <div class="card panel" data-panel="3">
-    <div class="step-header">
+  <div class="card panel" data-panel="3" id="step3-card">
+    <div class="step-header gen-work-only">
       <span class="step-num">3</span>
       <div class="step-heading">
         <h2 class="step-title" data-i18n="step3_title">توليد الكتاب</h2>
         <span class="step-sub" data-i18n="step3_sub">الصفحات بتتولد مع بعض… استنى شوية</span>
       </div>
     </div>
-    <div class="actions-row">
+    <div class="actions-row gen-work-only" id="gen-actions-row">
       <button class="btn" id="start-btn"><span class="emoji">🎨</span> <span data-i18n="start_btn">ابدأ التوليد</span></button>
       <button class="btn btn-outline" id="preview-btn" style="display:none"><span class="emoji">👀</span> <span data-i18n="preview_btn">معاينة وترتيب</span></button>
       <button class="btn btn-success" id="pdf-btn" style="display:none"><span class="emoji">📄</span> <span data-i18n="pdf_btn">تنزيل PDF</span></button>
       <button class="btn btn-outline" id="share-btn" style="display:none"><span class="emoji">🔗</span> <span data-i18n="share_btn">شارك (24 ساعة)</span></button>
     </div>
-    <div class="share-box" id="share-box"></div>
-    <div class="progress-wrap" id="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
-    <div id="status"></div>
+    <div class="progress-wrap gen-work-only" id="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="progress-label gen-work-only" id="progress-label"></div>
+    <div id="status" class="gen-work-only"></div>
+
+    <div class="done-screen" id="done-screen" role="status" aria-live="polite">
+      <p class="done-kicker" data-i18n="done_kicker">انتهى التوليد</p>
+      <h2 id="done-title" data-i18n="done_title">الكتاب جاهز ✓</h2>
+      <p class="done-lead" id="done-sub" data-i18n="done_sub">التوليد خلص — نزّل الـ PDF أو شاركه أو رتّب الصفحات قبل الطباعة.</p>
+      <div class="done-stats" aria-label="إحصائيات الاستهلاك">
+        <div class="done-stat">
+          <strong id="stat-pages">0</strong>
+          <span data-i18n="stat_pages">صفحات الكتاب</span>
+        </div>
+        <div class="done-stat">
+          <strong id="stat-used">—</strong>
+          <span data-i18n="stat_used">استهلاك هذه المرة</span>
+        </div>
+        <div class="done-stat">
+          <strong id="stat-free">—</strong>
+          <span data-i18n="stat_free">مجاني متبقي</span>
+        </div>
+        <div class="done-stat">
+          <strong id="stat-credits">—</strong>
+          <span data-i18n="stat_credits">رصيد مدفوع</span>
+        </div>
+      </div>
+      <div class="done-actions">
+        <button type="button" class="btn-pdf-main" id="pdf-main-btn">
+          <span class="emoji">📄</span>
+          <span data-i18n="pdf_btn_main">تنزيل ملف PDF الآن</span>
+        </button>
+        <div class="done-secondary">
+          <button type="button" class="btn btn-outline" id="preview-main-btn">
+            <span class="emoji">👀</span>
+            <span data-i18n="preview_btn">معاينة وترتيب</span>
+          </button>
+          <button type="button" class="btn btn-outline" id="share-main-btn">
+            <span class="emoji">🔗</span>
+            <span data-i18n="share_btn">شارك (24 ساعة)</span>
+          </button>
+        </div>
+        <button type="button" class="btn btn-outline done-again" id="again-btn" data-i18n="start_again">توليد من جديد</button>
+      </div>
+      <div class="share-box" id="share-box"></div>
+    </div>
+
     <div class="results-grid" id="results"></div>
-    <div class="nav-row">
+    <div class="nav-row gen-work-only">
       <button type="button" class="btn btn-outline" data-goto="2" data-i18n="back">رجوع</button>
       <button type="button" class="btn btn-outline" data-goto="1" data-i18n="restart">من الأول</button>
     </div>
@@ -519,14 +649,14 @@
     </div>
     <p class="modal-sub" data-i18n="auth_sub">عشان تولّد الكتاب، سجّل دخول أو اعمل حساب جديد بالإيميل أو Google</p>
     {% if google_ready %}
-    <a class="btn btn-google" id="google-login-btn" href="/auth/google">
-      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-        <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/>
-        <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.2 6.1 29.4 4 24 4 16.1 4 9.2 8.5 6.3 14.7z"/>
-        <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.2C29.3 35.3 26.8 36 24 36c-5.3 0-9.7-3.1-11.3-7.5l-6.5 5C9.1 39.4 16 44 24 44z"/>
-        <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.1-3.5 5.5-6.6 6.6l.1.1 6.3 5.2C36.8 41.3 44 36 44 24c0-1.2-.1-2.3-.4-3.5z"/>
+    <a class="btn-google" id="google-login-btn" href="/auth/google">
+      <svg class="btn-google-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
       </svg>
-      <span data-i18n="google_continue">المتابعة مع Google</span>
+      <span class="btn-google-label" data-i18n="google_continue">سجّل الدخول عبر Google</span>
     </a>
     <div class="auth-divider"><span data-i18n="or_email">أو بالإيميل</span></div>
     {% endif %}
@@ -583,6 +713,7 @@
 const BASE_SCENES = {{ scenes|tojson }};
 const BOOK_PACK_PRICE = {{ book_pack_price|tojson }};
 const BOOK_PACK_CREDITS = {{ book_pack_credits|tojson }};
+const FREE_BOOKS = {{ free_books|tojson }};
 const PAYMOB_READY = {{ paymob_ready|tojson }};
 const WALLET_READY = {{ wallet_ready|tojson }};
 let payMethod = 'all';
@@ -615,7 +746,22 @@ const I18N = {
     custom_label: 'وظيفة مخصصة (بالعربي)', custom_ph: 'مثال: محامي في المحكمة',
     custom_hint: 'هنترجم الوصف ونضيفه كوظيفة جديدة', custom_btn: 'إضافة وظيفة',
     step3_title: 'توليد الكتاب', step3_sub: 'الصفحات بتتولد مع بعض… استنى شوية',
-    start_btn: 'ابدأ التوليد', preview_btn: 'معاينة وترتيب', pdf_btn: 'تنزيل PDF',
+    step3_sub_done: 'الكتاب جاهز — نزّل الـ PDF وطبعه',
+    start_btn: 'ابدأ التوليد', start_again: 'توليد من جديد',
+    preview_btn: 'معاينة وترتيب', pdf_btn: 'تنزيل PDF',
+    pdf_btn_main: 'تنزيل ملف PDF الآن',
+    done_kicker: 'انتهى التوليد',
+    done_title: 'الكتاب جاهز ✓',
+    done_sub: 'التوليد خلص — نزّل الـ PDF أو شاركه أو رتّب الصفحات قبل الطباعة.',
+    gen_progress: 'جاري التوليد… استنى لحظات',
+    gen_done: 'تم التوليد بنجاح',
+    stat_pages: 'صفحات الكتاب',
+    stat_used: 'استهلاك هذه المرة',
+    stat_free: 'مجاني متبقي',
+    stat_credits: 'رصيد مدفوع',
+    used_free: 'كتاب مجاني',
+    used_credit: 'رصيد ١',
+    used_none: 'بدون خصم',
     share_btn: 'شارك (24 ساعة)', next: 'التالي', back: 'رجوع', restart: 'من الأول',
     close: 'إغلاق', preview_title: 'معاينة الكتاب', preview_sub: 'اسحب الصفحات لإعادة الترتيب',
     footer: 'صُمّم بحب للأطفال',
@@ -634,7 +780,7 @@ const I18N = {
     login: 'تسجيل الدخول', logout: 'خروج', register: 'حساب جديد',
     auth_title: 'تسجيل الدخول مطلوب',
     auth_sub: 'عشان تولّد الكتاب، سجّل دخول أو اعمل حساب جديد بالإيميل أو Google',
-    google_continue: 'المتابعة مع Google',
+    google_continue: 'سجّل الدخول عبر Google',
     or_email: 'أو بالإيميل',
     google_off: 'تسجيل Google مش مفعّل حالياً.',
     google_failed: 'فشل الدخول بجوجل. جرّب تاني.',
@@ -654,7 +800,22 @@ const I18N = {
     custom_label: 'Custom job (Arabic text)', custom_ph: 'e.g. a lawyer in court',
     custom_hint: 'We translate it and add it as a new job', custom_btn: 'Add job',
     step3_title: 'Generate book', step3_sub: 'Pages generate in parallel… please wait',
-    start_btn: 'Start generating', preview_btn: 'Preview & reorder', pdf_btn: 'Download PDF',
+    step3_sub_done: 'Your book is ready — download the PDF',
+    start_btn: 'Start generating', start_again: 'Generate again',
+    preview_btn: 'Preview & reorder', pdf_btn: 'Download PDF',
+    pdf_btn_main: 'Download PDF now',
+    done_kicker: 'Generation finished',
+    done_title: 'Book ready ✓',
+    done_sub: 'Generation finished — download, share, or reorder pages before printing.',
+    gen_progress: 'Generating… please wait',
+    gen_done: 'Generated successfully',
+    stat_pages: 'Book pages',
+    stat_used: 'Used this time',
+    stat_free: 'Free left',
+    stat_credits: 'Paid credits',
+    used_free: '1 free book',
+    used_credit: '1 credit',
+    used_none: 'No charge',
     share_btn: 'Share (24h)', next: 'Next', back: 'Back', restart: 'Start over',
     close: 'Close', preview_title: 'Book preview', preview_sub: 'Drag pages to reorder',
     footer: 'Made with love for kids',
@@ -673,7 +834,7 @@ const I18N = {
     login: 'Log in', logout: 'Log out', register: 'Sign up',
     auth_title: 'Login required',
     auth_sub: 'Log in or create an account with email or Google to generate the book',
-    google_continue: 'Continue with Google',
+    google_continue: 'Sign in with Google',
     or_email: 'or with email',
     google_off: 'Google sign-in is not configured yet.',
     google_failed: 'Google sign-in failed. Please try again.',
@@ -695,6 +856,21 @@ const statusEl = document.getElementById('status');
 const results = document.getElementById('results');
 const progressWrap = document.getElementById('progress-wrap');
 const progressBar = document.getElementById('progress-bar');
+const progressLabel = document.getElementById('progress-label');
+const doneScreen = document.getElementById('done-screen');
+const step3Card = document.getElementById('step3-card');
+const doneTitle = document.getElementById('done-title');
+const doneSub = document.getElementById('done-sub');
+const pdfMainBtn = document.getElementById('pdf-main-btn');
+const previewMainBtn = document.getElementById('preview-main-btn');
+const shareMainBtn = document.getElementById('share-main-btn');
+const againBtn = document.getElementById('again-btn');
+const statPages = document.getElementById('stat-pages');
+const statUsed = document.getElementById('stat-used');
+const statFree = document.getElementById('stat-free');
+const statCredits = document.getElementById('stat-credits');
+const step3Sub = document.querySelector('[data-panel="3"] .step-sub');
+let lastUsage = null;
 const customText = document.getElementById('custom-text');
 const addCustomBtn = document.getElementById('add-custom-btn');
 const previewModal = document.getElementById('preview-modal');
@@ -934,14 +1110,6 @@ function fillSlot(scene, b64) {
     <button type="button" class="btn btn-sm regen-btn" data-regen="${scene.id}">${t('regen')}</button>`;
   slot.querySelector('[data-regen]').onclick = e => { e.stopPropagation(); regenerateOne(scene.id); };
 }
-function showReadyButtons(order) {
-  pageOrder = order.filter(id => pageImages[id]);
-  const show = pageOrder.length > 0;
-  pdfBtn.style.display = show ? 'inline-flex' : 'none';
-  previewBtn.style.display = show ? 'inline-flex' : 'none';
-  shareBtn.style.display = show ? 'inline-flex' : 'none';
-  saveLocal();
-}
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
   const controller = new AbortController();
@@ -959,6 +1127,92 @@ function mapClientError(err) {
 function setStatus(text, isError = false) {
   statusEl.textContent = text || '';
   statusEl.className = isError ? 'error' : '';
+}
+function setStatusOk(text) {
+  statusEl.textContent = text || '';
+  statusEl.className = text ? 'ok' : '';
+}
+
+function hideDoneBanner() {
+  doneScreen.classList.remove('show');
+  step3Card.classList.remove('show-done');
+  if (step3Sub) {
+    step3Sub.textContent = t('step3_sub');
+    step3Sub.dataset.i18n = 'step3_sub';
+  }
+  const startLabel = startBtn.querySelector('[data-i18n="start_btn"], [data-i18n="start_again"]') || startBtn.querySelector('span:last-child');
+  if (startLabel) {
+    startLabel.dataset.i18n = 'start_btn';
+    startLabel.textContent = t('start_btn');
+  }
+}
+
+function formatUsed(consumed) {
+  if (consumed === 'free') return t('used_free');
+  if (consumed === 'credit') return t('used_credit');
+  if (consumed === 'none') return t('used_none');
+  return '—';
+}
+
+function applyQuotaToUser(quota) {
+  if (!quota || !currentUser) return;
+  currentUser.book_credits = quota.book_credits;
+  currentUser.free_left = quota.free_left;
+  currentUser.free_used = quota.free_used;
+  currentUser.free_limit = quota.free_limit;
+  updateAuthUI();
+}
+
+function showDoneBanner(doneCount, usage) {
+  lastUsage = usage || lastUsage || null;
+  doneTitle.textContent = t('done_title');
+  doneSub.textContent = t('done_sub');
+  const pdfLabel = pdfMainBtn.querySelector('[data-i18n="pdf_btn_main"]');
+  if (pdfLabel) pdfLabel.textContent = t('pdf_btn_main');
+  previewMainBtn.querySelector('[data-i18n]') 
+    ? (previewMainBtn.querySelector('[data-i18n]').textContent = t('preview_btn'))
+    : null;
+  const shareLabel = shareMainBtn.querySelector('[data-i18n]');
+  if (shareLabel) shareLabel.textContent = t('share_btn');
+  againBtn.textContent = t('start_again');
+
+  const quota = (lastUsage && lastUsage.quota) || {
+    free_left: currentUser?.free_left,
+    book_credits: currentUser?.book_credits,
+  };
+  statPages.textContent = String(doneCount || 0);
+  statUsed.textContent = formatUsed(lastUsage?.consumed);
+  statFree.textContent = quota.free_left != null
+    ? `${quota.free_left}/${quota.free_limit != null ? quota.free_limit : FREE_BOOKS}`
+    : '—';
+  statCredits.textContent = quota.book_credits != null ? String(quota.book_credits) : '—';
+
+  if (lastUsage?.quota) applyQuotaToUser(lastUsage.quota);
+
+  doneScreen.classList.add('show');
+  step3Card.classList.add('show-done');
+  if (step3Sub) {
+    step3Sub.textContent = t('step3_sub_done');
+    step3Sub.dataset.i18n = 'step3_sub_done';
+  }
+  setTimeout(() => {
+    doneScreen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 120);
+}
+
+function showReadyButtons(order, usage) {
+  pageOrder = order.filter(id => pageImages[id]);
+  const show = pageOrder.length > 0;
+  pdfBtn.style.display = show ? 'inline-flex' : 'none';
+  previewBtn.style.display = show ? 'inline-flex' : 'none';
+  shareBtn.style.display = show ? 'inline-flex' : 'none';
+  if (show) showDoneBanner(pageOrder.length, usage);
+  else hideDoneBanner();
+  saveLocal();
+}
+
+function downloadPdf() {
+  if (sessionId && pageOrder.length) location.href = pdfUrl(pageOrder);
 }
 function pdfUrl(order) {
   const name = encodeURIComponent((childNameInput.value || '').trim());
@@ -1016,15 +1270,16 @@ function openPreview() {
   previewModal.classList.add('open');
 }
 
+pdfMainBtn.onclick = downloadPdf;
+previewMainBtn.onclick = openPreview;
 previewBtn.onclick = openPreview;
 document.getElementById('close-preview-btn').onclick = () => previewModal.classList.remove('open');
 previewModal.onclick = e => { if (e.target === previewModal) previewModal.classList.remove('open'); };
-document.getElementById('modal-pdf-btn').onclick = () => { if (sessionId && pageOrder.length) location.href = pdfUrl(pageOrder); };
-pdfBtn.onclick = () => { if (sessionId && pageOrder.length) location.href = pdfUrl(pageOrder); };
 
-shareBtn.onclick = async () => {
+async function doShare() {
   if (!sessionId || !pageOrder.length) return;
   shareBtn.disabled = true;
+  shareMainBtn.disabled = true;
   try {
     const res = await fetchWithTimeout(`/share/${sessionId}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1036,8 +1291,22 @@ shareBtn.onclick = async () => {
     shareBox.innerHTML = `${lang === 'en' ? 'Link:' : 'اللينك:'} <a href="${data.url}" target="_blank" rel="noopener">${data.url}</a>`;
     try { await navigator.clipboard.writeText(data.url); } catch {}
   } catch (e) { setStatus(mapClientError(e), true); }
-  finally { shareBtn.disabled = false; }
+  finally {
+    shareBtn.disabled = false;
+    shareMainBtn.disabled = false;
+  }
+}
+
+shareBtn.onclick = doShare;
+shareMainBtn.onclick = doShare;
+againBtn.onclick = () => {
+  hideDoneBanner();
+  shareBox.classList.remove('show');
+  startBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
+
+document.getElementById('modal-pdf-btn').onclick = downloadPdf;
+pdfBtn.onclick = downloadPdf;
 
 addCustomBtn.onclick = async () => {
   const text = (customText.value || '').trim();
@@ -1077,11 +1346,14 @@ async function startGeneration() {
   previewBtn.style.display = 'none';
   shareBtn.style.display = 'none';
   shareBox.classList.remove('show');
+  hideDoneBanner();
   results.innerHTML = '';
   pageImages = {};
   progressWrap.classList.add('active');
   progressBar.style.width = '10%';
-  setStatus(lang === 'en' ? 'Uploading & generating...' : 'جاري الرفع والتوليد...');
+  progressLabel.classList.add('show');
+  progressLabel.textContent = t('gen_progress');
+  setStatus(t('gen_progress'));
 
   try {
     if (hasFiles) {
@@ -1102,6 +1374,7 @@ async function startGeneration() {
       goToStep(2);
       startBtn.disabled = false;
       progressWrap.classList.remove('active');
+      progressLabel.classList.remove('show');
       return;
     }
     const chosen = allScenes.filter(s => selected.has(s.id)).slice(0, MAX_PAGES);
@@ -1131,17 +1404,31 @@ async function startGeneration() {
       }
     }
     progressBar.style.width = '100%';
-    setStatus(done === 0
-      ? (lastError || (lang === 'en' ? 'No pages generated' : 'مفيش صفحات اتولدت'))
-      : ((lang === 'en' ? `Done! ${done} pages` : `تمّ! ${done} صفحة`) + (lastError ? (lang === 'en' ? ' (some failed)' : ' (بعضها فشل)') : '')),
-      done === 0);
-    showReadyButtons(order);
+    progressLabel.textContent = done > 0 ? t('gen_done') : (lastError || t('gen_progress'));
+    if (done === 0) {
+      setStatus(lastError || (lang === 'en' ? 'No pages generated' : 'مفيش صفحات اتولدت'), true);
+    } else {
+      setStatusOk(
+        (lang === 'en' ? `Done! ${done} pages ready` : `تمّ! ${done} صفحة جاهزة`) +
+        (lastError ? (lang === 'en' ? ' (some failed)' : ' (بعضها فشل)') : '')
+      );
+    }
+    showReadyButtons(order, data.usage);
+    await refreshAuth();
+    if (data.usage?.quota) applyQuotaToUser(data.usage.quota);
+    setTimeout(() => {
+      progressWrap.classList.remove('active');
+      progressLabel.classList.remove('show');
+    }, 800);
   } catch (e) {
     const msg = mapClientError(e);
     if (String(msg).includes('تسجّل') || String(msg).includes('log in') || e.message?.includes('auth')) {
       await ensureAuth();
     }
     setStatus(msg, true);
+    progressWrap.classList.remove('active');
+    progressLabel.classList.remove('show');
+    hideDoneBanner();
   } finally {
     startBtn.disabled = false;
   }

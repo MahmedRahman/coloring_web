@@ -472,13 +472,36 @@ def collect_admin_stats() -> dict:
     }
 
 
+def user_quota(user: Optional[dict]) -> dict:
+    if not user:
+        return {
+            "book_credits": 0,
+            "free_limit": FREE_BOOKS_PER_MONTH,
+            "free_used": 0,
+            "free_left": FREE_BOOKS_PER_MONTH,
+        }
+    credits = get_user_credits(user["id"])
+    free_used = monthly_book_count_for_user(user["id"])
+    free_left = max(0, FREE_BOOKS_PER_MONTH - free_used)
+    return {
+        "book_credits": credits,
+        "free_limit": FREE_BOOKS_PER_MONTH,
+        "free_used": free_used,
+        "free_left": free_left,
+    }
+
+
 def user_public(user: dict) -> dict:
+    q = user_quota(user)
     return {
         "id": user["id"],
         "email": user["email"],
         "username": user["username"],
-        "book_credits": int(user.get("book_credits") or 0),
+        "book_credits": q["book_credits"],
         "auth_provider": user.get("auth_provider") or "email",
+        "free_limit": q["free_limit"],
+        "free_used": q["free_used"],
+        "free_left": q["free_left"],
     }
 
 
@@ -779,16 +802,22 @@ def check_freemium_or_error():
     return None
 
 
-def track_book(session_id: str, pages: int, scene_ids: List[str]):
+def track_book(session_id: str, pages: int, scene_ids: List[str]) -> dict:
     ip = get_remote_address()
     now = datetime.now(timezone.utc).isoformat()
     user = current_user()
     user_id = user["id"] if user else None
+    consumed = None
     # Prefer consuming a paid credit when free monthly quota is already used
     if user_id is not None:
         free_used = monthly_book_count_for_user(user_id)
         if free_used >= FREE_BOOKS_PER_MONTH:
-            consume_user_credit(user_id)
+            if consume_user_credit(user_id):
+                consumed = "credit"
+            else:
+                consumed = "credit_failed"
+        else:
+            consumed = "free"
     with _db_lock:
         conn = db_connect()
         conn.execute(
@@ -802,6 +831,13 @@ def track_book(session_id: str, pages: int, scene_ids: List[str]):
             )
         conn.commit()
         conn.close()
+    # Refresh user after possible credit consume
+    user = current_user()
+    return {
+        "consumed": consumed,
+        "pages": pages,
+        "quota": user_quota(user),
+    }
 
 
 def monthly_book_count(ip: str) -> int:
@@ -1459,9 +1495,17 @@ def generate_batch(session_id: str):
 
     ok_ids = [p["scene_id"] for p in pages if not p.get("error")]
     created_ids = [p["scene_id"] for p in pages if not p.get("error") and p.get("created")]
+    usage = None
     if created_ids:
-        track_book(session_id, len(created_ids), created_ids)
-    return jsonify({"pages": pages})
+        usage = track_book(session_id, len(created_ids), created_ids)
+    elif ok_ids:
+        # Restored/cached pages — no new consumption
+        usage = {
+            "consumed": "none",
+            "pages": len(ok_ids),
+            "quota": user_quota(current_user()),
+        }
+    return jsonify({"pages": pages, "usage": usage})
 
 
 @app.route("/session/<session_id>")
