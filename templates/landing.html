@@ -49,6 +49,7 @@
   .nav-brand span { color: var(--coral); }
   .nav-links {
     display: flex; align-items: center; gap: 4px;
+    flex: 1; justify-content: center;
   }
   .nav-links a:not(.btn) {
     padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--muted);
@@ -473,13 +474,13 @@
       <a href="#how">الخطوات</a>
       <a href="#results">النتائج</a>
       <a class="btn btn-primary" href="/app">اصنع كتابك</a>
-      <div class="nav-auth">
-        <span class="nav-user-label" id="lnd-user-label"></span>
-        <a class="btn-nav-sm btn-dashboard" id="lnd-dash-btn" href="/dashboard" style="display:none">حسابي</a>
-        <button type="button" class="btn-nav-sm btn-login" id="lnd-login-btn">تسجيل الدخول</button>
-        <button type="button" class="btn-nav-sm btn-login" id="lnd-logout-btn" style="display:none">خروج</button>
-      </div>
     </nav>
+    <div class="nav-auth">
+      <span class="nav-user-label" id="lnd-user-label"></span>
+      <a class="btn-nav-sm btn-dashboard" id="lnd-dash-btn" href="/dashboard" style="display:none">حسابي</a>
+      <button type="button" class="btn-nav-sm btn-login" id="lnd-login-btn">تسجيل الدخول</button>
+      <button type="button" class="btn-nav-sm btn-login" id="lnd-logout-btn" style="display:none">خروج</button>
+    </div>
   </header>
 
   <section class="hero">
