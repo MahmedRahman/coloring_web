@@ -4,647 +4,714 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>لونّي — كتاب تلوين باسم طفلك</title>
-<meta name="description" content="ارفع صورة طفلك واطلع كتاب تلوين PDF جاهز للطباعة بوظائف يحلم بيها.">
+<meta name="description" content="حوّل صورة طفلك إلى كتاب تلوين باسمه، جاهز للطباعة في دقائق.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --display: "Baloo Bhaijaan 2", "SF Arabic", sans-serif;
-    --font: "IBM Plex Sans Arabic", "SF Arabic", Tahoma, sans-serif;
-    --ink: #12263a;
-    --muted: #5b6b7c;
-    --paper: #f3f8fc;
-    --sea: #2f6f8f;
-    --lemon: #f2c14e;
-    --coral: #e85d4c;
-    --mint: #7eb8a2;
-    --line: rgba(18, 38, 58, 0.12);
-  }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0;
-    font-family: var(--font);
-    color: var(--ink);
-    background: var(--paper);
-    line-height: 1.65;
-    -webkit-font-smoothing: antialiased;
-  }
-  a { color: inherit; text-decoration: none; }
-  img { max-width: 100%; display: block; }
+/* ====== TOKENS ====== */
+:root {
+  --display: "Baloo Bhaijaan 2","SF Arabic",sans-serif;
+  --font:    "IBM Plex Sans Arabic","SF Arabic",Tahoma,sans-serif;
+  --ink:    #1a1a2e;
+  --muted:  #6b7280;
+  --coral:  #e85d4c;
+  --lemon:  #f59e0b;
+  --mint:   #10b981;
+  --lavender:#8b5cf6;
+  --sky:    #3b82f6;
+  --pink:   #ec4899;
+  --bg:     #ffffff;
+  --card:   #f8f9fa;
+  --border: #e5e7eb;
+  --line:   rgba(0,0,0,.08);
+  --r:      16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);color:var(--ink);background:var(--bg);line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
 
-  .nav {
-    position: sticky; top: 0; z-index: 20;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; padding: 14px 28px;
-    background: rgba(255,255,255,.88);
-    border-bottom: 1px solid var(--line);
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  }
-  .nav-brand {
-    font-family: var(--display); font-weight: 800; font-size: 26px;
-    letter-spacing: -0.03em; line-height: 1;
-  }
-  .nav-brand span { color: var(--coral); }
-  .nav-links {
-    display: flex; align-items: center; gap: 4px;
-    flex: 1; justify-content: center;
-  }
-  .nav-links a:not(.btn) {
-    padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--muted);
-    border-radius: 10px; transition: color .15s ease, background .15s ease;
-  }
-  .nav-links a:not(.btn):hover { color: var(--ink); background: rgba(18,38,58,.04); }
-  .nav .btn { padding: 10px 16px; font-size: 14px; }
+/* ====== NAVBAR ====== */
+.nav{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;padding:12px 28px;
+  background:rgba(255,255,255,.96);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+.nav-brand{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.02em;color:var(--ink);flex-shrink:0}
+.nav-brand span{color:var(--coral)}
+.nav-links{display:flex;align-items:center;gap:4px;flex:1;justify-content:center}
+.nav-links a{padding:8px 14px;font-size:14px;font-weight:600;color:var(--muted);border-radius:8px;transition:color .15s,background .15s}
+.nav-links a:hover{color:var(--ink);background:rgba(0,0,0,.04)}
+.nav-auth{display:flex;align-items:center;gap:8px}
 
-  /* Auth nav buttons */
-  .nav-auth {
-    display: flex; align-items: center; gap: 8px;
-  }
-  .btn-nav-sm {
-    display: inline-flex; align-items: center; justify-content: center;
-    padding: 8px 14px; border-radius: 10px;
-    font-size: 13px; font-weight: 700; border: 0; cursor: pointer;
-    font-family: var(--font);
-    transition: transform .15s ease, background .15s ease;
-  }
-  .btn-nav-sm:hover { transform: translateY(-1px); }
-  .btn-login {
-    background: transparent; color: var(--muted);
-    border: 1px solid var(--line);
-  }
-  .btn-login:hover { color: var(--ink); background: rgba(18,38,58,.05); }
-  .btn-dashboard {
-    background: var(--ink); color: #fff;
-  }
-  .btn-dashboard:hover { background: #0c1a28; }
-  .nav-user-label {
-    font-size: 13px; font-weight: 700; color: var(--ink);
-    padding: 8px 12px; border-radius: 10px;
-    border: 1px solid var(--line);
-    display: none;
-  }
+/* ====== BUTTONS ====== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:12px 24px;border-radius:12px;font-family:var(--font);
+  font-weight:700;font-size:15px;border:0;cursor:pointer;
+  transition:transform .2s ease,box-shadow .2s ease;
+}
+.btn:hover{transform:translateY(-2px)}
+.btn-primary{background:var(--ink);color:#fff;box-shadow:0 4px 16px rgba(26,26,46,.2)}
+.btn-primary:hover{box-shadow:0 8px 24px rgba(26,26,46,.3)}
+.btn-coral{background:var(--coral);color:#fff;box-shadow:0 4px 20px rgba(232,93,76,.35)}
+.btn-coral:hover{box-shadow:0 8px 28px rgba(232,93,76,.45)}
+.btn-outline{background:#fff;color:var(--ink);border:2px solid var(--border)}
+.btn-outline:hover{border-color:var(--ink)}
+.btn-nav-sm{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;
+  border:0;cursor:pointer;font-family:var(--font);
+  transition:transform .15s,background .15s;
+}
+.btn-nav-sm:hover{transform:translateY(-1px)}
+.btn-login{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-login:hover{color:var(--ink);background:rgba(0,0,0,.04);transform:none}
+.btn-dashboard{background:var(--ink);color:#fff}
+.nav-user-label{font-size:13px;font-weight:700;padding:8px 12px;border-radius:8px;border:1px solid var(--border);display:none}
 
-  /* Auth Modal */
-  .lnd-modal-backdrop {
-    display: none; position: fixed; inset: 0;
-    background: rgba(18,38,58,.52);
-    z-index: 100; align-items: center; justify-content: center; padding: 20px;
-  }
-  .lnd-modal-backdrop.open { display: flex; }
-  .lnd-modal {
-    background: #fff; border-radius: 20px; width: min(420px, 100%);
-    max-height: 92vh; overflow: auto; padding: 28px;
-    box-shadow: 0 24px 56px rgba(18,38,58,.18);
-  }
-  .lnd-modal-head {
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
-    margin-bottom: 6px;
-  }
-  .lnd-modal-head h3 { margin: 0; font-size: 22px; font-weight: 800; color: var(--ink); }
-  .lnd-close-x {
-    flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px;
-    border: 1px solid var(--line); background: white; cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 22px; line-height: 1; color: var(--muted);
-  }
-  .lnd-close-x:hover { background: #f5f3ff; color: var(--sea); }
-  .lnd-modal-sub { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
-  .lnd-auth-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
-  .lnd-auth-tabs button {
-    flex: 1; border: 1px solid var(--line); background: var(--paper);
-    border-radius: 10px; padding: 10px; font-family: var(--font);
-    font-weight: 700; cursor: pointer; color: var(--muted);
-  }
-  .lnd-auth-tabs button.active {
-    background: var(--ink); color: white; border-color: transparent;
-  }
-  .lnd-auth-form label {
-    display: block; font-size: 13px; font-weight: 700; margin: 10px 0 6px; color: var(--ink);
-  }
-  .lnd-auth-form input {
-    width: 100%; padding: 12px 14px; border-radius: 12px;
-    border: 1px solid var(--line); font-family: var(--font);
-    font-size: 15px; outline: none; color: var(--ink);
-  }
-  .lnd-auth-form input:focus { border-color: var(--sea); box-shadow: 0 0 0 3px rgba(47,111,143,.12); }
-  .lnd-auth-error { color: var(--coral); font-size: 13px; font-weight: 700; min-height: 20px; margin-top: 10px; }
-  .lnd-auth-form .btn-auth-submit {
-    display: block; width: 100%; margin-top: 14px; padding: 13px;
-    border-radius: 12px; border: 0; background: var(--ink); color: #fff;
-    font-family: var(--font); font-weight: 800; font-size: 15px; cursor: pointer;
-    transition: background .2s ease;
-  }
-  .lnd-auth-form .btn-auth-submit:hover { background: #0c1a28; }
-  .lnd-auth-form .btn-auth-submit:disabled { background: #c5cdd6; cursor: not-allowed; }
-  .lnd-btn-google {
-    display: flex; width: 100%; align-items: center; justify-content: center;
-    gap: 12px; min-height: 50px; padding: 12px 16px;
-    border-radius: 12px; border: 1.5px solid #dadce0;
-    background: #fff; color: var(--ink);
-    font-family: var(--font); font-size: 15px; font-weight: 700;
-    text-decoration: none; margin-bottom: 4px;
-    transition: background .15s ease;
-  }
-  .lnd-btn-google:hover { background: #f8f9fa; }
-  .lnd-auth-divider {
-    display: flex; align-items: center; gap: 12px;
-    margin: 14px 0; color: var(--muted); font-size: 12px; font-weight: 700;
-  }
-  .lnd-auth-divider::before, .lnd-auth-divider::after {
-    content: ''; flex: 1; height: 1px; background: var(--line);
-  }
+/* ====== HERO ====== */
+.hero-section{
+  background:linear-gradient(135deg,#fff8f5 0%,#fef0ed 45%,#f5f0ff 100%);
+  position:relative;overflow:hidden;padding:64px 28px 80px;
+}
+.hero-inner{
+  max-width:1200px;margin:0 auto;
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:56px;align-items:center;
+}
+.hero-text h1{
+  font-family:var(--display);
+  font-size:clamp(34px,5.5vw,60px);
+  font-weight:800;line-height:1.2;
+  color:var(--ink);margin-bottom:18px;
+}
+.hero-text h1 .hl{color:var(--coral);position:relative}
+.hero-text h1 .hl::after{
+  content:'';position:absolute;bottom:-2px;left:0;right:0;
+  height:4px;border-radius:2px;
+  background:linear-gradient(90deg,var(--coral),#f97316);
+  opacity:.5;
+}
+.hero-sub{font-size:17px;color:var(--muted);line-height:1.75;margin-bottom:32px;max-width:42ch}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap}
+.hero-visual{display:flex;align-items:center;justify-content:center;position:relative}
 
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    padding: 14px 22px; border-radius: 12px; font-family: var(--font);
-    font-weight: 700; font-size: 15px; border: 0; cursor: pointer;
-    transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
-  }
-  .btn:hover { transform: translateY(-1px); }
-  .btn-primary { background: var(--ink); color: #fff; }
-  .btn-primary:hover { background: #0c1a28; }
-  .btn-lemon {
-    background: var(--lemon); color: var(--ink);
-    box-shadow: 0 10px 28px rgba(242, 193, 78, .35);
-  }
-  .btn-ghost {
-    background: rgba(255,255,255,.55); color: var(--ink);
-    border: 1.5px solid rgba(18,38,58,.16);
-  }
+/* Floating decorations */
+.hero-deco{position:absolute;animation:floaty 4s ease-in-out infinite;pointer-events:none;font-size:28px;opacity:.8}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-12px) rotate(12deg)}}
 
-  /* HERO */
-  .hero {
-    position: relative;
-    min-height: calc(100vh - 64px);
-    min-height: calc(100dvh - 64px);
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-    align-items: stretch;
-    overflow: hidden;
-    background: #eaf3f8;
-  }
-  .hero-copy {
-    position: relative; z-index: 2;
-    display: flex; flex-direction: column; justify-content: center;
-    padding: clamp(40px, 8vh, 88px) clamp(24px, 5vw, 72px);
-    background:
-      linear-gradient(120deg, #f7fbff 0%, #f7fbff 55%, rgba(247,251,255,.55) 100%);
-  }
-  .hero-brand {
-    font-family: var(--display);
-    font-size: clamp(72px, 12vw, 120px);
-    font-weight: 800; line-height: .88; margin: 0 0 22px;
-    letter-spacing: -0.04em;
-    animation: riseIn .7s ease both;
-  }
-  .hero-brand span { color: var(--coral); }
-  .hero h1 {
-    font-family: var(--display); font-weight: 700;
-    font-size: clamp(26px, 3.4vw, 38px); line-height: 1.28;
-    margin: 0 0 14px; max-width: 12ch;
-    color: var(--ink);
-    animation: riseIn .7s ease .06s both;
-  }
-  .hero .lead {
-    margin: 0 0 30px; color: var(--muted); font-size: clamp(16px, 1.5vw, 18px);
-    max-width: 32ch; line-height: 1.7;
-    animation: riseIn .7s ease .12s both;
-  }
-  .hero-cta {
-    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
-    animation: riseIn .7s ease .18s both;
-  }
-  .hero-stage {
-    position: relative;
-    background:
-      radial-gradient(circle at 30% 20%, #ffe9a8 0%, transparent 42%),
-      radial-gradient(circle at 80% 80%, #c9ebe0 0%, transparent 45%),
-      linear-gradient(160deg, #cfe4f0 0%, #f3efe4 50%, #f8d7c8 100%);
-    display: grid; place-items: center;
-    padding: clamp(24px, 5vw, 56px);
-    overflow: hidden;
-  }
-  .hero-stage::before {
-    content: "";
-    position: absolute; inset: 0;
-    background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath d='M10 90c15-30 30-30 45 0s30 30 45 0' fill='none' stroke='%2312263a' stroke-opacity='.06' stroke-width='1.5'/%3E%3C/svg%3E");
-    background-size: 140px;
-    animation: paperDrift 32s linear infinite;
-  }
-  .hero-page {
-    position: relative; z-index: 1;
-    width: min(100%, 420px);
-    aspect-ratio: 210 / 297;
-    background: #fff;
-    border: 2px solid rgba(18,38,58,.14);
-    box-shadow:
-      18px 24px 0 rgba(18,38,58,.06),
-      0 30px 60px rgba(18, 38, 58, .12);
-    padding: 8%;
-    animation: pageIn 1s ease .15s both;
-  }
-  .hero-page svg { width: 100%; height: 100%; }
-  @keyframes pageIn {
-    from { opacity: 0; transform: translateY(28px) rotate(-2deg); }
-    to { opacity: 1; transform: none; }
-  }
-  @keyframes paperDrift {
-    from { background-position: 0 0; }
-    to { background-position: 140px 70px; }
-  }
-  @keyframes riseIn {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: none; }
-  }
+/* Book illustration */
+.hero-book{
+  width:100%;max-width:320px;border-radius:22px;
+  background:linear-gradient(145deg,#9333ea 0%,#ec4899 100%);
+  padding:28px 22px 24px;
+  box-shadow:0 32px 80px rgba(147,51,234,.35),10px 10px 0 rgba(0,0,0,.07);
+  position:relative;overflow:hidden;text-align:center;
+  color:#fff;font-family:var(--display);
+}
+.hero-book::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 20% 80%,rgba(255,255,255,.15) 0%,transparent 60%),
+             radial-gradient(circle at 80% 10%,rgba(255,255,255,.1) 0%,transparent 50%);
+}
+.hero-book-kicker{font-size:12px;opacity:.8;margin-bottom:4px;position:relative}
+.hero-book-name{font-size:44px;font-weight:800;color:#fef08a;margin-bottom:18px;position:relative;text-shadow:0 2px 12px rgba(0,0,0,.25)}
+.hero-book-char{
+  width:130px;height:130px;border-radius:50%;margin:0 auto;position:relative;
+  background:rgba(255,255,255,.15);border:3px solid rgba(255,255,255,.35);
+  display:flex;align-items:center;justify-content:center;font-size:72px;
+}
+.hero-book-bottom{position:relative;margin-top:18px;font-size:14px;font-weight:700;opacity:.85}
 
-  section { padding: 88px 28px; }
-  .wrap { max-width: 1080px; margin: 0 auto; }
-  .sec-kicker {
-    font-size: 13px; font-weight: 700; letter-spacing: .08em;
-    text-transform: uppercase; color: var(--sea); margin: 0 0 10px;
-  }
-  .sec-title {
-    font-family: var(--display); font-size: clamp(30px, 4vw, 44px);
-    font-weight: 800; margin: 0 0 12px; line-height: 1.2; letter-spacing: -0.02em;
-  }
-  .sec-lead {
-    margin: 0; color: var(--muted); font-size: 17px; max-width: 46ch;
-  }
+/* ====== SECTION COMMONS ====== */
+.sec{padding:72px 28px}
+.sec-inner{max-width:1200px;margin:0 auto}
+.sec-bg{background:var(--card)}
+.sec-title{
+  font-family:var(--display);
+  font-size:clamp(24px,3.5vw,34px);
+  font-weight:800;color:var(--ink);
+  text-align:center;margin-bottom:40px;
+}
 
-  .idea {
-    background: #fff;
-    border-block: 1px solid var(--line);
-  }
-  .idea-grid {
-    display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center;
-  }
-  .idea-visual {
-    aspect-ratio: 4/3;
-    background:
-      linear-gradient(160deg, #fff7d6, #e8f6f1 55%, #fde8e2);
-    border: 1px solid var(--line);
-    position: relative; overflow: hidden;
-  }
-  .idea-visual svg {
-    position: absolute; inset: 8% 10%; width: 80%; height: 84%;
-  }
+/* ====== KIDS CAROUSEL ====== */
+.kids-track{
+  display:flex;gap:14px;
+  overflow-x:auto;padding:4px 4px 20px;
+  scroll-snap-type:x mandatory;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.kids-track::-webkit-scrollbar{display:none}
+.kid-card{
+  flex:0 0 152px;background:#fff;
+  border:1.5px solid var(--border);border-radius:16px;
+  padding:14px 10px 12px;text-align:center;
+  scroll-snap-align:start;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  transition:transform .2s,box-shadow .2s;
+}
+.kid-card:hover{transform:translateY(-5px);box-shadow:0 12px 28px rgba(0,0,0,.12)}
+.kid-avatar{
+  width:62px;height:62px;border-radius:50%;margin:0 auto 8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:800;color:#fff;
+  font-family:var(--display);box-shadow:0 4px 12px rgba(0,0,0,.2);
+}
+.kid-book-mini{
+  width:100%;aspect-ratio:3/4;border-radius:10px;
+  border:1.5px solid var(--border);margin-bottom:10px;
+  display:flex;align-items:center;justify-content:center;font-size:30px;
+}
+.kid-name{font-weight:800;font-size:14px;color:var(--ink)}
+.kid-job{font-size:11px;color:var(--muted);margin-top:2px}
+.carousel-arrows{display:flex;gap:8px;justify-content:center;margin-top:12px}
+.c-arrow{
+  width:38px;height:38px;border-radius:50%;
+  border:1.5px solid var(--border);background:#fff;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;color:var(--ink);
+  box-shadow:0 2px 8px rgba(0,0,0,.08);transition:background .15s;
+}
+.c-arrow:hover{background:var(--card)}
 
-  .how { background: var(--paper); }
-  .steps {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;
-    margin-top: 40px; counter-reset: step;
-  }
-  .step { position: relative; padding-top: 8px; }
-  .step::before {
-    counter-increment: step; content: counter(step);
-    font-family: var(--display); font-size: 64px; font-weight: 800;
-    color: rgba(47, 111, 143, .18); line-height: 1; display: block; margin-bottom: 8px;
-  }
-  .step h3 {
-    font-family: var(--display); font-size: 24px; margin: 0 0 8px; font-weight: 700;
-  }
-  .step p { margin: 0; color: var(--muted); font-size: 15px; }
+/* ====== HOW IT WORKS ====== */
+.how-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:60px;align-items:center}
+.how-left-label{font-size:14px;font-weight:700;color:var(--muted);margin-bottom:16px;text-align:center}
+.ba-wrap{display:flex;align-items:center;gap:14px}
+.ba-side{flex:1;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.1);position:relative}
+.ba-badge{
+  position:absolute;top:10px;right:10px;z-index:2;
+  font-size:11px;font-weight:800;padding:4px 10px;
+  border-radius:6px;background:rgba(0,0,0,.6);color:#fff;
+}
+.ba-badge.after-b{background:var(--coral);right:auto;left:10px}
+.ba-photo{
+  aspect-ratio:3/4;width:100%;
+  display:flex;align-items:center;justify-content:center;font-size:48px;
+}
+.ba-photo.real{background:linear-gradient(135deg,#fde68a 0%,#fca5a5 100%)}
+.ba-photo.coloring{background:#fff;border:2px solid var(--border);flex-direction:column;gap:4px}
+.ba-arrow-col{flex-shrink:0;text-align:center;font-size:22px;color:var(--muted)}
+.ba-arrow-label{display:block;font-size:11px;font-weight:700;color:var(--coral);margin-top:4px}
+.steps-list{display:flex;flex-direction:column;gap:20px}
+.step-row{display:flex;align-items:flex-start;gap:14px}
+.sn{flex-shrink:0;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;font-weight:800}
+.sn1{background:linear-gradient(135deg,#a855f7,#8b5cf6)}
+.sn2{background:linear-gradient(135deg,#f59e0b,#f97316)}
+.sn3{background:linear-gradient(135deg,#10b981,#059669)}
+.sn4{background:linear-gradient(135deg,#ef4444,var(--coral))}
+.sn5{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+.step-content h3{font-size:16px;font-weight:800;margin-bottom:2px}
+.step-content p{font-size:13px;color:var(--muted);line-height:1.55}
 
-  .results {
-    background: var(--ink); color: #f5f9fc;
-  }
-  .results .sec-kicker { color: var(--lemon); }
-  .results .sec-lead { color: rgba(245,249,252,.72); }
-  .gallery {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 36px;
-  }
-  .shot {
-    aspect-ratio: 210/297;
-    background: #fff; color: var(--ink);
-    border: 0; padding: 14px 12px 10px;
-    display: flex; flex-direction: column; gap: 8px;
-    transform: translateY(12px); opacity: 0;
-    transition: transform .5s ease, opacity .5s ease;
-  }
-  .shot.in { transform: none; opacity: 1; }
-  .shot svg { flex: 1; width: 100%; }
-  .shot span {
-    font-size: 13px; font-weight: 700; text-align: center;
-  }
+/* ====== GALLERY + REACTIONS ====== */
+.gallery-two{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+.gallery-block h2{font-family:var(--display);font-size:24px;font-weight:800;margin-bottom:18px}
+.book-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.book-tile{
+  border-radius:14px;aspect-ratio:4/5;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:36px;gap:8px;box-shadow:0 4px 14px rgba(0,0,0,.1);
+  position:relative;overflow:hidden;
+}
+.book-tile-name{font-family:var(--display);font-size:18px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.25)}
+.react-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.react-tile{border-radius:14px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:52px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
 
-  .proof {
-    background: #fff;
-  }
-  .quotes {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 36px;
-  }
-  .quote {
-    border-inline-start: 3px solid var(--lemon);
-    padding-inline-start: 18px;
-  }
-  .quote p {
-    margin: 0 0 12px; font-size: 18px; font-weight: 500; line-height: 1.7;
-  }
-  .quote cite {
-    font-style: normal; color: var(--muted); font-size: 14px; font-weight: 600;
-  }
+/* ====== PROFESSIONS GRID ====== */
+.prof-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(88px,1fr));
+  gap:10px;
+}
+.prof-card{
+  background:#fff;border:1.5px solid var(--border);border-radius:12px;
+  padding:14px 6px 10px;text-align:center;cursor:pointer;
+  transition:transform .15s,box-shadow .15s;
+}
+.prof-card:hover{transform:translateY(-4px);box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.prof-emoji{font-size:34px;margin-bottom:6px;display:block}
+.prof-label{font-size:12px;font-weight:700;color:var(--ink)}
+.prof-more{background:linear-gradient(135deg,#f5f3ff,#fdf4ff);border-color:#e9d5ff}
+.prof-more .prof-label{color:var(--lavender)}
 
-  .stats {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
-    margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--line);
-  }
-  .stat strong {
-    display: block; font-family: var(--display); font-size: 40px; font-weight: 800;
-    line-height: 1; margin-bottom: 6px;
-  }
-  .stat span { color: var(--muted); font-size: 14px; font-weight: 600; }
+/* ====== TESTIMONIALS ====== */
+.testi-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.testi-card{
+  background:var(--card);border:1.5px solid var(--border);
+  border-radius:16px;padding:22px;
+  transition:box-shadow .2s;
+}
+.testi-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.09)}
+.testi-q-icon{font-size:28px;color:var(--coral);margin-bottom:10px;display:block}
+.testi-body{font-size:14px;font-weight:600;color:var(--ink);line-height:1.65;margin-bottom:16px}
+.testi-foot{display:flex;align-items:center;gap:10px}
+.testi-ava{
+  width:42px;height:42px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:#fff;font-weight:800;
+  font-family:var(--display);flex-shrink:0;
+}
+.testi-who strong{display:block;font-size:14px;font-weight:800}
+.testi-stars{color:#f59e0b;font-size:14px}
 
-  .cta {
-    background:
-      radial-gradient(circle at 20% 30%, rgba(242,193,78,.45), transparent 40%),
-      radial-gradient(circle at 85% 70%, rgba(126,184,162,.35), transparent 40%),
-      #eaf4fa;
-    text-align: center;
-  }
-  .cta .sec-title { margin-inline: auto; }
-  .cta .sec-lead { margin: 0 auto 28px; }
-  .cta-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+/* ====== TRUST BAR ====== */
+.trust-bar{background:var(--card);border-top:1.5px solid var(--border);padding:28px}
+.trust-inner{
+  max-width:1200px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:20px;
+}
+.trust-item{display:flex;align-items:center;gap:12px}
+.trust-ico{
+  width:44px;height:44px;border-radius:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  background:#fff;border:1.5px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+.trust-info strong{display:block;font-size:13px;font-weight:800;color:var(--ink)}
+.trust-info span{font-size:12px;color:var(--muted)}
 
-  footer {
-    position: relative;
-    padding: 48px 28px 32px;
-    border-top: 1px solid var(--line);
-    background:
-      linear-gradient(180deg, #eef6fb 0%, #f7fbff 55%, #fff 100%);
-    color: var(--muted);
-    font-size: 14px;
-  }
-  .footer-inner {
-    max-width: 1100px; margin: 0 auto;
-    display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-    gap: 36px 48px;
-    align-items: end;
-  }
-  .footer-brand {
-    font-family: var(--display); font-weight: 800; font-size: 32px;
-    letter-spacing: -0.03em; line-height: 1; color: var(--ink);
-  }
-  .footer-brand span { color: var(--coral); }
-  .footer-tag {
-    margin: 12px 0 0; max-width: 34ch;
-    color: var(--muted); font-size: 15px; line-height: 1.6;
-  }
-  .footer-social {
-    margin-top: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .btn-facebook {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: #1877f2;
-    color: #ffffff;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    transition: background 0.2s ease, transform 0.2s ease;
-  }
-  .btn-facebook:hover {
-    background: #166fe5;
-    color: #ffffff;
-    transform: translateY(-1px);
-  }
-  .footer-nav {
-    display: flex; flex-wrap: wrap; gap: 8px 4px;
-    justify-content: flex-end;
-  }
-  .footer-nav a {
-    padding: 8px 12px; border-radius: 10px;
-    font-size: 14px; font-weight: 600; color: var(--muted);
-    transition: color .15s ease, background .15s ease;
-  }
-  .footer-nav a:hover { color: var(--ink); background: rgba(18,38,58,.05); }
-  .footer-bottom {
-    max-width: 1100px; margin: 28px auto 0;
-    padding-top: 20px; border-top: 1px solid var(--line);
-    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-    font-size: 13px;
-  }
-  .footer-bottom a { font-weight: 600; color: var(--sea); }
-  .footer-bottom a:hover { color: var(--ink); }
+/* ====== FOOTER FB BAR ====== */
+.footer-fb-bar{
+  background:#fff;border-top:1px solid var(--border);
+  padding:16px 28px;
+  display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;
+}
+.footer-fb-bar .copy{font-size:13px;color:var(--muted)}
+.btn-fb{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 18px;border-radius:10px;
+  background:#1877f2;color:#fff;
+  font-size:13px;font-weight:700;
+  transition:background .2s,transform .15s;
+}
+.btn-fb:hover{background:#166fe5;transform:translateY(-1px)}
 
-  .reveal {
-    opacity: 0; transform: translateY(20px);
-    transition: opacity .6s ease, transform .6s ease;
-  }
-  .reveal.in { opacity: 1; transform: none; }
+/* ====== AUTH MODAL ====== */
+.lnd-modal-backdrop{
+  display:none;position:fixed;inset:0;
+  background:rgba(26,26,46,.52);
+  z-index:100;align-items:center;justify-content:center;padding:20px;
+}
+.lnd-modal-backdrop.open{display:flex}
+.lnd-modal{
+  background:#fff;border-radius:20px;width:min(420px,100%);
+  max-height:92vh;overflow:auto;padding:28px;
+  box-shadow:0 24px 56px rgba(0,0,0,.18);
+}
+.lnd-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px}
+.lnd-modal-head h3{margin:0;font-size:22px;font-weight:800;color:var(--ink)}
+.lnd-close-x{
+  flex:0 0 auto;width:36px;height:36px;border-radius:10px;
+  border:1px solid var(--border);background:#fff;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:22px;color:var(--muted);transition:background .15s;
+}
+.lnd-close-x:hover{background:#f5f3ff}
+.lnd-modal-sub{margin:0 0 18px;color:var(--muted);font-size:14px}
+.lnd-auth-tabs{display:flex;gap:6px;margin-bottom:16px}
+.lnd-auth-tabs button{
+  flex:1;border:1px solid var(--border);background:var(--card);
+  border-radius:10px;padding:10px;font-family:var(--font);
+  font-weight:700;cursor:pointer;color:var(--muted);transition:background .15s,color .15s;
+}
+.lnd-auth-tabs button.active{background:var(--ink);color:#fff;border-color:transparent}
+.lnd-auth-form label{display:block;font-size:13px;font-weight:700;margin:10px 0 6px;color:var(--ink)}
+.lnd-auth-form input{
+  width:100%;padding:12px 14px;border-radius:12px;
+  border:1px solid var(--border);font-family:var(--font);font-size:15px;outline:none;color:var(--ink);
+}
+.lnd-auth-form input:focus{border-color:var(--lavender);box-shadow:0 0 0 3px rgba(139,92,246,.12)}
+.lnd-auth-error{color:var(--coral);font-size:13px;font-weight:700;min-height:20px;margin-top:10px}
+.lnd-auth-form .btn-auth-submit{
+  display:block;width:100%;margin-top:14px;padding:13px;
+  border-radius:12px;border:0;background:var(--ink);color:#fff;
+  font-family:var(--font);font-weight:800;font-size:15px;cursor:pointer;
+  transition:background .2s;
+}
+.lnd-auth-form .btn-auth-submit:hover{background:#0c1a28}
+.lnd-auth-form .btn-auth-submit:disabled{background:#c5cdd6;cursor:not-allowed}
+.lnd-btn-google{
+  display:flex;width:100%;align-items:center;justify-content:center;
+  gap:12px;min-height:50px;padding:12px 16px;
+  border-radius:12px;border:1.5px solid #dadce0;
+  background:#fff;color:var(--ink);
+  font-family:var(--font);font-size:15px;font-weight:700;
+  text-decoration:none;margin-bottom:4px;transition:background .15s;
+}
+.lnd-btn-google:hover{background:#f8f9fa}
+.lnd-auth-divider{
+  display:flex;align-items:center;gap:12px;
+  margin:14px 0;color:var(--muted);font-size:12px;font-weight:700;
+}
+.lnd-auth-divider::before,.lnd-auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 
-  @media (max-width: 900px) {
-    .hero {
-      grid-template-columns: 1fr;
-      min-height: auto;
-    }
-    .hero-stage {
-      min-height: 52vh;
-      order: -1;
-    }
-    .hero-page { width: min(72%, 320px); }
-    .idea-grid, .steps, .gallery, .quotes, .stats { grid-template-columns: 1fr; }
-    .gallery { grid-template-columns: 1fr 1fr; }
-    .nav-links a:not(.btn) { display: none; }
-    .footer-inner { grid-template-columns: 1fr; gap: 24px; }
-    .footer-nav { justify-content: flex-start; }
-  }
-  @media (max-width: 560px) {
-    .nav { padding: 12px 16px; }
-    section { padding: 64px 16px; }
-    .gallery { gap: 10px; }
-    .hero-copy { padding: 36px 20px 48px; }
-    footer { padding: 40px 16px 28px; }
-  }
+/* ====== ANIMATIONS ====== */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:none}
+
+/* ====== RESPONSIVE ====== */
+@media(max-width:900px){
+  .hero-inner{grid-template-columns:1fr;text-align:center}
+  .hero-text .hero-sub{max-width:100%}
+  .hero-cta{justify-content:center}
+  .hero-visual{order:-1}
+  .how-grid{grid-template-columns:1fr}
+  .ba-wrap{justify-content:center;max-width:380px;margin:0 auto}
+  .gallery-two{grid-template-columns:1fr}
+  .testi-grid{grid-template-columns:1fr}
+  .trust-inner{grid-template-columns:1fr 1fr}
+  .nav-links a:not(.btn){display:none}
+}
+@media(max-width:560px){
+  .sec{padding:48px 16px}
+  .hero-section{padding:48px 16px 60px}
+  .nav{padding:12px 16px}
+  .trust-inner{grid-template-columns:1fr 1fr;gap:12px}
+  .prof-grid{grid-template-columns:repeat(4,1fr)}
+  .testi-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
-  <header class="nav">
-    <a class="nav-brand" href="/">لونّ<span>ي</span></a>
-    <nav class="nav-links" aria-label="القائمة">
-      <a href="#idea">الفكرة</a>
-      <a href="#how">الخطوات</a>
-      <a href="#results">النتائج</a>
-      <a class="btn btn-primary" href="/app">اصنع كتابك</a>
-    </nav>
-    <div class="nav-auth">
-      <span class="nav-user-label" id="lnd-user-label"></span>
-      <a class="btn-nav-sm btn-dashboard" id="lnd-dash-btn" href="/dashboard" style="display:none">حسابي</a>
-      <button type="button" class="btn-nav-sm btn-login" id="lnd-login-btn">تسجيل الدخول</button>
-      <button type="button" class="btn-nav-sm btn-login" id="lnd-logout-btn" style="display:none">خروج</button>
-    </div>
-  </header>
 
-  <section class="hero">
-    <div class="hero-copy">
-      <p class="hero-brand">لونّ<span>ي</span></p>
-      <h1>كتاب تلوين باسم طفلك</h1>
-      <p class="lead">ارفع الصورة، اختار الوظائف، وخذ PDF بمقاس A4 جاهز للطباعة.</p>
+<!-- ====== NAVBAR ====== -->
+<header class="nav">
+  <a class="nav-brand" href="/">لونّ<span>ي</span></a>
+  <nav class="nav-links" aria-label="القائمة">
+    <a href="#idea">الفكرة</a>
+    <a href="#how">الخطوات</a>
+    <a href="#results">النتائج</a>
+    <a class="btn btn-primary" href="/app" style="font-size:14px;padding:9px 18px;border-radius:10px">اصنع كتابك</a>
+  </nav>
+  <div class="nav-auth">
+    <span class="nav-user-label" id="lnd-user-label"></span>
+    <a class="btn-nav-sm btn-dashboard" id="lnd-dash-btn" href="/dashboard" style="display:none">حسابي</a>
+    <button type="button" class="btn-nav-sm btn-login" id="lnd-login-btn">تسجيل الدخول</button>
+    <button type="button" class="btn-nav-sm btn-login" id="lnd-logout-btn" style="display:none">خروج</button>
+  </div>
+</header>
+
+<!-- ====== HERO ====== -->
+<section class="hero-section">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <h1>أول مرة طفلك<br>يبقى <span class="hl">بطل</span> كتاب<br>التلوين بتاعه.</h1>
+      <p class="hero-sub">حوّل صورة طفلك إلى كتاب تلوين باسمه،<br>جاهز للطباعة في دقائق.</p>
       <div class="hero-cta">
-        <a class="btn btn-lemon" href="/app">ابدأ الكتاب</a>
-        <a class="btn btn-ghost" href="#results">شوف النتائج</a>
+        <a class="btn btn-coral" href="/app">ابدأ الآن</a>
+        <a class="btn btn-outline" href="#results">شوف النتائج</a>
       </div>
     </div>
-    <div class="hero-stage" aria-hidden="true">
-      <div class="hero-page">
-        <svg viewBox="0 0 280 360" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="140" cy="118" r="52" stroke="#12263a" stroke-width="3.2"/>
-          <path d="M118 112c8 14 28 18 44 0" stroke="#12263a" stroke-width="2.8" stroke-linecap="round"/>
-          <circle cx="124" cy="104" r="4.5" fill="#12263a"/>
-          <circle cx="156" cy="104" r="4.5" fill="#12263a"/>
-          <path d="M95 185h90v95H95z" stroke="#12263a" stroke-width="3.2"/>
-          <path d="M110 210h28M110 235h48M110 260h36" stroke="#12263a" stroke-width="2.8" stroke-linecap="round"/>
-          <path d="M185 200l48-28v130l-48-28V200z" stroke="#12263a" stroke-width="3.2"/>
-          <circle cx="220" cy="78" r="22" stroke="#e85d4c" stroke-width="2.8"/>
-          <path d="M48 300c28-18 56-18 84 0s56 18 84 0" stroke="#2f6f8f" stroke-width="2.8" stroke-linecap="round"/>
-          <path d="M60 70l18 28H42z" stroke="#f2c14e" stroke-width="2.6"/>
-        </svg>
+    <div class="hero-visual">
+      <span class="hero-deco" style="top:-14px;right:28px;animation-delay:0s">⭐</span>
+      <span class="hero-deco" style="bottom:16px;right:-12px;font-size:22px;animation-delay:1s">💛</span>
+      <span class="hero-deco" style="top:44px;left:-12px;font-size:18px;animation-delay:2s">✨</span>
+      <span class="hero-deco" style="bottom:60px;left:20px;font-size:16px;animation-delay:.5s">🌟</span>
+      <div class="hero-book">
+        <div class="hero-book-kicker">كتاب التلوين للبطل</div>
+        <div class="hero-book-name">يوسف</div>
+        <div class="hero-book-char">🧑‍🚀</div>
+        <div class="hero-book-bottom">🚀 رائد فضاء</div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section class="idea" id="idea">
-    <div class="wrap idea-grid reveal">
+<!-- ====== KIDS SOCIAL PROOF ====== -->
+<section class="sec" id="results">
+  <div class="sec-inner">
+    <h2 class="sec-title reveal">شوف أطفال تانيين وكتبهم ❤️</h2>
+    <div class="kids-track" id="kids-track">
+      <div class="kid-card">
+        <div class="kid-avatar" style="background:linear-gradient(135deg,#a855f7,#ec4899)">س</div>
+        <div class="kid-book-mini" style="background:linear-gradient(135deg,#fce7f3,#f5d0fe)">👩‍⚕️</div>
+        <div class="kid-name">سارة</div>
+        <div class="kid-job">👩‍⚕️ طبيبة</div>
+      </div>
+      <div class="kid-card">
+        <div class="kid-avatar" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6)">ي</div>
+        <div class="kid-book-mini" style="background:linear-gradient(135deg,#eff6ff,#f5f3ff)">🧑‍🚀</div>
+        <div class="kid-name">يوسف</div>
+        <div class="kid-job">🧑‍🚀 رائد فضاء</div>
+      </div>
+      <div class="kid-card">
+        <div class="kid-avatar" style="background:linear-gradient(135deg,#10b981,#3b82f6)">آ</div>
+        <div class="kid-book-mini" style="background:linear-gradient(135deg,#ecfdf5,#eff6ff)">👮</div>
+        <div class="kid-name">آدم</div>
+        <div class="kid-job">👮 شرطي</div>
+      </div>
+      <div class="kid-card">
+        <div class="kid-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">ك</div>
+        <div class="kid-book-mini" style="background:linear-gradient(135deg,#fffbeb,#fef2f2)">🧑‍🚒</div>
+        <div class="kid-name">كريم</div>
+        <div class="kid-job">🧑‍🚒 رجل إطفاء</div>
+      </div>
+      <div class="kid-card">
+        <div class="kid-avatar" style="background:linear-gradient(135deg,#06b6d4,#3b82f6)">ع</div>
+        <div class="kid-book-mini" style="background:linear-gradient(135deg,#ecfeff,#eff6ff)">✈️</div>
+        <div class="kid-name">عمر</div>
+        <div class="kid-job">✈️ طيار</div>
+      </div>
+      <div class="kid-card">
+        <div class="kid-avatar" style="background:linear-gradient(135deg,#ec4899,#f97316)">ل</div>
+        <div class="kid-book-mini" style="background:linear-gradient(135deg,#fdf4ff,#fff7ed)">👩‍🍳</div>
+        <div class="kid-name">ليان</div>
+        <div class="kid-job">👩‍🍳 شيف</div>
+      </div>
+      <div class="kid-card">
+        <div class="kid-avatar" style="background:linear-gradient(135deg,#8b5cf6,#06b6d4)">ن</div>
+        <div class="kid-book-mini" style="background:linear-gradient(135deg,#f5f3ff,#ecfeff)">🧑‍💻</div>
+        <div class="kid-name">نور</div>
+        <div class="kid-job">🧑‍💻 مبرمج</div>
+      </div>
+      <div class="kid-card">
+        <div class="kid-avatar" style="background:linear-gradient(135deg,#059669,#10b981)">م</div>
+        <div class="kid-book-mini" style="background:linear-gradient(135deg,#ecfdf5,#f0fdf4)">🏋️</div>
+        <div class="kid-name">مريم</div>
+        <div class="kid-job">🏋️ بطلة رياضة</div>
+      </div>
+    </div>
+    <div class="carousel-arrows">
+      <button class="c-arrow" id="kids-prev" aria-label="السابق">‹</button>
+      <button class="c-arrow" id="kids-next" aria-label="التالي">›</button>
+    </div>
+  </div>
+</section>
+
+<!-- ====== HOW IT WORKS ====== -->
+<section class="sec sec-bg" id="how">
+  <div class="sec-inner">
+    <h2 class="sec-title reveal">ثلاث خطوات بسيطة ✨</h2>
+    <div class="how-grid reveal">
+      <!-- Before / After -->
       <div>
-        <p class="sec-kicker">الفكرة</p>
-        <h2 class="sec-title">مش صفحات عامة… ده كتاب فيه وش طفلك</h2>
-        <p class="sec-lead">
-          لونّي بيحوّل صورة الطفل لصفحات تلوين واضحة الخطوط: طبيب، مهندس، طيار، رائد فضاء…
-          بنفس ملامحه، جاهزة تتطبع وتتلون في البيت.
-        </p>
+        <p class="how-left-label">من صورة واحدة... إلى كتاب كامل</p>
+        <div class="ba-wrap">
+          <div class="ba-side">
+            <div class="ba-badge">قبل</div>
+            <div class="ba-photo real">😊</div>
+          </div>
+          <div class="ba-arrow-col">
+            →
+            <span class="ba-arrow-label">سحر ✨</span>
+          </div>
+          <div class="ba-side">
+            <div class="ba-badge after-b">بعد</div>
+            <div class="ba-photo coloring">
+              <svg viewBox="0 0 110 150" width="70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="55" cy="48" r="28" stroke="#1a1a2e" stroke-width="2.5"/>
+                <path d="M30 90h50v42H30z" stroke="#1a1a2e" stroke-width="2.5"/>
+                <path d="M18 108h18M74 108h18" stroke="#1a1a2e" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M44 42h5M61 42h5" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round"/>
+                <path d="M48 58c3 5 11 5 14 0" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span style="font-size:11px;font-weight:700;color:var(--muted)">عمر — طيار</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="idea-visual" aria-hidden="true">
-        <svg viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="30" y="24" width="150" height="210" fill="#fff" stroke="#12263a" stroke-width="2.5"/>
-          <circle cx="105" cy="95" r="28" stroke="#12263a" stroke-width="2.5"/>
-          <path d="M70 150h70v50H70z" stroke="#12263a" stroke-width="2.5"/>
-          <rect x="210" y="50" width="150" height="210" fill="#fff" stroke="#12263a" stroke-width="2.5"/>
-          <path d="M250 120h70M250 150h50M250 180h60" stroke="#12263a" stroke-width="2.5" stroke-linecap="round"/>
-          <circle cx="285" cy="90" r="18" stroke="#e85d4c" stroke-width="2.5"/>
-        </svg>
+      <!-- Steps -->
+      <div class="steps-list">
+        <div class="step-row">
+          <div class="sn sn1">🖼️</div>
+          <div class="step-content">
+            <h3>ارفع صورة طفلك</h3>
+            <p>صورة واضحة للوجه. تقدر ترفع أكتر من صورة للدقة.</p>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="sn sn2">🎨</div>
+          <div class="step-content">
+            <h3>اختار المهنة والشخصية</h3>
+            <p>أكتر من 20 فكرة مختلفة — طبيب، طيار، شيف، وأكتر.</p>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="sn sn3">🤖</div>
+          <div class="step-content">
+            <h3>الذكاء الاصطناعي يعمل بمجل السحر</h3>
+            <p>تصميم كتاب مميز بملامح طفلك الحقيقية تلقائياً.</p>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="sn sn4">📄</div>
+          <div class="step-content">
+            <h3>حمّل الكتاب PDF</h3>
+            <p>جاهز للطباعة فوراً على ورق A4 عادي.</p>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="sn sn5">🖨️</div>
+          <div class="step-content">
+            <h3>اطبع واستمتع</h3>
+            <p>كتاب طفلك جاهز! هدية وذكرى تدوم.</p>
+          </div>
+        </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section class="how" id="how">
-    <div class="wrap reveal">
-      <p class="sec-kicker">إزاي بيشتغل</p>
-      <h2 class="sec-title">ثلاث خطوات… والكتاب عندك</h2>
-      <p class="sec-lead">من غير تعقيد: صورة، وظائف، توليد.</p>
-      <div class="steps">
-        <div class="step">
-          <h3>ارفع الصورة</h3>
-          <p>صورة واضحة لوجه الطفل. تقدر ترفع أكتر من صورة عشان الشبه يبقى أدق.</p>
+<!-- ====== GALLERY + REACTIONS ====== -->
+<section class="sec" id="idea">
+  <div class="sec-inner">
+    <div class="gallery-two">
+      <div class="gallery-block reveal">
+        <h2>كتاب حقيقي... ذكرى تدوم ❤️</h2>
+        <div class="book-grid">
+          <div class="book-tile" style="background:linear-gradient(145deg,#a855f7,#ec4899)">
+            <span>🧑‍⚕️</span><span class="book-tile-name">ليان</span>
+          </div>
+          <div class="book-tile" style="background:linear-gradient(145deg,#3b82f6,#8b5cf6)">
+            <span>🧑‍🚀</span><span class="book-tile-name">يوسف</span>
+          </div>
+          <div class="book-tile" style="background:linear-gradient(145deg,#f59e0b,#f97316)">
+            <span>👮</span><span class="book-tile-name">آدم</span>
+          </div>
+          <div class="book-tile" style="background:linear-gradient(145deg,#10b981,#059669)">
+            <span>👩‍🍳</span><span class="book-tile-name">نور</span>
+          </div>
         </div>
-        <div class="step">
-          <h3>اختار الوظائف</h3>
-          <p>طبيب، طاهي، شرطي، فنان… أو اكتب وظيفة مخصصة بالعربي.</p>
-        </div>
-        <div class="step">
-          <h3>نزّل الـ PDF</h3>
-          <p>صفحات A4 جاهزة للطباعة، مع غلاف باسم الطفل وترتيب تقدر تعدّله.</p>
+      </div>
+      <div class="gallery-block reveal">
+        <h2>ردود فعل الأطفال ❤️</h2>
+        <div class="react-grid">
+          <div class="react-tile" style="background:linear-gradient(135deg,#fde68a,#fca5a5)">😍</div>
+          <div class="react-tile" style="background:linear-gradient(135deg,#bbf7d0,#bfdbfe)">🤩</div>
+          <div class="react-tile" style="background:linear-gradient(135deg,#f5d0fe,#c7d2fe)">🥳</div>
+          <div class="react-tile" style="background:linear-gradient(135deg,#fed7aa,#fde68a)">😄</div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section class="results" id="results">
-    <div class="wrap">
-      <p class="sec-kicker reveal">النتائج</p>
-      <h2 class="sec-title reveal">صفحات تلوين نضيفة… وسهلة للطفل</h2>
-      <p class="sec-lead reveal">خطوط واضحة، خلفية بيضا، ومقاس طباعة A4 عمودي.</p>
-      <div class="gallery">
-        <div class="shot" style="transition-delay:.05s">
-          <svg viewBox="0 0 200 260" fill="none"><circle cx="100" cy="90" r="36" stroke="#12263a" stroke-width="2.5"/><path d="M70 140h60v55H70z" stroke="#12263a" stroke-width="2.5"/><path d="M55 155h20M145 155h20" stroke="#12263a" stroke-width="2.5"/><path d="M85 80h8M108 80h8M90 100c6 8 16 8 22 0" stroke="#12263a" stroke-width="2" stroke-linecap="round"/></svg>
-          <span>طبيب</span>
-        </div>
-        <div class="shot" style="transition-delay:.12s">
-          <svg viewBox="0 0 200 260" fill="none"><path d="M70 70h60l20 30H50z" stroke="#12263a" stroke-width="2.5"/><rect x="60" y="100" width="80" height="70" stroke="#12263a" stroke-width="2.5"/><circle cx="100" cy="200" r="28" stroke="#12263a" stroke-width="2.5"/><path d="M40 230h120" stroke="#2f6f8f" stroke-width="2.5"/></svg>
-          <span>مهندس</span>
-        </div>
-        <div class="shot" style="transition-delay:.19s">
-          <svg viewBox="0 0 200 260" fill="none"><circle cx="100" cy="95" r="34" stroke="#12263a" stroke-width="2.5"/><path d="M55 150c20-25 70-25 90 0v40H55v-40z" stroke="#12263a" stroke-width="2.5"/><path d="M30 120c20-10 40 0 50 15" stroke="#e85d4c" stroke-width="2.5" stroke-linecap="round"/><circle cx="155" cy="55" r="16" stroke="#f2c14e" stroke-width="2.5"/></svg>
-          <span>طيار</span>
-        </div>
-        <div class="shot" style="transition-delay:.26s">
-          <svg viewBox="0 0 200 260" fill="none"><circle cx="100" cy="100" r="40" stroke="#12263a" stroke-width="2.5"/><path d="M70 150h60v20H70z" stroke="#12263a" stroke-width="2.5"/><path d="M85 180v40M115 180v40M60 220h80" stroke="#12263a" stroke-width="2.5"/><circle cx="55" cy="60" r="8" stroke="#7eb8a2" stroke-width="2"/><circle cx="150" cy="70" r="6" stroke="#7eb8a2" stroke-width="2"/></svg>
-          <span>رائد فضاء</span>
-        </div>
-      </div>
+<!-- ====== PROFESSIONS ====== -->
+<section class="sec sec-bg">
+  <div class="sec-inner">
+    <h2 class="sec-title reveal">✨ أفكار المهن والشخصيات</h2>
+    <div class="prof-grid reveal">
+      <div class="prof-card"><span class="prof-emoji">👩‍⚕️</span><span class="prof-label">طبيب</span></div>
+      <div class="prof-card"><span class="prof-emoji">🧑‍🚀</span><span class="prof-label">رائد فضاء</span></div>
+      <div class="prof-card"><span class="prof-emoji">👮</span><span class="prof-label">شرطي</span></div>
+      <div class="prof-card"><span class="prof-emoji">🧑‍🚒</span><span class="prof-label">رجل إطفاء</span></div>
+      <div class="prof-card"><span class="prof-emoji">✈️</span><span class="prof-label">طيار</span></div>
+      <div class="prof-card"><span class="prof-emoji">👩‍🍳</span><span class="prof-label">شيف</span></div>
+      <div class="prof-card"><span class="prof-emoji">🧑‍💻</span><span class="prof-label">مهندس</span></div>
+      <div class="prof-card"><span class="prof-emoji">🎨</span><span class="prof-label">فنان</span></div>
+      <div class="prof-card"><span class="prof-emoji">👩‍🏫</span><span class="prof-label">معلم</span></div>
+      <div class="prof-card"><span class="prof-emoji">⚽</span><span class="prof-label">لاعب كرة</span></div>
+      <div class="prof-card"><span class="prof-emoji">🎭</span><span class="prof-label">ممثل</span></div>
+      <div class="prof-card prof-more"><span class="prof-emoji">➕</span><span class="prof-label">والمزيد...</span></div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section class="proof" id="proof">
-    <div class="wrap reveal">
-      <p class="sec-kicker">آراء ونتائج</p>
-      <h2 class="sec-title">الأهالي بيحبّوا اللحظة دي</h2>
-      <div class="quotes">
-        <blockquote class="quote">
-          <p>«طبعت الكتاب لسارة… قعدت تلوّن نفسها وهي دكتورة لساعة كاملة.»</p>
-          <cite>— نورا، أم لطفلة ٦ سنين</cite>
-        </blockquote>
-        <blockquote class="quote">
-          <p>«الشبه واضح والخطوط مريحة للطباعة. وفّرت عليّا لفّ المكتبات.»</p>
-          <cite>— أحمد، أب لطفل ٤ سنين</cite>
-        </blockquote>
-      </div>
-      <div class="stats">
-        <div class="stat"><strong>A4</strong><span>مقاس طباعة جاهز</span></div>
-        <div class="stat"><strong>٨</strong><span>صفحات في الكتاب الواحد</span></div>
-        <div class="stat"><strong>٣</strong><span>خطوات من الصورة للـ PDF</span></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="cta" id="start">
-    <div class="wrap reveal">
-      <p class="sec-kicker">ابدأ</p>
-      <h2 class="sec-title">خلّي أول كتاب لطفلك جاهز النهاردة</h2>
-      <p class="sec-lead">ادخل على الأداة، ارفع الصورة، واختار الوظائف. الباقي علينا.</p>
-      <div class="cta-actions">
-        <a class="btn btn-primary" href="/app">ادخل على الأداة</a>
-        <a class="btn btn-ghost" href="/dashboard">حسابي</a>
-      </div>
-    </div>
-  </section>
-
-  <footer>
-    <div class="footer-inner">
-      <div>
-        <a class="footer-brand" href="/">لونّ<span>ي</span></a>
-        <p class="footer-tag">كتاب تلوين باسم طفلك… صورة، وظائف، وPDF جاهز للطباعة.</p>
-        <div class="footer-social">
-          <a href="https://www.facebook.com/Lawenyapp" target="_blank" rel="noopener noreferrer" class="btn-facebook" aria-label="تابعنا على فيسبوك">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-            <span>تابعنا على فيسبوك</span>
-          </a>
+<!-- ====== TESTIMONIALS ====== -->
+<section class="sec">
+  <div class="sec-inner">
+    <h2 class="sec-title reveal">ماذا يقول الأهالي ❤️</h2>
+    <div class="testi-grid">
+      <div class="testi-card reveal">
+        <span class="testi-q-icon">❝</span>
+        <p class="testi-body">فكرة جميلة جداً وكتاب بجودة عالية، هدية مختلفة فعلاً! بنتي مش بتسيبه من يدها.</p>
+        <div class="testi-foot">
+          <div class="testi-ava" style="background:linear-gradient(135deg,#a855f7,#ec4899)">أ</div>
+          <div class="testi-who">
+            <strong>أم يوسف</strong>
+            <div class="testi-stars">★★★★★</div>
+          </div>
         </div>
       </div>
-      <nav class="footer-nav" aria-label="روابط الفوتر">
-        <a href="#idea">الفكرة</a>
-        <a href="#how">الخطوات</a>
-        <a href="#results">النتائج</a>
-        <a href="https://www.facebook.com/Lawenyapp" target="_blank" rel="noopener noreferrer">فيسبوك</a>
-        <a href="/app">اصنع كتابك</a>
-        <a href="/dashboard">حسابي</a>
-      </nav>
+      <div class="testi-card reveal">
+        <span class="testi-q-icon">❝</span>
+        <p class="testi-body">ابني فرح جداً لما شاف نفسه في الكتاب وبيلوّن كل يوم! الجودة ممتازة والخطوات سهلة.</p>
+        <div class="testi-foot">
+          <div class="testi-ava" style="background:linear-gradient(135deg,#3b82f6,#10b981)">أ</div>
+          <div class="testi-who">
+            <strong>أم سارة</strong>
+            <div class="testi-stars">★★★★★</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card reveal">
+        <span class="testi-q-icon">❝</span>
+        <p class="testi-body">أحسن هدية قدمتها لبنتي في عيدها. الصور واضحة وجميلة والاسم على الغلاف كان مميزاً!</p>
+        <div class="testi-foot">
+          <div class="testi-ava" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">م</div>
+          <div class="testi-who">
+            <strong>أم مريم</strong>
+            <div class="testi-stars">★★★★★</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card reveal">
+        <span class="testi-q-icon">❝</span>
+        <p class="testi-body">سهّل عليّ التصميم وطلع كتاب احترافي في دقائق. شكراً لونّي على هذه الفكرة الرائعة!</p>
+        <div class="testi-foot">
+          <div class="testi-ava" style="background:linear-gradient(135deg,#06b6d4,#8b5cf6)">ن</div>
+          <div class="testi-who">
+            <strong>أم نور</strong>
+            <div class="testi-stars">★★★★★</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="footer-bottom">
-      <span>© 2026 لونّي</span>
-      <a href="https://www.facebook.com/Lawenyapp" target="_blank" rel="noopener noreferrer">صفحة الفيسبوك</a>
-      <a href="/app">ابدأ دلوقتي</a>
-    </div>
-  </footer>
+  </div>
+</section>
 
-<!-- Auth Modal -->
+<!-- ====== TRUST BAR ====== -->
+<div class="trust-bar">
+  <div class="trust-inner">
+    <div class="trust-item">
+      <div class="trust-ico">🖨️</div>
+      <div class="trust-info">
+        <strong>جاهز للطباعة</strong>
+        <span>A4 بجودة PDF</span>
+      </div>
+    </div>
+    <div class="trust-item">
+      <div class="trust-ico">🛡️</div>
+      <div class="trust-info">
+        <strong>أمن الأطفال</strong>
+        <span>بدون أي بيانات</span>
+      </div>
+    </div>
+    <div class="trust-item">
+      <div class="trust-ico">⭐</div>
+      <div class="trust-info">
+        <strong>تصميم احترافي</strong>
+        <span>جودة عالية</span>
+      </div>
+    </div>
+    <div class="trust-item">
+      <div class="trust-ico">⚡</div>
+      <div class="trust-info">
+        <strong>في دقائق فقط</strong>
+        <span>نتيجة فورية</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== FOOTER ====== -->
+<div class="footer-fb-bar">
+  <span class="copy">© 2026 لونّي</span>
+  <a href="https://www.facebook.com/Lawenyapp" target="_blank" rel="noopener noreferrer" class="btn-fb">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    </svg>
+    تابعنا على فيسبوك
+  </a>
+</div>
+
+<!-- ====== AUTH MODAL ====== -->
 <div class="lnd-modal-backdrop" id="lnd-auth-modal" role="dialog" aria-modal="true">
   <div class="lnd-modal">
     <div class="lnd-modal-head">
@@ -654,7 +721,12 @@
     <p class="lnd-modal-sub">ادخل على حسابك أو سجّل اسمك عشان تبدأ تصنع كتب التلوين.</p>
     {% if google_ready %}
     <a class="lnd-btn-google" href="/auth/google">
-      <svg width="22" height="22" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
       <span>دخول عبر Google</span>
     </a>
     <div class="lnd-auth-divider"><span>أو بالإيميل</span></div>
@@ -679,22 +751,25 @@
 </div>
 
 <script>
+/* Intersection Observer for reveal animations */
 const io = new IntersectionObserver((entries) => {
   entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.add('in');
-      io.unobserve(e.target);
-    }
+    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
   });
-}, { threshold: 0.18 });
-document.querySelectorAll('.reveal, .shot').forEach(el => io.observe(el));
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+/* Kids Carousel */
+const kidsTrack = document.getElementById('kids-track');
+document.getElementById('kids-next').onclick = () => kidsTrack.scrollBy({ left: -180, behavior: 'smooth' });
+document.getElementById('kids-prev').onclick = () => kidsTrack.scrollBy({ left: 180, behavior: 'smooth' });
 
 /* -------- Landing Auth -------- */
 let lndUser = null;
 let lndAuthMode = 'login';
 
-const lndModal   = document.getElementById('lnd-auth-modal');
-const lndError   = document.getElementById('lnd-auth-error');
+const lndModal    = document.getElementById('lnd-auth-modal');
+const lndError    = document.getElementById('lnd-auth-error');
 const lndLoginBtn  = document.getElementById('lnd-login-btn');
 const lndLogoutBtn = document.getElementById('lnd-logout-btn');
 const lndDashBtn   = document.getElementById('lnd-dash-btn');
@@ -730,7 +805,7 @@ function lndSetMode(mode) {
 
 async function lndRefreshAuth() {
   try {
-    const res = await fetch('/auth/me');
+    const res  = await fetch('/auth/me');
     const data = await res.json();
     lndUser = data.authenticated ? data.user : null;
   } catch { lndUser = null; }
@@ -757,7 +832,11 @@ document.getElementById('lnd-auth-form').onsubmit = async (e) => {
   const body = lndAuthMode === 'register' ? { email, password, username } : { email, password };
   lndSubmitBtn.disabled = true;
   try {
-    const res  = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res  = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || 'فشل تسجيل الدخول');
     lndUser = data.user;
