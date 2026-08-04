@@ -178,9 +178,11 @@ SESSIONS_DIR = Path(tempfile.gettempdir()) / "coloring_sessions"
 SHARES_DIR = Path(tempfile.gettempdir()) / "coloring_shares"
 DATA_DIR = Path(os.environ.get("COLORING_DATA_DIR", Path(__file__).resolve().parent / "data"))
 DB_PATH = DATA_DIR / "analytics.db"
+SPECIAL_ORDERS_DIR = DATA_DIR / "special_orders"
 SESSIONS_DIR.mkdir(exist_ok=True)
 SHARES_DIR.mkdir(exist_ok=True)
 DATA_DIR.mkdir(exist_ok=True)
+SPECIAL_ORDERS_DIR.mkdir(exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024
@@ -266,6 +268,22 @@ def init_db():
                 paymob_txn_id TEXT,
                 created_at TEXT NOT NULL,
                 paid_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS special_orders (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                child_name  TEXT NOT NULL,
+                client_name TEXT,
+                phone       TEXT,
+                email       TEXT,
+                notes       TEXT,
+                status      TEXT NOT NULL DEFAULT 'pending',
+                created_at  TEXT NOT NULL,
+                updated_at  TEXT
+            );
+            CREATE TABLE IF NOT EXISTS special_order_photos (
+                id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id INTEGER NOT NULL REFERENCES special_orders(id) ON DELETE CASCADE,
+                filename TEXT NOT NULL
             );
             """
         )
@@ -2169,6 +2187,253 @@ def admin_get_user(user_id: int):
         "books_count": int(books_count),
         "payments": [dict(r) for r in payments_rows],
     })
+
+
+# ─────────────────────────── Special Orders (WhatsApp) ───────────────────────────
+
+ALLOWED_PHOTO_EXT = {"jpg", "jpeg", "png", "webp", "heic", "heif"}
+MAX_PHOTOS_PER_ORDER = 8
+MAX_PHOTO_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+def _order_photo_dir(order_id: int) -> Path:
+    d = SPECIAL_ORDERS_DIR / str(order_id)
+    d.mkdir(exist_ok=True)
+    return d
+
+
+def _safe_photo_name(filename: str) -> Optional[str]:
+    """Return a safe filename or None if extension not allowed."""
+    name = Path(filename).name
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    if ext not in ALLOWED_PHOTO_EXT:
+        return None
+    return f"{secrets.token_hex(8)}.{ext}"
+
+
+def _order_to_dict(row: sqlite3.Row, photos: list) -> dict:
+    d = dict(row)
+    d["photos"] = photos
+    return d
+
+
+@app.route("/admin/api/special-orders", methods=["GET"])
+@admin_required
+def admin_list_special_orders():
+    """List special orders, optional ?status=pending|done filter."""
+    status_filter = request.args.get("status", "").strip().lower()
+    with _db_lock:
+        conn = db_connect()
+        if status_filter in ("pending", "done"):
+            rows = conn.execute(
+                "SELECT * FROM special_orders WHERE status = ? ORDER BY id DESC",
+                (status_filter,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM special_orders ORDER BY id DESC"
+            ).fetchall()
+        photo_rows = conn.execute(
+            "SELECT order_id, filename FROM special_order_photos"
+        ).fetchall()
+        conn.close()
+
+    photos_by_order: dict = {}
+    for p in photo_rows:
+        photos_by_order.setdefault(p["order_id"], []).append(p["filename"])
+
+    orders = [_order_to_dict(r, photos_by_order.get(r["id"], [])) for r in rows]
+    return jsonify({"orders": orders, "total": len(orders)})
+
+
+@app.route("/admin/api/special-orders", methods=["POST"])
+@admin_required
+def admin_create_special_order():
+    """Create a new special order. JSON body (child_name required)."""
+    data = request.get_json(silent=True) or {}
+    child_name = (data.get("child_name") or "").strip()
+    if not child_name:
+        return jsonify({"error": "اسم الطفل مطلوب."}), 400
+
+    now = datetime.now(timezone.utc).isoformat()
+    with _db_lock:
+        conn = db_connect()
+        cur = conn.execute(
+            """
+            INSERT INTO special_orders (child_name, client_name, phone, email, notes, status, created_at)
+            VALUES (?, ?, ?, ?, ?, 'pending', ?)
+            """,
+            (
+                child_name,
+                (data.get("client_name") or "").strip() or None,
+                (data.get("phone") or "").strip() or None,
+                (data.get("email") or "").strip() or None,
+                (data.get("notes") or "").strip() or None,
+                now,
+            ),
+        )
+        order_id = cur.lastrowid
+        conn.commit()
+        row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        conn.close()
+    return jsonify({"ok": True, "order": _order_to_dict(row, [])}), 201
+
+
+@app.route("/admin/api/special-orders/<int:order_id>", methods=["PUT"])
+@admin_required
+def admin_update_special_order(order_id: int):
+    """Update fields of an existing special order."""
+    data = request.get_json(silent=True) or {}
+    now = datetime.now(timezone.utc).isoformat()
+
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "الطلب مش موجود."}), 404
+
+        child_name  = (data.get("child_name") or row["child_name"]).strip()
+        client_name = (data.get("client_name") if "client_name" in data else row["client_name"])
+        phone       = (data.get("phone")       if "phone"       in data else row["phone"])
+        email       = (data.get("email")       if "email"       in data else row["email"])
+        notes       = (data.get("notes")       if "notes"       in data else row["notes"])
+        status      = (data.get("status")      if "status"      in data else row["status"])
+        if status not in ("pending", "done"):
+            status = row["status"]
+
+        conn.execute(
+            """
+            UPDATE special_orders
+            SET child_name=?, client_name=?, phone=?, email=?, notes=?, status=?, updated_at=?
+            WHERE id=?
+            """,
+            (child_name, client_name or None, phone or None, email or None,
+             notes or None, status, now, order_id),
+        )
+        conn.commit()
+        updated = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        photos  = [r["filename"] for r in conn.execute(
+            "SELECT filename FROM special_order_photos WHERE order_id = ?", (order_id,)
+        ).fetchall()]
+        conn.close()
+    return jsonify({"ok": True, "order": _order_to_dict(updated, photos)})
+
+
+@app.route("/admin/api/special-orders/<int:order_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_special_order(order_id: int):
+    """Delete a special order and all its photos from disk."""
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT id FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "الطلب مش موجود."}), 404
+        conn.execute("DELETE FROM special_order_photos WHERE order_id = ?", (order_id,))
+        conn.execute("DELETE FROM special_orders WHERE id = ?", (order_id,))
+        conn.commit()
+        conn.close()
+    # Remove photos directory
+    import shutil as _shutil
+    _shutil.rmtree(SPECIAL_ORDERS_DIR / str(order_id), ignore_errors=True)
+    return jsonify({"ok": True})
+
+
+@app.route("/admin/api/special-orders/<int:order_id>/photos", methods=["POST"])
+@admin_required
+def admin_upload_order_photos(order_id: int):
+    """Upload one or more photos for an order (multipart/form-data, field: photos)."""
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT id FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        existing_count = conn.execute(
+            "SELECT COUNT(*) AS c FROM special_order_photos WHERE order_id = ?", (order_id,)
+        ).fetchone()["c"]
+        conn.close()
+    if not row:
+        return jsonify({"error": "الطلب مش موجود."}), 404
+    if existing_count >= MAX_PHOTOS_PER_ORDER:
+        return jsonify({"error": f"أقصى عدد صور هو {MAX_PHOTOS_PER_ORDER}."}), 400
+
+    files = request.files.getlist("photos")
+    if not files:
+        return jsonify({"error": "مفيش صور مرفوعة."}), 400
+
+    slots_left = MAX_PHOTOS_PER_ORDER - existing_count
+    saved = []
+    photo_dir = _order_photo_dir(order_id)
+
+    for f in files[:slots_left]:
+        if not f or not f.filename:
+            continue
+        safe_name = _safe_photo_name(f.filename)
+        if not safe_name:
+            continue
+        dest = photo_dir / safe_name
+        f.seek(0, 2)
+        size = f.tell()
+        f.seek(0)
+        if size > MAX_PHOTO_SIZE:
+            continue
+        try:
+            img = Image.open(f.stream).convert("RGB")
+            # Cap at 1600px
+            if max(img.size) > 1600:
+                img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+            # Save as JPEG regardless of original format
+            jpeg_name = safe_name.rsplit(".", 1)[0] + ".jpg"
+            img.save(photo_dir / jpeg_name, "JPEG", quality=85)
+            saved.append(jpeg_name)
+        except Exception:
+            continue
+
+    if not saved:
+        return jsonify({"error": "مفيش صور صالحة تم رفعها."}), 400
+
+    with _db_lock:
+        conn = db_connect()
+        for name in saved:
+            conn.execute(
+                "INSERT INTO special_order_photos (order_id, filename) VALUES (?, ?)",
+                (order_id, name),
+            )
+        conn.commit()
+        conn.close()
+
+    return jsonify({"ok": True, "uploaded": saved}), 201
+
+
+@app.route("/admin/special-orders/<int:order_id>/photo/<filename>")
+@admin_required
+def admin_serve_order_photo(order_id: int, filename: str):
+    """Serve a single photo file for a special order."""
+    # Sanitize filename — only alphanumeric + dot + underscore + hyphen
+    if not re.match(r'^[a-zA-Z0-9_\-]+\.[a-zA-Z]+$', filename):
+        abort(404)
+    photo_path = SPECIAL_ORDERS_DIR / str(order_id) / filename
+    if not photo_path.exists():
+        abort(404)
+    return send_file(photo_path)
+
+
+@app.route("/admin/api/special-orders/<int:order_id>/photo/<filename>", methods=["DELETE"])
+@admin_required
+def admin_delete_order_photo(order_id: int, filename: str):
+    """Delete a single photo from a special order."""
+    if not re.match(r'^[a-zA-Z0-9_\-]+\.[a-zA-Z]+$', filename):
+        return jsonify({"error": "اسم الملف غير صالح."}), 400
+    photo_path = SPECIAL_ORDERS_DIR / str(order_id) / filename
+    with _db_lock:
+        conn = db_connect()
+        conn.execute(
+            "DELETE FROM special_order_photos WHERE order_id = ? AND filename = ?",
+            (order_id, filename),
+        )
+        conn.commit()
+        conn.close()
+    photo_path.unlink(missing_ok=True)
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":

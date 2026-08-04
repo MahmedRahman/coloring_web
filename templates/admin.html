@@ -378,6 +378,116 @@
     .kpis { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 500px) { .kpis { grid-template-columns: 1fr; } }
+
+  /* ── Special Orders Cards ── */
+  .so-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+  }
+  .so-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-2);
+    background: transparent; color: var(--muted); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all .18s;
+  }
+  .filter-btn:hover { color: var(--text); border-color: var(--border-2); }
+  .filter-btn.active {
+    background: var(--primary-dim); color: var(--primary);
+    border-color: rgba(56,189,248,0.4);
+  }
+  .filter-btn.active-done {
+    background: var(--ok-dim); color: var(--ok);
+    border-color: rgba(52,211,153,0.4);
+  }
+  .filter-btn.active-pending {
+    background: var(--warn-dim); color: var(--warn);
+    border-color: rgba(251,191,36,0.4);
+  }
+  .so-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  .so-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+    transition: border-color .2s, transform .2s;
+  }
+  .so-card:hover { border-color: var(--border-2); transform: translateY(-2px); }
+  .so-card.status-done { border-right: 3px solid var(--ok); }
+  .so-card.status-pending { border-right: 3px solid var(--warn); }
+  .so-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .so-child-name { font-weight: 700; font-size: 15px; }
+  .so-id { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .so-card-body { padding: 14px 16px; }
+  .so-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .so-meta-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--text-2);
+  }
+  .so-meta-row .ico { width: 16px; text-align: center; opacity: .7; font-size: 13px; }
+  .so-meta-row span { color: var(--muted); min-width: 60px; font-size: 12px; }
+  .so-notes {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px;
+    font-size: 12.5px; color: var(--text-2); line-height: 1.5;
+    margin-bottom: 12px; white-space: pre-wrap;
+  }
+  .so-photos {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+  }
+  .so-photo-wrap {
+    position: relative; width: 72px; height: 72px;
+  }
+  .so-photo {
+    width: 72px; height: 72px; border-radius: 9px;
+    object-fit: cover; cursor: pointer;
+    border: 1px solid var(--border-2);
+    transition: opacity .2s;
+  }
+  .so-photo:hover { opacity: .85; }
+  .so-photo-del {
+    position: absolute; top: -5px; right: -5px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--danger); color: white; border: 0;
+    font-size: 10px; display: grid; place-items: center; cursor: pointer;
+    opacity: 0; transition: opacity .2s;
+    line-height: 1;
+  }
+  .so-photo-wrap:hover .so-photo-del { opacity: 1; }
+  .so-upload-btn {
+    width: 72px; height: 72px; border-radius: 9px;
+    border: 1.5px dashed var(--border-2); background: transparent;
+    color: var(--muted); font-size: 22px; cursor: pointer;
+    display: grid; place-items: center;
+    transition: border-color .2s, color .2s;
+  }
+  .so-upload-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .so-card-foot {
+    display: flex; gap: 6px; padding: 10px 16px;
+    border-top: 1px solid var(--border); flex-wrap: wrap;
+  }
+  .so-date { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-right: auto; align-self: center; }
+  /* Order form modal wider */
+  .modal-lg { max-width: 560px; }
+  .modal-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  /* Full-size photo lightbox */
+  .lightbox {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,0.9); align-items: center; justify-content: center;
+    cursor: zoom-out;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 10px; object-fit: contain; }
+  .so-empty {
+    grid-column: 1 / -1; padding: 60px 20px; text-align: center;
+    color: var(--muted); font-size: 14px;
+  }
+  .so-empty .so-empty-ico { font-size: 40px; margin-bottom: 12px; display: block; }
 </style>
 </head>
 <body>
@@ -417,6 +527,9 @@
       </button>
       <button class="nav-item" data-section="jobs">
         <span class="nav-ico">✦</span> الوظائف
+      </button>
+      <button class="nav-item" data-section="special-orders" id="nav-special-orders">
+        <span class="nav-ico">📱</span> طلبات خاصة
       </button>
     </nav>
 
@@ -772,11 +885,61 @@
         </div>
       </div>
     </section>
+
+    <!-- SPECIAL ORDERS -->
+    <section class="section" id="section-special-orders">
+      <div class="so-toolbar">
+        <div class="so-filters">
+          <button class="filter-btn active" data-filter="all" onclick="filterOrders('all', this)">📋 الكل</button>
+          <button class="filter-btn" data-filter="pending" onclick="filterOrders('pending', this)">⏳ معلّق</button>
+          <button class="filter-btn" data-filter="done" onclick="filterOrders('done', this)">✅ مكتمل</button>
+        </div>
+        <button class="btn btn-primary" onclick="openOrderModal(null)">
+          + طلب جديد
+        </button>
+      </div>
+      <div class="so-grid" id="so-grid">
+        <div class="so-empty"><span class="so-empty-ico">📱</span>جاري التحميل...</div>
+      </div>
+    </section>
   </main>
 </div>
 
 <!-- Toast -->
 <div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- Order Modal (add/edit) -->
+<div class="modal-overlay" id="order-modal">
+  <div class="modal modal-lg">
+    <h3 id="order-modal-title">📱 طلب جديد</h3>
+    <p class="modal-sub">اسم الطفل مطلوب، باقي الحقول اختيارية</p>
+    <div class="modal-grid-2">
+      <div>
+        <label for="o-child">اسم الطفل *</label>
+        <input type="text" id="o-child" placeholder="اسم الطفل" required>
+      </div>
+      <div>
+        <label for="o-client">اسم العميل</label>
+        <input type="text" id="o-client" placeholder="اسم ولي الأمر">
+      </div>
+      <div>
+        <label for="o-phone">رقم التليفون</label>
+        <input type="tel" id="o-phone" placeholder="01xxxxxxxxx">
+      </div>
+      <div>
+        <label for="o-email">البريد الإلكتروني</label>
+        <input type="email" id="o-email" placeholder="example@email.com">
+      </div>
+    </div>
+    <label for="o-notes">ملاحظات</label>
+    <textarea id="o-notes" placeholder="أي تفاصيل إضافية عن الطلب..."></textarea>
+    <div class="modal-msg" id="order-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="submitOrderForm()">حفظ الطلب</button>
+      <button class="btn btn-ghost" onclick="closeModal('order-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
 
 <!-- Credits Modal -->
 <div class="modal-overlay" id="credits-modal">
@@ -825,12 +988,14 @@
 </div>
 
 <script>
+/* ─── Special Orders ─── */
 const sectionMeta = {
-  overview: { title: 'نظرة عامة',    sub: 'متابعة الأداء والمستخدمين والكتب' },
-  users:    { title: 'المستخدمون',   sub: 'إدارة الحسابات والـ Credits' },
-  books:    { title: 'الكتب',        sub: 'سجل الكتب المولّدة' },
-  payments: { title: 'المدفوعات',    sub: 'سجل المعاملات المالية' },
-  jobs:     { title: 'الوظائف',      sub: 'ترتيب الوظائف حسب الاستخدام' },
+  overview:        { title: 'نظرة عامة',       sub: 'متابعة الأداء والمستخدمين والكتب' },
+  users:           { title: 'المستخدمون',      sub: 'إدارة الحسابات والـ Credits' },
+  books:           { title: 'الكتب',           sub: 'سجل الكتب المولّدة' },
+  payments:        { title: 'المدفوعات',       sub: 'سجل المعاملات المالية' },
+  jobs:            { title: 'الوظائف',         sub: 'ترتيب الوظائف حسب الاستخدام' },
+  'special-orders':{ title: 'طلبات خاصة',      sub: 'طلبات الواتساب — تسجيل وإدارة' },
 };
 
 function showSection(id) {
@@ -843,6 +1008,7 @@ function showSection(id) {
   document.getElementById('page-title').textContent = sectionMeta[id].title;
   document.getElementById('page-sub').textContent   = sectionMeta[id].sub;
   history.replaceState(null, '', '#' + id);
+  if (id === 'special-orders') loadOrders();
 }
 
 document.querySelectorAll('[data-section]').forEach(el => {
@@ -931,7 +1097,7 @@ async function submitNotify() {
   } catch(err) { msgEl.textContent = err.message; msgEl.className = 'modal-msg err'; }
 }
 
-/* Delete */
+/* Delete user */
 let _deleteUserId = null, _deleteUsername = '';
 function confirmDelete(userId, username) {
   _deleteUserId = userId; _deleteUsername = username;
@@ -953,6 +1119,236 @@ async function submitDelete() {
     showToast(`تم حذف "${_deleteUsername}" ✓`, 'ok');
     setTimeout(() => closeModal('delete-modal'), 1500);
   } catch(err) { msgEl.textContent = err.message; msgEl.className = 'modal-msg err'; }
+}
+
+/* ════════════════ Special Orders JS ════════════════ */
+let _soAll = [];          // all loaded orders
+let _soFilter = 'all';    // current filter
+let _soEditId = null;     // null = new, number = editing
+
+async function loadOrders(filter) {
+  if (filter !== undefined) _soFilter = filter;
+  const url = _soFilter === 'all'
+    ? '/admin/api/special-orders'
+    : `/admin/api/special-orders?status=${_soFilter}`;
+  try {
+    const res  = await fetch(url);
+    const data = await res.json();
+    _soAll = data.orders || [];
+    renderOrders(_soAll);
+  } catch(e) {
+    document.getElementById('so-grid').innerHTML =
+      '<div class="so-empty"><span class="so-empty-ico">⚠️</span>خطأ في تحميل الطلبات.</div>';
+  }
+}
+
+function filterOrders(f, btn) {
+  _soFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.remove('active', 'active-done', 'active-pending');
+  });
+  if (f === 'all')     btn.classList.add('active');
+  if (f === 'done')    btn.classList.add('active-done');
+  if (f === 'pending') btn.classList.add('active-pending');
+  loadOrders();
+}
+
+function renderOrders(orders) {
+  const grid = document.getElementById('so-grid');
+  if (!orders.length) {
+    grid.innerHTML = '<div class="so-empty"><span class="so-empty-ico">📱</span>مفيش طلبات في هذه الفئة.</div>';
+    return;
+  }
+  grid.innerHTML = orders.map(o => orderCardHTML(o)).join('');
+}
+
+function photoURL(orderId, filename) {
+  return `/admin/special-orders/${orderId}/photo/${filename}`;
+}
+
+function orderCardHTML(o) {
+  const statusBadge = o.status === 'done'
+    ? '<span class="badge badge-green">✓ مكتمل</span>'
+    : '<span class="badge badge-yellow">⏳ معلّق</span>';
+
+  const photos = (o.photos || []).map(fn => `
+    <div class="so-photo-wrap">
+      <img class="so-photo" src="${photoURL(o.id, fn)}" alt="صورة الطفل"
+           onclick="openLightbox('${photoURL(o.id, fn)}')">
+      <button class="so-photo-del" onclick="deletePhoto(${o.id},'${fn}',this)" title="حذف الصورة">✕</button>
+    </div>`).join('');
+
+  const uploadSlots = (o.photos || []).length < 8
+    ? `<label class="so-upload-btn" title="رفع صور" style="cursor:pointer">
+         +
+         <input type="file" accept="image/*" multiple hidden onchange="uploadPhotos(${o.id}, this)">
+       </label>` : '';
+
+  const metaRows = [
+    o.client_name ? `<div class="so-meta-row"><span class="ico">👤</span><span>العميل</span>${escHtml(o.client_name)}</div>` : '',
+    o.phone       ? `<div class="so-meta-row"><span class="ico">📞</span><span>تليفون</span><a href="tel:${escHtml(o.phone)}" style="color:var(--primary)">${escHtml(o.phone)}</a></div>` : '',
+    o.email       ? `<div class="so-meta-row"><span class="ico">📧</span><span>بريد</span>${escHtml(o.email)}</div>` : '',
+  ].join('');
+
+  const notes = o.notes
+    ? `<div class="so-notes">${escHtml(o.notes)}</div>` : '';
+
+  const date = (o.created_at || '').slice(0,16).replace('T',' ');
+  const toggleLabel = o.status === 'done' ? '↩ معلّق' : '✓ مكتمل';
+  const toggleClass = o.status === 'done' ? 'btn-ghost' : 'btn-success';
+
+  return `
+  <div class="so-card status-${o.status}" id="so-card-${o.id}">
+    <div class="so-card-head">
+      <div>
+        <div class="so-child-name">🧒 ${escHtml(o.child_name)}</div>
+        <div class="so-id">#${o.id}</div>
+      </div>
+      ${statusBadge}
+    </div>
+    <div class="so-card-body">
+      ${metaRows ? `<div class="so-meta">${metaRows}</div>` : ''}
+      ${notes}
+      <div class="so-photos">
+        ${photos}
+        ${uploadSlots}
+      </div>
+    </div>
+    <div class="so-card-foot">
+      <button class="btn btn-sm ${toggleClass}" onclick="toggleStatus(${o.id},'${o.status}',this)">${toggleLabel}</button>
+      <button class="btn btn-sm" onclick="openOrderModal(${o.id})">✏️ تعديل</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteOrder(${o.id})">حذف</button>
+      <span class="so-date">${date}</span>
+    </div>
+  </div>`;
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* Toggle status */
+async function toggleStatus(id, current, btn) {
+  const newStatus = current === 'done' ? 'pending' : 'done';
+  try {
+    const res  = await fetch(`/admin/api/special-orders/${id}`, {
+      method: 'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({status: newStatus}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ');
+    showToast(newStatus === 'done' ? '✅ تم تحديد الطلب كمكتمل' : '⏳ الطلب رجع معلّق', 'ok');
+    loadOrders();
+  } catch(e) { showToast(e.message, 'err'); }
+}
+
+/* Delete order */
+async function deleteOrder(id) {
+  if (!confirm(`هتحذف الطلب #${id} وكل صوره. متأكد؟`)) return;
+  try {
+    const res  = await fetch(`/admin/api/special-orders/${id}`, {method:'DELETE'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ');
+    const card = document.getElementById(`so-card-${id}`);
+    if (card) { card.style.transition = 'opacity .3s'; card.style.opacity = '0'; setTimeout(()=>card.remove(),320); }
+    showToast(`تم حذف الطلب #${id} ✓`, 'ok');
+  } catch(e) { showToast(e.message,'err'); }
+}
+
+/* Upload photos */
+async function uploadPhotos(orderId, input) {
+  if (!input.files.length) return;
+  const fd = new FormData();
+  for (const f of input.files) fd.append('photos', f);
+  try {
+    const res  = await fetch(`/admin/api/special-orders/${orderId}/photos`, {method:'POST', body: fd});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ في الرفع');
+    showToast(`تم رفع ${data.uploaded.length} صورة ✓`, 'ok');
+    loadOrders();
+  } catch(e) { showToast(e.message, 'err'); }
+  input.value = '';
+}
+
+/* Delete single photo */
+async function deletePhoto(orderId, filename, btn) {
+  if (!confirm('تحذف الصورة دي؟')) return;
+  try {
+    const res  = await fetch(`/admin/api/special-orders/${orderId}/photo/${filename}`, {method:'DELETE'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ');
+    btn.closest('.so-photo-wrap').remove();
+    showToast('تم حذف الصورة ✓', 'ok');
+  } catch(e) { showToast(e.message, 'err'); }
+}
+
+/* Order form modal */
+function openOrderModal(id) {
+  _soEditId = id;
+  const isEdit = id !== null;
+  document.getElementById('order-modal-title').textContent = isEdit ? '✏️ تعديل الطلب' : '📱 طلب جديد';
+  document.getElementById('order-msg').textContent = '';
+  document.getElementById('order-msg').className   = 'modal-msg';
+
+  if (isEdit) {
+    const o = _soAll.find(x => x.id === id);
+    if (o) {
+      document.getElementById('o-child').value  = o.child_name  || '';
+      document.getElementById('o-client').value = o.client_name || '';
+      document.getElementById('o-phone').value  = o.phone       || '';
+      document.getElementById('o-email').value  = o.email       || '';
+      document.getElementById('o-notes').value  = o.notes       || '';
+    }
+  } else {
+    ['o-child','o-client','o-phone','o-email','o-notes'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+  }
+  openModal('order-modal');
+  setTimeout(() => document.getElementById('o-child').focus(), 120);
+}
+
+async function submitOrderForm() {
+  const msgEl = document.getElementById('order-msg');
+  const child_name  = document.getElementById('o-child').value.trim();
+  const client_name = document.getElementById('o-client').value.trim();
+  const phone       = document.getElementById('o-phone').value.trim();
+  const email       = document.getElementById('o-email').value.trim();
+  const notes       = document.getElementById('o-notes').value.trim();
+
+  if (!child_name) {
+    msgEl.textContent = 'اسم الطفل مطلوب!'; msgEl.className = 'modal-msg err'; return;
+  }
+  const payload = { child_name, client_name, phone, email, notes };
+  const isEdit  = _soEditId !== null;
+  const url     = isEdit ? `/admin/api/special-orders/${_soEditId}` : '/admin/api/special-orders';
+  const method  = isEdit ? 'PUT' : 'POST';
+
+  try {
+    const res  = await fetch(url, {
+      method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ');
+    msgEl.textContent = isEdit ? 'تم التعديل ✓' : 'تم إضافة الطلب ✓';
+    msgEl.className   = 'modal-msg ok';
+    showToast(isEdit ? 'تم تعديل الطلب ✓' : 'تم إضافة الطلب ✓', 'ok');
+    setTimeout(() => { closeModal('order-modal'); loadOrders(); }, 900);
+  } catch(e) { msgEl.textContent = e.message; msgEl.className = 'modal-msg err'; }
+}
+
+/* Lightbox */
+function openLightbox(src) {
+  let lb = document.getElementById('so-lightbox');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'so-lightbox'; lb.className = 'lightbox';
+    lb.innerHTML = '<img id="so-lb-img">';
+    lb.onclick = () => lb.classList.remove('open');
+    document.body.appendChild(lb);
+  }
+  document.getElementById('so-lb-img').src = src;
+  lb.classList.add('open');
 }
 </script>
 </body>
