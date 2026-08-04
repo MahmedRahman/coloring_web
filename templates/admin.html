@@ -992,7 +992,13 @@
     </div>
 
     <!-- Photo upload section -->
-    <label>صور الطفل <span style="color:var(--muted);font-weight:400">(اختياري — حتى 8 صور)</span></label>
+    <!-- Existing photos (edit mode only) -->
+    <div id="o-existing-photos-wrap" style="display:none">
+      <label>صور مرفوعة — اضغط ✕ لحذف أي صورة</label>
+      <div id="o-existing-photos" class="o-photo-preview" style="margin-bottom:10px"></div>
+    </div>
+
+    <label>إضافة صور جديدة <span id="o-slots-label" style="color:var(--muted);font-weight:400">(حتى 8 صور)</span></label>
     <label id="o-photo-drop" class="o-photo-drop">
       <span id="o-photo-drop-text">
         🖼️ اختر صور أو اسحبها هنا &mdash; يمكن تحديد أكتر من صورة
@@ -1205,6 +1211,51 @@ function setOrderStatus(val) {
     btnPending.classList.add('sel-pending');
     btnDone.classList.remove('sel-done');
   }
+}
+
+/* Existing photos in modal */
+let _modalOrderId = null;
+let _existingPhotos = []; // filenames currently on server
+
+function renderExistingPhotos(orderId, photos) {
+  _modalOrderId = orderId;
+  _existingPhotos = [...photos];
+  const wrap    = document.getElementById('o-existing-photos-wrap');
+  const grid    = document.getElementById('o-existing-photos');
+  const lbl     = document.getElementById('o-slots-label');
+
+  if (!orderId || !photos.length) {
+    wrap.style.display = 'none';
+    if (lbl) lbl.textContent = '(حتى 8 صور)';
+    return;
+  }
+  wrap.style.display = 'block';
+  grid.innerHTML = _existingPhotos.map((fn, idx) => `
+    <div class="o-prev-wrap" id="o-ex-${fn}">
+      <img class="o-prev-img" src="/admin/special-orders/${orderId}/photo/${fn}"
+           onclick="openLightbox('/admin/special-orders/${orderId}/photo/${fn}')" style="cursor:zoom-in">
+      <button class="o-prev-rm" onclick="deleteModalPhoto('${fn}')" type="button" title="حذف">✕</button>
+    </div>`).join('');
+
+  const slotsLeft = 8 - _existingPhotos.length - _modalFiles.length;
+  if (lbl) lbl.textContent = slotsLeft > 0 ? `(يمكن إضافة ${slotsLeft} أكتر)` : '(وصلت الحد الأقصى)';
+}
+
+async function deleteModalPhoto(filename) {
+  if (!_modalOrderId) return;
+  if (!confirm('تحذف الصورة دي من الطلب؟')) return;
+  try {
+    const res  = await fetch(`/admin/api/special-orders/${_modalOrderId}/photo/${filename}`, {method:'DELETE'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ');
+    // Remove from local array and re-render
+    _existingPhotos = _existingPhotos.filter(f => f !== filename);
+    // Also update _soAll in memory so card updates after modal closes
+    const order = _soAll.find(x => x.id === _modalOrderId);
+    if (order) order.photos = _existingPhotos;
+    renderExistingPhotos(_modalOrderId, _existingPhotos);
+    showToast('تم حذف الصورة ✓', 'ok');
+  } catch(e) { showToast(e.message, 'err'); }
 }
 
 async function loadOrders(filter) {
@@ -1435,12 +1486,14 @@ function openOrderModal(id) {
       document.getElementById('o-email').value  = o.email       || '';
       document.getElementById('o-notes').value  = o.notes       || '';
       setOrderStatus(o.status || 'pending');
+      renderExistingPhotos(o.id, o.photos || []);
     }
   } else {
     ['o-child','o-client','o-phone','o-email','o-notes'].forEach(fid => {
       document.getElementById(fid).value = '';
     });
     setOrderStatus('pending');
+    renderExistingPhotos(null, []);
   }
   openModal('order-modal');
   setTimeout(() => document.getElementById('o-child').focus(), 120);
