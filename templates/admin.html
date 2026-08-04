@@ -1013,26 +1013,31 @@
       </button>
     </div>
 
-    <!-- Photo upload section -->
-    <!-- Existing photos (edit mode only) -->
+    <!-- ─── صور الطفل (تظهر في الإضافة والتعديل) ─── -->
+
+    <!-- الصور الموجودة — تعديل فقط -->
     <div id="o-existing-photos-wrap" style="display:none">
-      <label>صور مرفوعة — اضغط ✕ لحذف أي صورة</label>
+      <label>📷 صور مرفوعة — اضغط ✕ لحذف أي صورة</label>
       <div id="o-existing-photos" class="o-photo-preview" style="margin-bottom:10px"></div>
     </div>
 
-    <label>إضافة صور جديدة <span id="o-slots-label" style="color:var(--muted);font-weight:400">(حتى 8 صور)</span></label>
+    <!-- إضافة صور جديدة -->
+    <label>🖼️ إضافة صور جديدة <span id="o-slots-label" style="color:var(--muted);font-weight:400">(حتى 8 صور)</span></label>
     <label id="o-photo-drop" class="o-photo-drop">
       <span id="o-photo-drop-text">
-        🖼️ اختر صور أو اسحبها هنا &mdash; يمكن تحديد أكتر من صورة
+        اختر صور أو اسحبها هنا — يمكن تحديد أكتر من صورة في نفس الوقت
       </span>
       <input type="file" id="o-photos" accept="image/*" multiple hidden onchange="previewModalPhotos(this)">
     </label>
-    <!-- PDF upload section -->
-    <label>ملف PDF <span style="color:var(--muted);font-weight:400">(اختياري — حتى 50 MB)</span></label>
+    <!-- منطقة preview الصور الجديدة -->
+    <div id="o-photo-preview" class="o-photo-preview"></div>
+
+    <!-- ─── ملف PDF (تظهر في الإضافة والتعديل) ─── -->
+    <label>📄 ملف PDF <span style="color:var(--muted);font-weight:400">(اختياري — حتى 50 MB)</span></label>
     <div id="o-pdf-zone" class="pdf-zone">
       <span id="o-pdf-current"></span>
       <label style="margin:0">
-        <span id="o-pdf-btn" class="btn btn-sm btn-ghost" style="pointer-events:none">📄 رفع PDF</span>
+        <span class="btn btn-sm btn-ghost" style="pointer-events:none">📤 اختر ملف PDF</span>
         <input type="file" id="o-pdf-input" accept=".pdf,application/pdf" hidden onchange="previewPdf(this)">
       </label>
       <span id="o-pdf-selected" style="font-size:12px;color:var(--ok);display:none"></span>
