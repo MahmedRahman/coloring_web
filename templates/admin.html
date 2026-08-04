@@ -532,6 +532,28 @@
     background: var(--ok-dim); border-color: rgba(52,211,153,0.45);
     color: var(--ok);
   }
+  /* PDF */
+  .pdf-zone {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    border: 1.5px dashed var(--border-2); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 14px;
+    transition: border-color .2s, background .2s;
+  }
+  .pdf-zone.has-pdf {
+    border-style: solid; border-color: rgba(167,139,250,0.4);
+    background: rgba(167,139,250,0.06);
+  }
+  .pdf-zone label { cursor: pointer; }
+  .pdf-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 8px;
+    background: rgba(167,139,250,0.15); border: 1px solid rgba(167,139,250,0.3);
+    color: var(--violet); font-size: 12px; font-weight: 600;
+  }
+  .pdf-badge a { color: inherit; }
+  .so-pdf-row {
+    display: flex; align-items: center; gap: 8px; padding: 8px 0 6px;
+  }
 </style>
 </head>
 <body>
@@ -1005,7 +1027,16 @@
       </span>
       <input type="file" id="o-photos" accept="image/*" multiple hidden onchange="previewModalPhotos(this)">
     </label>
-    <div id="o-photo-preview" class="o-photo-preview"></div>
+    <!-- PDF upload section -->
+    <label>ملف PDF <span style="color:var(--muted);font-weight:400">(اختياري — حتى 50 MB)</span></label>
+    <div id="o-pdf-zone" class="pdf-zone">
+      <span id="o-pdf-current"></span>
+      <label style="margin:0">
+        <span id="o-pdf-btn" class="btn btn-sm btn-ghost" style="pointer-events:none">📄 رفع PDF</span>
+        <input type="file" id="o-pdf-input" accept=".pdf,application/pdf" hidden onchange="previewPdf(this)">
+      </label>
+      <span id="o-pdf-selected" style="font-size:12px;color:var(--ok);display:none"></span>
+    </div>
 
     <div class="modal-msg" id="order-msg"></div>
     <div class="modal-actions">
@@ -1325,6 +1356,14 @@ function orderCardHTML(o) {
   const notes = o.notes
     ? `<div class="so-notes">${escHtml(o.notes)}</div>` : '';
 
+  const pdfRow = o.pdf_filename
+    ? `<div class="so-pdf-row">
+         <span class="pdf-badge">
+           📄 <a href="/admin/special-orders/${o.id}/pdf/${o.pdf_filename}" target="_blank">PDF تحميل</a>
+         </span>
+         <button class="btn btn-sm btn-danger" onclick="deletePdf(${o.id},'${o.pdf_filename}',this)" title="حذف PDF">× PDF</button>
+       </div>` : '';
+
   const date = (o.created_at || '').slice(0,16).replace('T',' ');
   const toggleLabel = o.status === 'done' ? '↩ معلّق' : '✓ مكتمل';
   const toggleClass = o.status === 'done' ? 'btn-ghost' : 'btn-success';
@@ -1341,6 +1380,7 @@ function orderCardHTML(o) {
     <div class="so-card-body">
       ${metaRows ? `<div class="so-meta">${metaRows}</div>` : ''}
       ${notes}
+      ${pdfRow}
       <div class="so-photos">
         ${photos}
         ${uploadSlots}
@@ -1472,6 +1512,7 @@ function openOrderModal(id) {
   _soEditId = id;
   _modalFiles = []; // reset photos
   renderModalPreviews();
+  resetPdfZone();
   const isEdit = id !== null;
   document.getElementById('order-modal-title').textContent = isEdit ? '✏️ تعديل الطلب' : '📱 طلب جديد';
   document.getElementById('order-msg').textContent = '';
@@ -1487,6 +1528,14 @@ function openOrderModal(id) {
       document.getElementById('o-notes').value  = o.notes       || '';
       setOrderStatus(o.status || 'pending');
       renderExistingPhotos(o.id, o.photos || []);
+      // Show existing PDF info
+      if (o.pdf_filename) {
+        const zone = document.getElementById('o-pdf-zone');
+        const cur  = document.getElementById('o-pdf-current');
+        zone.classList.add('has-pdf');
+        cur.innerHTML = `<span class="pdf-badge">📄 <a href="/admin/special-orders/${o.id}/pdf/${o.pdf_filename}" target="_blank">PDF موجود</a></span>
+          <button class="btn btn-sm btn-danger" onclick="deletePdfFromModal(${o.id},'${o.pdf_filename}')" type="button">× حذف</button>`;
+      }
     }
   } else {
     ['o-child','o-client','o-phone','o-email','o-notes'].forEach(fid => {
@@ -1507,6 +1556,7 @@ async function submitOrderForm() {
   const email       = document.getElementById('o-email').value.trim();
   const notes       = document.getElementById('o-notes').value.trim();
   const status      = document.getElementById('o-status-done').classList.contains('sel-done') ? 'done' : 'pending';
+  const pdfFile     = document.getElementById('o-pdf-input').files[0] || null;
 
   if (!child_name) {
     msgEl.textContent = 'اسم الطفل مطلوب!'; msgEl.className = 'modal-msg err'; return;
@@ -1535,10 +1585,23 @@ async function submitOrderForm() {
       const pRes  = await fetch(`/admin/api/special-orders/${orderId}/photos`, {method:'POST', body: fd});
       const pData = await pRes.json();
       if (!pRes.ok) {
-        // Order saved but photos failed — warn not block
         showToast(`❗ تم حفظ الطلب بس فيه مشكلة في الصور: ${pData.error}`, 'err');
       } else {
         showToast(`تم رفع ${pData.uploaded.length} صورة ✓`, 'ok');
+      }
+    }
+
+    // Step 3: upload PDF if selected
+    if (pdfFile) {
+      msgEl.textContent = 'جاري رفع PDF...';
+      const fd = new FormData();
+      fd.append('pdf', pdfFile);
+      const pdfRes  = await fetch(`/admin/api/special-orders/${orderId}/pdf`, {method:'POST', body: fd});
+      const pdfData = await pdfRes.json();
+      if (!pdfRes.ok) {
+        showToast(`❗ تم حفظ الطلب بس PDF ماتلودش: ${pdfData.error}`, 'err');
+      } else {
+        showToast('تم رفع PDF ✓', 'ok');
       }
     }
 
@@ -1547,6 +1610,68 @@ async function submitOrderForm() {
     showToast(isEdit ? 'تم تعديل الطلب ✓' : 'تم إضافة الطلب ✓', 'ok');
     setTimeout(() => { closeModal('order-modal'); loadOrders(); }, 700);
   } catch(e) { msgEl.textContent = e.message; msgEl.className = 'modal-msg err'; }
+}
+
+/* PDF helpers */
+function resetPdfZone() {
+  const zone = document.getElementById('o-pdf-zone');
+  const cur  = document.getElementById('o-pdf-current');
+  const sel  = document.getElementById('o-pdf-selected');
+  const inp  = document.getElementById('o-pdf-input');
+  zone.classList.remove('has-pdf');
+  cur.innerHTML  = '';
+  sel.textContent = ''; sel.style.display = 'none';
+  if (inp) inp.value = '';
+}
+
+function previewPdf(input) {
+  const f = input.files[0];
+  const sel = document.getElementById('o-pdf-selected');
+  const zone = document.getElementById('o-pdf-zone');
+  if (f) {
+    const mb = (f.size / 1024 / 1024).toFixed(1);
+    sel.textContent = `✓ ${f.name} (${mb} MB)`;
+    sel.style.display = 'inline';
+    zone.classList.add('has-pdf');
+  } else {
+    sel.textContent = ''; sel.style.display = 'none';
+    zone.classList.remove('has-pdf');
+  }
+}
+
+/* Delete PDF from card */
+async function deletePdf(orderId, filename, btn) {
+  if (!confirm('تحذف ملف PDF من الطلب ده؟')) return;
+  try {
+    const res  = await fetch(`/admin/api/special-orders/${orderId}/pdf`, {method:'DELETE'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ');
+    // Remove PDF row from card
+    btn.closest('.so-pdf-row').remove();
+    // Update in-memory cache
+    const o = _soAll.find(x => x.id === orderId);
+    if (o) o.pdf_filename = null;
+    showToast('تم حذف PDF ✓', 'ok');
+  } catch(e) { showToast(e.message, 'err'); }
+}
+
+/* Delete PDF from edit modal */
+async function deletePdfFromModal(orderId, filename) {
+  if (!confirm('تحذف ملف PDF من الطلب ده؟')) return;
+  try {
+    const res  = await fetch(`/admin/api/special-orders/${orderId}/pdf`, {method:'DELETE'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ');
+    // Clear PDF zone in modal
+    const zone = document.getElementById('o-pdf-zone');
+    const cur  = document.getElementById('o-pdf-current');
+    zone.classList.remove('has-pdf');
+    cur.innerHTML = '';
+    // Update in-memory cache
+    const o = _soAll.find(x => x.id === orderId);
+    if (o) o.pdf_filename = null;
+    showToast('تم حذف PDF ✓', 'ok');
+  } catch(e) { showToast(e.message, 'err'); }
 }
 
 /* Lightbox */

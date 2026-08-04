@@ -185,7 +185,7 @@ DATA_DIR.mkdir(exist_ok=True)
 SPECIAL_ORDERS_DIR.mkdir(exist_ok=True)
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 56 * 1024 * 1024  # 56 MB — covers 50 MB PDF uploads
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.jinja_env.auto_reload = True
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
@@ -303,6 +303,10 @@ def init_db():
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) "
             "WHERE google_id IS NOT NULL"
         )
+        # Migrate: add pdf_filename to special_orders if missing
+        so_cols = {r[1] for r in conn.execute("PRAGMA table_info(special_orders)").fetchall()}
+        if "pdf_filename" not in so_cols:
+            conn.execute("ALTER TABLE special_orders ADD COLUMN pdf_filename TEXT")
         conn.commit()
         conn.close()
 
@@ -2214,6 +2218,9 @@ def _safe_photo_name(filename: str) -> Optional[str]:
 def _order_to_dict(row: sqlite3.Row, photos: list) -> dict:
     d = dict(row)
     d["photos"] = photos
+    # pdf_filename may not exist in older rows
+    if "pdf_filename" not in d:
+        d["pdf_filename"] = None
     return d
 
 
@@ -2334,7 +2341,7 @@ def admin_delete_special_order(order_id: int):
         conn.execute("DELETE FROM special_orders WHERE id = ?", (order_id,))
         conn.commit()
         conn.close()
-    # Remove photos directory
+    # Remove entire order directory (photos + pdf)
     import shutil as _shutil
     _shutil.rmtree(SPECIAL_ORDERS_DIR / str(order_id), ignore_errors=True)
     return jsonify({"ok": True})
@@ -2433,6 +2440,95 @@ def admin_delete_order_photo(order_id: int, filename: str):
         conn.commit()
         conn.close()
     photo_path.unlink(missing_ok=True)
+    return jsonify({"ok": True})
+
+
+# ─── PDF endpoints ───────────────────────────────────────────────────────────
+
+MAX_PDF_SIZE = 50 * 1024 * 1024  # 50 MB
+
+
+@app.route("/admin/api/special-orders/<int:order_id>/pdf", methods=["POST"])
+@admin_required
+def admin_upload_order_pdf(order_id: int):
+    """Upload (or replace) the PDF for a special order."""
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT id, pdf_filename FROM special_orders WHERE id = ?",
+                           (order_id,)).fetchone()
+        conn.close()
+    if not row:
+        return jsonify({"error": "الطلب مش موجود."}), 404
+
+    f = request.files.get("pdf")
+    if not f or not f.filename:
+        return jsonify({"error": "مفيش ملف PDF مرفوع."}), 400
+
+    ext = Path(f.filename).suffix.lower()
+    if ext != ".pdf":
+        return jsonify({"error": "الملف لازم يكون PDF."}), 400
+
+    f.seek(0, 2)
+    size = f.tell()
+    f.seek(0)
+    if size > MAX_PDF_SIZE:
+        return jsonify({"error": f"حجم الملف أكبر من {MAX_PDF_SIZE // 1024 // 1024} MB."}), 400
+
+    pdf_dir  = _order_photo_dir(order_id)  # same directory as photos
+    pdf_name = f"order_{order_id}_{secrets.token_hex(6)}.pdf"
+    pdf_path = pdf_dir / pdf_name
+
+    # Delete old PDF if exists
+    old_pdf = row["pdf_filename"]
+    if old_pdf:
+        (pdf_dir / old_pdf).unlink(missing_ok=True)
+
+    f.save(str(pdf_path))
+
+    with _db_lock:
+        conn = db_connect()
+        conn.execute(
+            "UPDATE special_orders SET pdf_filename=?, updated_at=? WHERE id=?",
+            (pdf_name, datetime.now(timezone.utc).isoformat(), order_id),
+        )
+        conn.commit()
+        conn.close()
+
+    return jsonify({"ok": True, "pdf_filename": pdf_name}), 201
+
+
+@app.route("/admin/special-orders/<int:order_id>/pdf/<filename>")
+@admin_required
+def admin_serve_order_pdf(order_id: int, filename: str):
+    """Serve the PDF file for download."""
+    if not re.match(r'^[a-zA-Z0-9_\-]+\.pdf$', filename):
+        abort(404)
+    pdf_path = SPECIAL_ORDERS_DIR / str(order_id) / filename
+    if not pdf_path.exists():
+        abort(404)
+    return send_file(pdf_path, as_attachment=True, download_name=filename)
+
+
+@app.route("/admin/api/special-orders/<int:order_id>/pdf", methods=["DELETE"])
+@admin_required
+def admin_delete_order_pdf(order_id: int):
+    """Delete the PDF attached to a special order."""
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT pdf_filename FROM special_orders WHERE id=?",
+                           (order_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "الطلب مش موجود."}), 404
+        old_pdf = row["pdf_filename"]
+        conn.execute(
+            "UPDATE special_orders SET pdf_filename=NULL, updated_at=? WHERE id=?",
+            (datetime.now(timezone.utc).isoformat(), order_id),
+        )
+        conn.commit()
+        conn.close()
+    if old_pdf:
+        (SPECIAL_ORDERS_DIR / str(order_id) / old_pdf).unlink(missing_ok=True)
     return jsonify({"ok": True})
 
 
