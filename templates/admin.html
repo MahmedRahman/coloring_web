@@ -379,101 +379,190 @@
   }
   @media (max-width: 500px) { .kpis { grid-template-columns: 1fr; } }
 
-  /* ── Special Orders Cards ── */
+  /* ── Special Orders ── */
   .so-toolbar {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
   }
-  .so-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .so-toolbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .filter-btn {
-    padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-2);
-    background: transparent; color: var(--muted); font-size: 12px; font-weight: 600;
+    padding: 7px 16px; border-radius: 999px;
+    border: 1.5px solid var(--border-2);
+    background: transparent; color: var(--muted);
+    font-size: 12.5px; font-weight: 700;
     cursor: pointer; transition: all .18s;
+    white-space: nowrap;
   }
-  .filter-btn:hover { color: var(--text); border-color: var(--border-2); }
+  .filter-btn:hover { color: var(--text); border-color: var(--primary); }
   .filter-btn.active {
     background: var(--primary-dim); color: var(--primary);
-    border-color: rgba(56,189,248,0.4);
+    border-color: rgba(56,189,248,0.5);
   }
   .filter-btn.active-done {
     background: var(--ok-dim); color: var(--ok);
-    border-color: rgba(52,211,153,0.4);
+    border-color: rgba(52,211,153,0.5);
   }
   .filter-btn.active-pending {
-    background: var(--warn-dim); color: var(--warn);
-    border-color: rgba(251,191,36,0.4);
+    background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.4); color: var(--warn);
   }
+  /* Search input in toolbar */
+  .so-search {
+    background: var(--card); border: 1.5px solid var(--border-2);
+    border-radius: 9px; color: var(--text); font-size: 13px;
+    padding: 7px 12px; outline: none; width: 220px;
+    transition: border-color .18s;
+  }
+  .so-search:focus { border-color: var(--primary); }
+  .so-search::placeholder { color: var(--muted); }
+  /* Divider between filter groups */
+  .filter-divider {
+    width: 1px; height: 22px; background: var(--border-2);
+    flex-shrink: 0;
+  }
+  /* Grid */
   .so-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 16px;
   }
+  /* Card */
   .so-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); overflow: hidden;
-    transition: border-color .2s, transform .2s;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+    transition: border-color .2s, box-shadow .2s, transform .2s;
+    display: flex; flex-direction: column;
   }
-  .so-card:hover { border-color: var(--border-2); transform: translateY(-2px); }
-  .so-card.status-done { border-right: 3px solid var(--ok); }
-  .so-card.status-pending { border-right: 3px solid var(--warn); }
+  .so-card:hover {
+    border-color: var(--border-2);
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    transform: translateY(-2px);
+  }
+  .so-card.status-done   { border-top: 3px solid var(--ok); }
+  .so-card.status-pending { border-top: 3px solid var(--warn); }
+
+  /* Card header — child name + parent name + status */
   .so-card-head {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .so-card-head-row {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 16px; border-bottom: 1px solid var(--border);
-    gap: 10px;
+    gap: 8px;
   }
-  .so-child-name { font-weight: 700; font-size: 15px; }
-  .so-id { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-  .so-card-body { padding: 14px 16px; }
-  .so-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-  .so-meta-row {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 12.5px; color: var(--text-2);
+  .so-child-name {
+    font-weight: 800; font-size: 17px; color: var(--text);
+    display: flex; align-items: center; gap: 6px; line-height: 1.2;
   }
-  .so-meta-row .ico { width: 16px; text-align: center; opacity: .7; font-size: 13px; }
-  .so-meta-row span { color: var(--muted); min-width: 60px; font-size: 12px; }
+  .so-child-icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg,#a78bfa,#38bdf8);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .so-parent-name {
+    font-size: 13px; color: var(--muted); font-weight: 500;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .so-parent-name strong { color: var(--text-2); font-weight: 600; }
+  .so-id-badge {
+    font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+    background: var(--bg-2); padding: 2px 7px; border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+
+  /* Card body */
+  .so-card-body {
+    padding: 12px 16px;
+    flex: 1;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .so-info-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 6px 8px;
+  }
+  .so-info-item {
+    display: flex; flex-direction: column; gap: 1px;
+  }
+  .so-info-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--muted); font-weight: 600;
+  }
+  .so-info-value {
+    font-size: 13px; color: var(--text); font-weight: 500;
+    word-break: break-all;
+  }
+  .so-info-value a { color: var(--primary); }
+  .so-assigned-row {
+    background: var(--primary-dim); border: 1px solid rgba(56,189,248,.2);
+    border-radius: 8px; padding: 6px 10px;
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12.5px; color: var(--primary); font-weight: 600;
+  }
   .so-notes {
     background: var(--bg-2); border: 1px solid var(--border);
     border-radius: 8px; padding: 8px 10px;
     font-size: 12.5px; color: var(--text-2); line-height: 1.5;
-    margin-bottom: 12px; white-space: pre-wrap;
+    white-space: pre-wrap;
   }
-  .so-photos {
-    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
-  }
-  .so-photo-wrap {
-    position: relative; width: 72px; height: 72px;
-  }
+  /* Photos */
+  .so-photos { display: flex; flex-wrap: wrap; gap: 8px; }
+  .so-photo-wrap { position: relative; width: 70px; height: 70px; }
   .so-photo {
-    width: 72px; height: 72px; border-radius: 9px;
+    width: 70px; height: 70px; border-radius: 9px;
     object-fit: cover; cursor: pointer;
     border: 1px solid var(--border-2);
     transition: opacity .2s;
   }
-  .so-photo:hover { opacity: .85; }
+  .so-photo:hover { opacity: .82; }
   .so-photo-del {
     position: absolute; top: -5px; right: -5px;
     width: 18px; height: 18px; border-radius: 50%;
     background: var(--danger); color: white; border: 0;
     font-size: 10px; display: grid; place-items: center; cursor: pointer;
-    opacity: 0; transition: opacity .2s;
-    line-height: 1;
+    opacity: 0; transition: opacity .2s; line-height: 1;
   }
   .so-photo-wrap:hover .so-photo-del { opacity: 1; }
   .so-upload-btn {
-    width: 72px; height: 72px; border-radius: 9px;
+    width: 70px; height: 70px; border-radius: 9px;
     border: 1.5px dashed var(--border-2); background: transparent;
     color: var(--muted); font-size: 22px; cursor: pointer;
     display: grid; place-items: center;
     transition: border-color .2s, color .2s;
   }
   .so-upload-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* Card footer */
   .so-card-foot {
-    display: flex; gap: 6px; padding: 10px 16px;
-    border-top: 1px solid var(--border); flex-wrap: wrap;
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-2);
   }
-  .so-date { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-right: auto; align-self: center; }
+  .so-date {
+    font-size: 10.5px; color: var(--muted);
+    font-family: var(--mono); margin-right: auto;
+  }
+
+  /* PDF in card */
+  .so-pdf-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .pdf-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 8px;
+    background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.28);
+    color: #a78bfa; font-size: 12px; font-weight: 600;
+  }
+  .pdf-badge a { color: inherit; text-decoration: none; }
+  .pdf-badge a:hover { text-decoration: underline; }
+  .so-empty {
+    grid-column: 1 / -1; padding: 60px 20px; text-align: center;
+    color: var(--muted); font-size: 14px;
+  }
+  .so-empty .so-empty-ico { font-size: 40px; margin-bottom: 12px; display: block; }
   /* Order form modal wider */
-  .modal-lg { max-width: 560px; }
+  .modal-lg { max-width: 580px; }
   .modal-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
   /* Full-size photo lightbox */
   .lightbox {
@@ -483,11 +572,6 @@
   }
   .lightbox.open { display: flex; }
   .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 10px; object-fit: contain; }
-  .so-empty {
-    grid-column: 1 / -1; padding: 60px 20px; text-align: center;
-    color: var(--muted); font-size: 14px;
-  }
-  .so-empty .so-empty-ico { font-size: 40px; margin-bottom: 12px; display: block; }
 
   /* Modal photo upload drop zone */
   .o-photo-drop {
@@ -1349,62 +1433,85 @@ function photoURL(orderId, filename) {
 }
 
 function orderCardHTML(o) {
-  const statusBadge = o.status === 'done'
+  const isDone = o.status === 'done';
+  const statusBadge = isDone
     ? '<span class="badge badge-green">✓ مكتمل</span>'
     : '<span class="badge badge-yellow">⏳ معلّق</span>';
 
+  // Photos
   const photos = (o.photos || []).map(fn => `
     <div class="so-photo-wrap">
-      <img class="so-photo" src="${photoURL(o.id, fn)}" alt="صورة الطفل"
+      <img class="so-photo" src="${photoURL(o.id, fn)}" alt="صورة"
            onclick="openLightbox('${photoURL(o.id, fn)}')">
-      <button class="so-photo-del" onclick="deletePhoto(${o.id},'${fn}',this)" title="حذف الصورة">✕</button>
+      <button class="so-photo-del" onclick="deletePhoto(${o.id},'${fn}',this)" title="حذف">✕</button>
     </div>`).join('');
 
   const uploadSlots = (o.photos || []).length < 8
-    ? `<label class="so-upload-btn" title="رفع صور" style="cursor:pointer">
+    ? `<label class="so-upload-btn" title="رفع صور">
          +
          <input type="file" accept="image/*" multiple hidden onchange="uploadPhotos(${o.id}, this)">
        </label>` : '';
 
-  const metaRows = [
-    o.client_name ? `<div class="so-meta-row"><span class="ico">👤</span><span>العميل</span>${escHtml(o.client_name)}</div>` : '',
-    o.phone       ? `<div class="so-meta-row"><span class="ico">📞</span><span>تليفون</span><a href="tel:${escHtml(o.phone)}" style="color:var(--primary)">${escHtml(o.phone)}</a></div>` : '',
-    o.email       ? `<div class="so-meta-row"><span class="ico">📧</span><span>بريد</span>${escHtml(o.email)}</div>` : '',
-    o.assigned_to ? `<div class="so-meta-row"><span class="ico">👷</span><span>مسؤول</span><strong style="color:var(--primary)">${escHtml(o.assigned_to)}</strong></div>` : '',
-  ].join('');
+  // Info rows
+  const phoneHTML  = o.phone ? `<a href="tel:${escHtml(o.phone)}">${escHtml(o.phone)}</a>` : '—';
+  const emailHTML  = o.email ? escHtml(o.email) : '—';
 
-  const notes = o.notes
+  const infoGrid = (o.phone || o.email) ? `
+    <div class="so-info-grid">
+      ${o.phone ? `<div class="so-info-item">
+        <span class="so-info-label">📞 تليفون</span>
+        <span class="so-info-value">${phoneHTML}</span>
+      </div>` : ''}
+      ${o.email ? `<div class="so-info-item">
+        <span class="so-info-label">📧 بريد</span>
+        <span class="so-info-value" style="font-size:11.5px">${emailHTML}</span>
+      </div>` : ''}
+    </div>` : '';
+
+  const assignedRow = o.assigned_to ? `
+    <div class="so-assigned-row">
+      👷 مسؤول: <strong>${escHtml(o.assigned_to)}</strong>
+    </div>` : '';
+
+  const notesHTML = o.notes
     ? `<div class="so-notes">${escHtml(o.notes)}</div>` : '';
 
-  const pdfRow = o.pdf_filename
-    ? `<div class="so-pdf-row">
-         <span class="pdf-badge">
-           📄 <a href="/admin/special-orders/${o.id}/pdf/${o.pdf_filename}" target="_blank">PDF تحميل</a>
-         </span>
-         <button class="btn btn-sm btn-danger" onclick="deletePdf(${o.id},'${o.pdf_filename}',this)" title="حذف PDF">× PDF</button>
-       </div>` : '';
+  const pdfRow = o.pdf_filename ? `
+    <div class="so-pdf-row">
+      <span class="pdf-badge">
+        📄 <a href="/admin/special-orders/${o.id}/pdf/${o.pdf_filename}" target="_blank">تحميل PDF</a>
+      </span>
+      <button class="btn btn-sm btn-danger" onclick="deletePdf(${o.id},'${o.pdf_filename}',this)">× PDF</button>
+    </div>` : '';
 
-  const date = (o.created_at || '').slice(0,16).replace('T',' ');
-  const toggleLabel = o.status === 'done' ? '↩ معلّق' : '✓ مكتمل';
-  const toggleClass = o.status === 'done' ? 'btn-ghost' : 'btn-success';
+  const date = (o.created_at || '').slice(0, 16).replace('T', ' ');
+  const toggleLabel = isDone ? '↩ معلّق' : '✓ مكتمل';
+  const toggleClass = isDone ? 'btn-ghost' : 'btn-success';
 
   return `
   <div class="so-card status-${o.status}" id="so-card-${o.id}">
     <div class="so-card-head">
-      <div>
-        <div class="so-child-name">🧒 ${escHtml(o.child_name)}</div>
-        <div class="so-id">#${o.id}</div>
+      <div class="so-card-head-row">
+        <div class="so-child-name">
+          <span class="so-child-icon">🧒</span>
+          ${escHtml(o.child_name)}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="so-id-badge">#${o.id}</span>
+          ${statusBadge}
+        </div>
       </div>
-      ${statusBadge}
+      ${o.client_name ? `
+      <div class="so-parent-name">
+        👤 الأب: <strong>${escHtml(o.client_name)}</strong>
+      </div>` : ''}
     </div>
     <div class="so-card-body">
-      ${metaRows ? `<div class="so-meta">${metaRows}</div>` : ''}
-      ${notes}
+      ${infoGrid}
+      ${assignedRow}
+      ${notesHTML}
       ${pdfRow}
-      <div class="so-photos">
-        ${photos}
-        ${uploadSlots}
-      </div>
+      ${(o.photos || []).length || true ? `<div class="so-photos">${photos}${uploadSlots}</div>` : ''}
     </div>
     <div class="so-card-foot">
       <button class="btn btn-sm ${toggleClass}" onclick="toggleStatus(${o.id},'${o.status}',this)">${toggleLabel}</button>
