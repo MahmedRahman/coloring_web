@@ -1411,7 +1411,7 @@ document.addEventListener('keydown', e => {
 });
 
 /* Credits */
-let _creditsUserId = null;
+
 function openCreditsModal(userId, username, current) {
   _creditsUserId = userId;
   document.getElementById('credits-username').textContent    = username;
@@ -1872,7 +1872,7 @@ async function deletePhoto(orderId, filename, btn) {
 }
 
 /* Order form modal */
-let _modalFiles = []; // DataTransfer-like accumulator for selected files
+
 
 function previewModalPhotos(input) {
   const newFiles = Array.from(input.files);
