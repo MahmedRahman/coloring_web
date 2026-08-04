@@ -446,6 +446,32 @@ def collect_admin_stats() -> dict:
     shares_count = sum(1 for p in SHARES_DIR.glob("*.json")) if SHARES_DIR.exists() else 0
     avg_pages = round((pages_total or 0) / books_total, 1) if books_total else 0
 
+    # Payments stats
+    with _db_lock:
+        conn = db_connect()
+        payments_total = conn.execute("SELECT COUNT(*) AS c FROM payments").fetchone()["c"]
+        payments_paid = conn.execute(
+            "SELECT COUNT(*) AS c FROM payments WHERE status = 'paid'"
+        ).fetchone()["c"]
+        revenue_total_cents = conn.execute(
+            "SELECT COALESCE(SUM(amount_cents), 0) AS c FROM payments WHERE status = 'paid'"
+        ).fetchone()["c"]
+        recent_payments = conn.execute(
+            """
+            SELECT p.id, p.special_reference, p.amount_cents, p.credits, p.status,
+                   p.created_at, p.paid_at, p.paymob_order_id, p.paymob_txn_id,
+                   u.username, u.email
+            FROM payments p
+            LEFT JOIN users u ON u.id = p.user_id
+            ORDER BY p.id DESC
+            LIMIT 50
+            """
+        ).fetchall()
+        conn.close()
+
+    revenue_egp = round((revenue_total_cents or 0) / 100, 2)
+    conversion_rate = round((payments_paid / payments_total * 100), 1) if payments_total else 0
+
     return {
         "books_today": int(books_today),
         "books_yesterday": int(books_yesterday),
@@ -469,6 +495,11 @@ def collect_admin_stats() -> dict:
         ],
         "recent_books": [dict(r) for r in recent_books],
         "recent_users": [dict(r) for r in recent_users],
+        "payments_total": int(payments_total),
+        "payments_paid": int(payments_paid),
+        "revenue_egp": revenue_egp,
+        "conversion_rate": conversion_rate,
+        "recent_payments": [dict(r) for r in recent_payments],
     }
 
 
@@ -1989,6 +2020,155 @@ def admin_dashboard():
 @admin_required
 def admin_api_stats():
     return jsonify(collect_admin_stats())
+
+
+@app.route("/admin/api/user/<int:user_id>/credits", methods=["POST"])
+@admin_required
+def admin_user_credits(user_id: int):
+    """Add or subtract credits for a user. JSON body: {delta: int, note: str}"""
+    data = request.get_json(silent=True) or {}
+    delta = data.get("delta")
+    if delta is None or not isinstance(delta, int):
+        return jsonify({"error": "delta مطلوب وهو عدد صحيح (موجب = إضافة، سالب = خصم)."}), 400
+    if delta == 0:
+        return jsonify({"error": "delta لازم يكون غير صفر."}), 400
+    if abs(delta) > 1000:
+        return jsonify({"error": "الحد الأقصى 1000 credit في المرة."}), 400
+
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT id, username, book_credits FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "المستخدم مش موجود."}), 404
+        # Prevent going below 0 on deduction
+        current = int((row["book_credits"] or 0))
+        new_credits = max(0, current + delta)
+        conn.execute("UPDATE users SET book_credits = ? WHERE id = ?", (new_credits, user_id))
+        conn.commit()
+        conn.close()
+
+    return jsonify({
+        "ok": True,
+        "user_id": user_id,
+        "delta": delta,
+        "new_credits": new_credits,
+    })
+
+
+@app.route("/admin/api/user/<int:user_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_user(user_id: int):
+    """Delete a user and their associated books/payments."""
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT id, username FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "المستخدم مش موجود."}), 404
+        username = row["username"]
+        conn.execute("DELETE FROM books WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM payments WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+        conn.close()
+    return jsonify({"ok": True, "deleted_user": username})
+
+
+@app.route("/admin/api/payments")
+@admin_required
+def admin_payments():
+    """Return paginated payments list."""
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = 50
+    offset = (page - 1) * per_page
+    with _db_lock:
+        conn = db_connect()
+        total = conn.execute("SELECT COUNT(*) AS c FROM payments").fetchone()["c"]
+        rows = conn.execute(
+            """
+            SELECT p.id, p.special_reference, p.amount_cents, p.credits, p.status,
+                   p.created_at, p.paid_at, p.paymob_order_id, p.paymob_txn_id,
+                   u.username, u.email
+            FROM payments p
+            LEFT JOIN users u ON u.id = p.user_id
+            ORDER BY p.id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (per_page, offset),
+        ).fetchall()
+        conn.close()
+    return jsonify({
+        "total": int(total),
+        "page": page,
+        "per_page": per_page,
+        "payments": [dict(r) for r in rows],
+    })
+
+
+@app.route("/admin/api/user/<int:user_id>/notify", methods=["POST"])
+@admin_required
+def admin_notify_user(user_id: int):
+    """Store a notification message in the DB for the user to see on next login."""
+    data = request.get_json(silent=True) or {}
+    message = (data.get("message") or "").strip()[:500]
+    if len(message) < 5:
+        return jsonify({"error": "الرسالة قصيرة جداً (5 حروف على الأقل)."}), 400
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT id, username FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "المستخدم مش موجود."}), 404
+        # Store notification in a simple JSON column; create table if needed
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS admin_notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                message TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                read_at TEXT
+            );
+            """
+        )
+        now_iso = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "INSERT INTO admin_notifications (user_id, message, created_at) VALUES (?, ?, ?)",
+            (user_id, message, now_iso),
+        )
+        conn.commit()
+        conn.close()
+    return jsonify({"ok": True, "user_id": user_id, "message": message})
+
+
+@app.route("/admin/api/user/<int:user_id>")
+@admin_required
+def admin_get_user(user_id: int):
+    """Get detailed info for a single user including books and payments."""
+    with _db_lock:
+        conn = db_connect()
+        user = conn.execute(
+            "SELECT id, username, email, created_at, book_credits, auth_provider FROM users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+        if not user:
+            conn.close()
+            return jsonify({"error": "المستخدم مش موجود."}), 404
+        books_count = conn.execute(
+            "SELECT COUNT(*) AS c FROM books WHERE user_id = ?", (user_id,)
+        ).fetchone()["c"]
+        payments_rows = conn.execute(
+            "SELECT special_reference, amount_cents, credits, status, created_at, paid_at "
+            "FROM payments WHERE user_id = ? ORDER BY id DESC LIMIT 10",
+            (user_id,),
+        ).fetchall()
+        conn.close()
+    return jsonify({
+        "user": dict(user),
+        "books_count": int(books_count),
+        "payments": [dict(r) for r in payments_rows],
+    })
 
 
 if __name__ == "__main__":

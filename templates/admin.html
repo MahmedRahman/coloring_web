@@ -3,264 +3,381 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard — كتاب التلوين</title>
+<title>لوحة التحكم — كتاب التلوين</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --font: 'IBM Plex Sans Arabic', 'Tajawal', sans-serif;
     --mono: 'JetBrains Mono', ui-monospace, monospace;
-    --bg: #0b1220;
-    --bg-2: #111a2e;
-    --surface: #151f35;
-    --surface-2: #1a2540;
-    --border: rgba(148, 163, 184, 0.14);
+    --bg: #060b14;
+    --bg-2: #0c1524;
+    --surface: #111e30;
+    --surface-2: #162437;
+    --surface-3: #1c2d44;
+    --border: rgba(148,163,184,0.1);
+    --border-2: rgba(148,163,184,0.18);
     --text: #e8eef9;
-    --muted: #8b9bb8;
+    --text-2: #c0cfe0;
+    --muted: #7a8faa;
     --primary: #38bdf8;
-    --primary-2: #818cf8;
+    --primary-dim: rgba(56,189,248,0.12);
+    --indigo: #818cf8;
+    --indigo-dim: rgba(129,140,248,0.12);
     --ok: #34d399;
+    --ok-dim: rgba(52,211,153,0.12);
     --warn: #fbbf24;
+    --warn-dim: rgba(251,191,36,0.12);
     --danger: #f87171;
-    --sidebar-w: 248px;
+    --danger-dim: rgba(248,113,113,0.12);
+    --violet: #a78bfa;
+    --violet-dim: rgba(167,139,250,0.12);
+    --sidebar-w: 252px;
+    --radius: 14px;
+    --radius-sm: 9px;
   }
-  * { box-sizing: border-box; }
+  *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
     font-family: var(--font);
     color: var(--text);
-    background:
-      linear-gradient(180deg, rgba(56, 189, 248, 0.05), transparent 280px),
-      var(--bg);
+    background: var(--bg);
     min-height: 100vh;
     line-height: 1.55;
   }
   a { color: inherit; text-decoration: none; }
-  button { font-family: inherit; }
+  button { font-family: inherit; cursor: pointer; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 99px; }
 
   .shell { display: flex; min-height: 100vh; }
 
   /* Sidebar */
   .sidebar {
-    width: var(--sidebar-w);
-    flex: 0 0 var(--sidebar-w);
-    background: rgba(17, 26, 46, 0.95);
+    width: var(--sidebar-w); flex: 0 0 var(--sidebar-w);
+    background: rgba(11,18,32,0.97);
     border-left: 1px solid var(--border);
-    padding: 22px 16px;
+    padding: 20px 14px 28px;
     position: sticky; top: 0; height: 100vh;
-    display: flex; flex-direction: column; gap: 8px;
+    display: flex; flex-direction: column; gap: 4px;
+    overflow-y: auto;
   }
   .logo {
     display: flex; align-items: center; gap: 12px;
-    padding: 8px 10px 20px;
+    padding: 6px 10px 20px;
     border-bottom: 1px solid var(--border);
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   .logo-mark {
-    width: 38px; height: 38px; border-radius: 11px;
+    width: 40px; height: 40px; border-radius: 12px;
     display: grid; place-items: center;
     background: linear-gradient(145deg, #38bdf8, #6366f1);
-    font-weight: 700; font-size: 14px; color: #04101f;
+    font-weight: 700; font-size: 15px; color: #030d1f;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(56,189,248,0.3);
   }
-  .logo-text { font-weight: 700; font-size: 15px; line-height: 1.25; }
-  .logo-text small { display: block; color: var(--muted); font-weight: 500; font-size: 11px; }
+  .logo-text { font-weight: 700; font-size: 14.5px; line-height: 1.25; }
+  .logo-text small { display: block; color: var(--muted); font-weight: 400; font-size: 11px; margin-top: 2px; }
   .nav-label {
-    color: var(--muted); font-size: 11px; font-weight: 600;
-    letter-spacing: 0.04em; padding: 12px 12px 6px; text-transform: uppercase;
+    color: var(--muted); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.06em; padding: 14px 12px 5px; text-transform: uppercase;
   }
-  .nav a, .nav button {
+  .nav-item {
     display: flex; align-items: center; gap: 10px;
-    width: 100%; padding: 10px 12px; border-radius: 10px;
+    width: 100%; padding: 9px 12px; border-radius: 10px;
     border: 0; background: transparent; color: var(--muted);
-    font-size: 14px; font-weight: 600; cursor: pointer; text-align: right;
+    font-size: 13.5px; font-weight: 500; text-align: right;
+    transition: all 0.18s ease; position: relative;
   }
-  .nav a:hover, .nav button:hover { background: rgba(56, 189, 248, 0.08); color: var(--text); }
-  .nav a.active {
-    background: linear-gradient(90deg, rgba(56, 189, 248, 0.16), rgba(99, 102, 241, 0.08));
-    color: var(--text);
-    box-shadow: inset 3px 0 0 var(--primary);
+  .nav-item:hover { background: rgba(56,189,248,0.07); color: var(--text-2); }
+  .nav-item.active {
+    background: linear-gradient(90deg, rgba(56,189,248,0.14), rgba(99,102,241,0.06));
+    color: var(--text); font-weight: 600;
   }
-  .nav .ico { width: 18px; text-align: center; opacity: 0.9; }
-  .sidebar-foot { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border); }
-  .sidebar-foot .meta { font-size: 11px; color: var(--muted); padding: 0 12px 10px; }
+  .nav-item.active::after {
+    content: ''; position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 60%; border-radius: 3px 0 0 3px;
+    background: linear-gradient(180deg, var(--primary), var(--indigo));
+  }
+  .nav-ico { width: 20px; text-align: center; font-size: 15px; opacity: 0.85; }
+  .sidebar-foot {
+    margin-top: auto; padding-top: 18px;
+    border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .sidebar-foot .meta { font-size: 11px; color: var(--muted); padding: 0 12px 8px; line-height: 1.6; }
 
   /* Main */
-  .main { flex: 1; min-width: 0; padding: 22px 28px 48px; }
+  .main { flex: 1; min-width: 0; padding: 26px 30px 60px; overflow-x: hidden; }
   .topbar {
     display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 16px; flex-wrap: wrap; margin-bottom: 22px;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 24px;
   }
-  .topbar h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
-  .topbar p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  .topbar h1 { margin: 0; font-size: 27px; font-weight: 700; letter-spacing: -0.025em; }
+  .topbar p { margin: 5px 0 0; color: var(--muted); font-size: 13.5px; }
   .top-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  /* Buttons */
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 14px; border-radius: 10px; border: 1px solid var(--border);
-    background: var(--surface); color: var(--text);
-    font-size: 13px; font-weight: 600; cursor: pointer;
+    padding: 8px 15px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border-2);
+    background: var(--surface-2); color: var(--text-2);
+    font-size: 13px; font-weight: 600;
+    transition: all 0.18s ease;
   }
-  .btn:hover { border-color: rgba(56, 189, 248, 0.35); }
+  .btn:hover { border-color: rgba(56,189,248,0.35); color: var(--text); }
   .btn-primary {
     background: linear-gradient(135deg, #0ea5e9, #6366f1);
     border: 0; color: white;
+    box-shadow: 0 2px 12px rgba(14,165,233,0.25);
   }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 7px; }
+  .btn-danger { background: var(--danger-dim); border-color: rgba(248,113,113,0.3); color: var(--danger); }
+  .btn-danger:hover { background: rgba(248,113,113,0.2); }
+  .btn-success { background: var(--ok-dim); border-color: rgba(52,211,153,0.3); color: var(--ok); }
+  .btn-success:hover { background: rgba(52,211,153,0.2); }
+  .btn-ghost { background: transparent; border-color: var(--border); }
+
+  /* Chip */
   .chip {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 12px; border-radius: 999px;
-    background: rgba(52, 211, 153, 0.12); color: var(--ok);
+    padding: 6px 12px; border-radius: 999px;
+    background: var(--ok-dim); color: var(--ok);
     font-size: 12px; font-weight: 600;
   }
   .chip .dot {
     width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
-    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
+    box-shadow: 0 0 0 3px rgba(52,211,153,0.2);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(52,211,153,0.2); }
+    50% { box-shadow: 0 0 0 6px rgba(52,211,153,0.05); }
   }
 
-  /* KPI cards */
+  /* KPIs */
   .kpis {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    margin-bottom: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px; margin-bottom: 20px;
   }
   .kpi {
-    background: linear-gradient(180deg, var(--surface-2), var(--surface));
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px 18px;
-    position: relative;
-    overflow: hidden;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
   }
-  .kpi::after {
-    content: '';
-    position: absolute; inset: auto -20% -40% auto;
-    width: 120px; height: 120px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(56, 189, 248, 0.12), transparent 70%);
-    pointer-events: none;
+  .kpi:hover { border-color: var(--border-2); transform: translateY(-1px); }
+  .kpi .glow {
+    position: absolute; width: 110px; height: 110px;
+    border-radius: 50%; inset: auto -10px -20px auto; pointer-events: none;
   }
+  .kpi-blue .glow  { background: radial-gradient(circle, rgba(56,189,248,0.15), transparent 70%); }
+  .kpi-indigo .glow{ background: radial-gradient(circle, rgba(129,140,248,0.15), transparent 70%); }
+  .kpi-green .glow { background: radial-gradient(circle, rgba(52,211,153,0.15), transparent 70%); }
+  .kpi-yellow .glow{ background: radial-gradient(circle, rgba(251,191,36,0.15), transparent 70%); }
+  .kpi-violet .glow{ background: radial-gradient(circle, rgba(167,139,250,0.15), transparent 70%); }
+  .kpi-orange .glow{ background: radial-gradient(circle, rgba(251,146,60,0.15), transparent 70%); }
+  .kpi-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    display: grid; place-items: center; font-size: 16px; margin-bottom: 12px;
+  }
+  .kpi-blue .kpi-icon  { background: var(--primary-dim); }
+  .kpi-indigo .kpi-icon{ background: var(--indigo-dim); }
+  .kpi-green .kpi-icon { background: var(--ok-dim); }
+  .kpi-yellow .kpi-icon{ background: var(--warn-dim); }
+  .kpi-violet .kpi-icon{ background: var(--violet-dim); }
+  .kpi-orange .kpi-icon{ background: rgba(251,146,60,0.12); }
   .kpi .label { margin: 0; color: var(--muted); font-size: 12px; font-weight: 600; }
   .kpi .value {
-    margin: 8px 0 6px; font-size: 30px; font-weight: 700;
-    font-variant-numeric: tabular-nums; letter-spacing: -0.03em;
+    margin: 6px 0 4px; font-size: 32px; font-weight: 700;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.04em; line-height: 1;
   }
-  .kpi .hint { margin: 0; font-size: 12px; color: var(--muted); }
+  .kpi .hint { margin: 0; font-size: 11.5px; color: var(--muted); }
   .kpi .hint.up { color: var(--ok); }
   .kpi .hint.down { color: var(--danger); }
   .kpi .hint.flat { color: var(--warn); }
 
   /* Panels */
-  .row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; margin-bottom: 14px; }
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-  }
+  .row { display: grid; grid-template-columns: 1.7fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
   .panel-head {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
   }
-  .panel-head h2 { margin: 0; font-size: 15px; font-weight: 700; }
-  .panel-head .sub { color: var(--muted); font-size: 12px; }
-  .panel-body { padding: 14px 16px; }
+  .panel-head h2 { margin: 0; font-size: 14.5px; font-weight: 700; }
+  .panel-head .sub { color: var(--muted); font-size: 12px; font-weight: 500; }
+  .panel-body { padding: 16px 18px; }
   .panel-body.flush { padding: 0; }
 
   /* Chart */
-  .chart-wrap { height: 220px; display: flex; align-items: flex-end; gap: 8px; padding: 8px 4px 0; }
-  .bar-col {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0;
+  .chart-wrap {
+    height: 200px; display: flex; align-items: flex-end; gap: 6px;
+    padding: 8px 2px 0; position: relative;
   }
+  .chart-wrap::before {
+    content: ''; position: absolute; inset: 8px 2px 0;
+    background: repeating-linear-gradient(
+      transparent, transparent calc(25% - 1px),
+      rgba(148,163,184,0.06) calc(25% - 1px), rgba(148,163,184,0.06) 25%
+    );
+    pointer-events: none;
+  }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
   .bar-col .bar {
-    width: 100%; max-width: 28px; border-radius: 8px 8px 4px 4px;
+    width: 100%; max-width: 24px; border-radius: 6px 6px 3px 3px;
     background: linear-gradient(180deg, #38bdf8, #6366f1);
     min-height: 4px;
-    transition: height 0.35s ease;
+    transition: height 0.5s cubic-bezier(.34,1.56,.64,1), filter 0.2s;
+    cursor: pointer;
   }
-  .bar-col .bar:hover { filter: brightness(1.12); }
-  .bar-col .d {
-    font-size: 10px; color: var(--muted); font-family: var(--mono);
-    white-space: nowrap;
-  }
-  .bar-col .c {
-    font-size: 11px; font-weight: 700; font-family: var(--mono); color: var(--text);
-    min-height: 14px;
-  }
+  .bar-col .bar:hover { filter: brightness(1.2); box-shadow: 0 0 12px rgba(56,189,248,0.4); }
+  .bar-col .d { font-size: 9.5px; color: var(--muted); font-family: var(--mono); white-space: nowrap; }
+  .bar-col .c { font-size: 10.5px; font-weight: 700; font-family: var(--mono); color: var(--text-2); min-height: 14px; }
 
-  /* Job bars */
+  /* Jobs */
   .job {
-    display: grid; grid-template-columns: 1fr auto; gap: 6px 12px;
-    align-items: center; padding: 10px 0;
-    border-bottom: 1px solid var(--border);
+    display: grid; grid-template-columns: 1fr auto; gap: 5px 10px;
+    align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border);
   }
   .job:last-child { border-bottom: 0; }
   .job-name { font-size: 13px; font-weight: 600; }
   .job-count { font-family: var(--mono); font-size: 12px; color: var(--primary); font-weight: 600; }
-  .job-track {
-    grid-column: 1 / -1; height: 6px; border-radius: 999px;
-    background: rgba(15, 23, 42, 0.8); overflow: hidden;
-  }
-  .job-fill {
-    height: 100%; border-radius: 999px;
-    background: linear-gradient(90deg, #38bdf8, #818cf8);
-  }
+  .job-track { grid-column: 1 / -1; height: 5px; border-radius: 999px; background: rgba(15,25,45,0.8); overflow: hidden; }
+  .job-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #38bdf8, #818cf8); transition: width 0.6s cubic-bezier(.34,1.56,.64,1); }
 
-  /* Mini stats */
+  /* Mini grid */
   .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .mini {
-    background: var(--bg-2); border: 1px solid var(--border);
-    border-radius: 12px; padding: 12px;
-  }
+  .mini { background: var(--bg-2); border: 1px solid var(--border); border-radius: 11px; padding: 13px 14px; }
   .mini .l { margin: 0; color: var(--muted); font-size: 11px; font-weight: 600; }
-  .mini .v { margin: 4px 0 0; font-size: 20px; font-weight: 700; font-family: var(--mono); }
+  .mini .v { margin: 4px 0 0; font-size: 22px; font-weight: 700; font-family: var(--mono); }
 
   /* Tables */
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  th { color: var(--muted); font-weight: 600; font-size: 11px; background: rgba(11, 18, 32, 0.45); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 500px; }
+  th, td { padding: 11px 16px; text-align: right; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; background: rgba(6,11,20,0.5); white-space: nowrap; }
   tr:last-child td { border-bottom: 0; }
-  tr:hover td { background: rgba(56, 189, 248, 0.04); }
+  tr:hover td { background: rgba(56,189,248,0.04); }
   .mono { font-family: var(--mono); font-size: 12px; }
   .muted { color: var(--muted); }
-  .user-cell { display: flex; flex-direction: column; gap: 2px; }
-  .user-cell strong { font-weight: 600; }
+  .user-row { display: flex; align-items: center; gap: 9px; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+    display: grid; place-items: center;
+    background: linear-gradient(145deg, rgba(56,189,248,0.2), rgba(99,102,241,0.2));
+    color: var(--text); font-size: 13px; font-weight: 700;
+    border: 1px solid rgba(56,189,248,0.15);
+  }
+  .user-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .user-cell strong { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-cell span { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Badges */
   .badge {
     display: inline-flex; align-items: center; justify-content: center;
-    min-width: 28px; padding: 3px 8px; border-radius: 999px;
-    background: rgba(56, 189, 248, 0.12); color: var(--primary);
+    min-width: 26px; padding: 3px 8px; border-radius: 999px;
+    background: var(--primary-dim); color: var(--primary);
     font-family: var(--mono); font-size: 11px; font-weight: 600;
   }
-  .avatar {
-    width: 30px; height: 30px; border-radius: 9px;
-    display: inline-grid; place-items: center;
-    background: linear-gradient(145deg, rgba(56,189,248,0.25), rgba(99,102,241,0.25));
-    color: var(--text); font-size: 12px; font-weight: 700; margin-left: 8px;
+  .badge-green  { background: var(--ok-dim); color: var(--ok); }
+  .badge-red    { background: var(--danger-dim); color: var(--danger); }
+  .badge-yellow { background: var(--warn-dim); color: var(--warn); }
+  .badge-violet { background: var(--violet-dim); color: var(--violet); }
+
+  /* Credits pill */
+  .credits-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 999px;
+    background: linear-gradient(135deg, rgba(56,189,248,0.15), rgba(129,140,248,0.1));
+    border: 1px solid rgba(56,189,248,0.2);
+    font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--primary);
   }
-  .user-row { display: flex; align-items: center; }
-  .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+
+  /* Actions */
+  .actions { display: flex; gap: 5px; justify-content: flex-start; }
+
+  /* Sections */
   .section { display: none; }
-  .section.active { display: block; animation: fade .25s ease; }
-  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .section.active { display: block; animation: fade .22s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+  .empty { padding: 32px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+  .empty .empty-ico { font-size: 32px; margin-bottom: 8px; display: block; }
 
+  /* Mobile */
   .mobile-bar {
-    display: none; position: sticky; top: 0; z-index: 20;
-    padding: 12px 16px; background: rgba(17, 26, 46, 0.95);
-    border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(10px);
+    display: none; position: sticky; top: 0; z-index: 30;
+    padding: 12px 16px; background: rgba(6,11,20,0.97);
+    border-bottom: 1px solid var(--border); backdrop-filter: blur(12px);
   }
 
-  @media (max-width: 1100px) {
-    .kpis { grid-template-columns: repeat(2, 1fr); }
-    .row { grid-template-columns: 1fr; }
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; animation: fadein .2s ease; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--surface-2); border: 1px solid var(--border-2);
+    border-radius: 18px; padding: 28px;
+    width: 100%; max-width: 440px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+    animation: slideup .22s ease;
+  }
+  @keyframes slideup { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal h3 { margin: 0 0 6px; font-size: 18px; font-weight: 700; }
+  .modal .modal-sub { margin: 0 0 20px; color: var(--muted); font-size: 13px; }
+  .modal label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 6px; }
+  .modal input, .modal textarea {
+    width: 100%; padding: 10px 12px;
+    background: var(--bg-2); border: 1px solid var(--border-2);
+    border-radius: 9px; color: var(--text); font-family: var(--font); font-size: 14px;
+    outline: none; margin-bottom: 14px; transition: border-color 0.2s;
+  }
+  .modal input:focus, .modal textarea:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(56,189,248,0.15);
+  }
+  .modal textarea { resize: vertical; min-height: 80px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .modal-actions .btn { flex: 1; justify-content: center; padding: 10px; }
+  .modal-msg { font-size: 13px; min-height: 18px; margin-bottom: 8px; font-weight: 600; }
+  .modal-msg.ok  { color: var(--ok); }
+  .modal-msg.err { color: var(--danger); }
+
+  /* Toast */
+  .toast-wrap {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--surface-3); border: 1px solid var(--border-2);
+    border-radius: 10px; padding: 10px 20px;
+    font-size: 13.5px; font-weight: 600; color: var(--text);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4); pointer-events: auto;
+    animation: toastIn .25s ease;
+  }
+  .toast.ok  { border-color: rgba(52,211,153,0.4);  color: var(--ok); }
+  .toast.err { border-color: rgba(248,113,113,0.4); color: var(--danger); }
+  @keyframes toastIn { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  @media (max-width: 1120px) {
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    .row  { grid-template-columns: 1fr; }
   }
   @media (max-width: 860px) {
     .sidebar { display: none; }
     .mobile-bar { display: flex; align-items: center; justify-content: space-between; }
-    .main { padding: 16px; }
-    .kpis { grid-template-columns: 1fr 1fr; }
+    .main { padding: 16px 16px 48px; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
   }
-  @media (max-width: 520px) {
-    .kpis { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 500px) { .kpis { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -268,41 +385,51 @@
 {% set max_job = stats.top_scenes[0].count if stats.top_scenes else 1 %}
 {% set delta = stats.books_today - stats.books_yesterday %}
 
+<!-- Mobile bar -->
 <div class="mobile-bar">
-  <strong>Dashboard</strong>
+  <strong style="font-size:15px">لوحة التحكم</strong>
   <form method="post" action="{{ url_for('admin_logout') }}" style="margin:0">
-    <button class="btn btn-primary" type="submit">خروج</button>
+    <button class="btn btn-sm" type="submit">خروج</button>
   </form>
 </div>
 
 <div class="shell">
+  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="logo">
       <div class="logo-mark">CB</div>
-      <div class="logo-text">
-        كتاب التلوين
-        <small>Admin Console</small>
-      </div>
+      <div class="logo-text">كتاب التلوين<small>Admin Console</small></div>
     </div>
 
     <div class="nav-label">القائمة</div>
-    <nav class="nav">
-      <a href="#overview" class="nav-link active" data-section="overview"><span class="ico">◆</span> نظرة عامة</a>
-      <a href="#books" class="nav-link" data-section="books"><span class="ico">▤</span> الكتب</a>
-      <a href="#users" class="nav-link" data-section="users"><span class="ico">◎</span> المستخدمون</a>
-      <a href="#jobs" class="nav-link" data-section="jobs"><span class="ico">✦</span> الوظائف</a>
+    <nav>
+      <button class="nav-item active" data-section="overview">
+        <span class="nav-ico">◆</span> نظرة عامة
+      </button>
+      <button class="nav-item" data-section="users">
+        <span class="nav-ico">◎</span> المستخدمون
+      </button>
+      <button class="nav-item" data-section="books">
+        <span class="nav-ico">▤</span> الكتب
+      </button>
+      <button class="nav-item" data-section="payments">
+        <span class="nav-ico">💳</span> المدفوعات
+      </button>
+      <button class="nav-item" data-section="jobs">
+        <span class="nav-ico">✦</span> الوظائف
+      </button>
     </nav>
 
     <div class="nav-label">اختصارات</div>
-    <nav class="nav">
-      <a href="/" target="_blank"><span class="ico">↗</span> فتح الموقع</a>
-      <a href="/analytics" target="_blank"><span class="ico">{ }</span> API JSON</a>
+    <nav>
+      <a class="nav-item" href="/" target="_blank"><span class="nav-ico">↗</span> فتح الموقع</a>
+      <a class="nav-item" href="/analytics" target="_blank"><span class="nav-ico">{ }</span> API JSON</a>
     </nav>
 
     <div class="sidebar-foot">
-      <div class="meta">آخر تحديث<br>{{ stats.generated_at }}</div>
+      <div class="meta">آخر تحديث<br><span style="color:var(--text-2)">{{ stats.generated_at }}</span></div>
       <form method="post" action="{{ url_for('admin_logout') }}">
-        <button type="submit" class="btn" style="width:100%">تسجيل الخروج</button>
+        <button type="submit" class="btn btn-ghost" style="width:100%;justify-content:center">تسجيل الخروج</button>
       </form>
     </div>
   </aside>
@@ -311,43 +438,55 @@
     <div class="topbar">
       <div>
         <h1 id="page-title">نظرة عامة</h1>
-        <p>متابعة الأداء والمستخدمين والكتب المولّدة</p>
+        <p id="page-sub">متابعة الأداء والمستخدمين والكتب</p>
       </div>
       <div class="top-actions">
         <span class="chip"><span class="dot"></span> النظام يعمل</span>
-        <button type="button" class="btn" onclick="location.reload()">تحديث</button>
-        <a class="btn btn-primary" href="/" target="_blank">الموقع</a>
+        <button class="btn" onclick="location.reload()">↺ تحديث</button>
+        <a class="btn btn-primary" href="/" target="_blank">الموقع ↗</a>
       </div>
     </div>
 
     <!-- OVERVIEW -->
     <section class="section active" id="section-overview">
       <div class="kpis">
-        <div class="kpi">
+        <div class="kpi kpi-blue">
+          <div class="kpi-icon">📚</div><div class="glow"></div>
           <p class="label">كتب اليوم</p>
           <p class="value">{{ stats.books_today }}</p>
-          {% if delta > 0 %}
-          <p class="hint up">▲ +{{ delta }} عن أمس</p>
-          {% elif delta < 0 %}
-          <p class="hint down">▼ {{ delta }} عن أمس</p>
-          {% else %}
-          <p class="hint flat">═ نفس أمس ({{ stats.books_yesterday }})</p>
-          {% endif %}
+          {% if delta > 0 %}<p class="hint up">▲ +{{ delta }} عن أمس</p>
+          {% elif delta < 0 %}<p class="hint down">▼ {{ delta }} عن أمس</p>
+          {% else %}<p class="hint flat">═ نفس أمس</p>{% endif %}
         </div>
-        <div class="kpi">
+        <div class="kpi kpi-indigo">
+          <div class="kpi-icon">📅</div><div class="glow"></div>
           <p class="label">آخر 7 أيام</p>
           <p class="value">{{ stats.books_week }}</p>
           <p class="hint">هذا الشهر: {{ stats.books_month }}</p>
         </div>
-        <div class="kpi">
+        <div class="kpi kpi-green">
+          <div class="kpi-icon">👥</div><div class="glow"></div>
           <p class="label">المستخدمون</p>
           <p class="value">{{ stats.users_total }}</p>
           <p class="hint up">+{{ stats.users_week }} هذا الأسبوع</p>
         </div>
-        <div class="kpi">
+        <div class="kpi kpi-yellow">
+          <div class="kpi-icon">🗒️</div><div class="glow"></div>
           <p class="label">صفحات مولّدة</p>
           <p class="value">{{ stats.pages_total }}</p>
-          <p class="hint">متوسط {{ stats.avg_pages }} صفحة / كتاب</p>
+          <p class="hint">متوسط {{ stats.avg_pages }} / كتاب</p>
+        </div>
+        <div class="kpi kpi-violet">
+          <div class="kpi-icon">💰</div><div class="glow"></div>
+          <p class="label">إجمالي الإيرادات</p>
+          <p class="value" style="font-size:26px">{{ stats.revenue_egp }} ج</p>
+          <p class="hint">{{ stats.payments_paid }} دفعة ناجحة</p>
+        </div>
+        <div class="kpi kpi-orange">
+          <div class="kpi-icon">📈</div><div class="glow"></div>
+          <p class="label">معدل التحويل</p>
+          <p class="value" style="font-size:26px">{{ stats.conversion_rate }}%</p>
+          <p class="hint">{{ stats.payments_total }} طلب إجمالي</p>
         </div>
       </div>
 
@@ -355,13 +494,13 @@
         <div class="panel">
           <div class="panel-head">
             <h2>نشاط الكتب — 14 يوم</h2>
-            <span class="sub">عدد الكتب يوميًا</span>
+            <span class="sub">كتب يومياً</span>
           </div>
           <div class="panel-body">
             <div class="chart-wrap">
               {% for d in stats.daily %}
-              {% set h = ((d.count / max_daily) * 170)|round|int %}
-              <div class="bar-col" title="{{ d.day }}: {{ d.count }}">
+              {% set h = ((d.count / max_daily) * 168)|round|int %}
+              <div class="bar-col" title="{{ d.day }}: {{ d.count }} كتاب">
                 <div class="c">{{ d.count if d.count else '' }}</div>
                 <div class="bar" style="height: {{ [h, 4]|max }}px"></div>
                 <div class="d">{{ d.label }}</div>
@@ -370,12 +509,8 @@
             </div>
           </div>
         </div>
-
         <div class="panel">
-          <div class="panel-head">
-            <h2>ملخص سريع</h2>
-            <span class="sub">حالة النظام</span>
-          </div>
+          <div class="panel-head"><h2>ملخص سريع</h2><span class="sub">حالة النظام</span></div>
           <div class="panel-body">
             <div class="mini-grid">
               <div class="mini"><p class="l">إجمالي الكتب</p><p class="v">{{ stats.books_total }}</p></div>
@@ -383,8 +518,8 @@
               <div class="mini"><p class="l">جلسات نشطة</p><p class="v">{{ stats.sessions_active }}</p></div>
               <div class="mini"><p class="l">روابط مشاركة</p><p class="v">{{ stats.shares_active }}</p></div>
             </div>
-            <p class="muted" style="margin:14px 0 0;font-size:12px">
-              الحد المجاني: <strong style="color:var(--text)">{{ stats.free_books_per_month }}</strong> كتب / شهر لكل IP
+            <p style="margin:14px 0 0;font-size:12px;color:var(--muted)">
+              الحد المجاني: <strong style="color:var(--text)">{{ stats.free_books_per_month }}</strong> كتب / شهر / IP
             </p>
           </div>
         </div>
@@ -394,40 +529,39 @@
         <div class="panel">
           <div class="panel-head">
             <h2>آخر الكتب</h2>
-            <a href="#books" class="sub nav-jump" data-section="books">عرض الكل ←</a>
+            <button class="btn btn-sm btn-ghost" data-section="books">عرض الكل</button>
           </div>
           <div class="panel-body flush">
             {% if stats.recent_books[:6] %}
-            <table>
-              <thead><tr><th>المستخدم</th><th>صفحات</th><th>الوقت</th></tr></thead>
-              <tbody>
-              {% for b in stats.recent_books[:6] %}
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>المستخدم</th><th>صفحات</th><th>الوقت</th></tr></thead>
+                <tbody>
+                {% for b in stats.recent_books[:6] %}
                 <tr>
                   <td>
                     <div class="user-row">
                       <span class="avatar">{{ (b.username or '?')[0]|upper }}</span>
                       <div class="user-cell">
                         <strong>{{ b.username or 'زائر' }}</strong>
-                        <span class="muted mono">{{ b.ip or '—' }}</span>
+                        <span>{{ b.ip or '—' }}</span>
                       </div>
                     </div>
                   </td>
                   <td><span class="badge">{{ b.pages }}</span></td>
                   <td class="muted mono">{{ (b.created_at or '')[11:16] }} · {{ (b.created_at or '')[5:10] }}</td>
                 </tr>
-              {% endfor %}
-              </tbody>
-            </table>
-            {% else %}
-            <p class="empty">لسة مفيش كتب.</p>
-            {% endif %}
+                {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% else %}<p class="empty"><span class="empty-ico">📚</span>لسة مفيش كتب.</p>{% endif %}
           </div>
         </div>
-
         <div class="panel">
           <div class="panel-head">
             <h2>أكثر الوظائف</h2>
-            <a href="#jobs" class="sub nav-jump" data-section="jobs">التفاصيل ←</a>
+            <button class="btn btn-sm btn-ghost" data-section="jobs">التفاصيل</button>
           </div>
           <div class="panel-body">
             {% if stats.top_scenes[:5] %}
@@ -438,45 +572,8 @@
                 <div class="job-track"><div class="job-fill" style="width:{{ (s.count / max_job * 100)|round(1) }}%"></div></div>
               </div>
               {% endfor %}
-            {% else %}
-              <p class="empty">لسة مفيش اختيارات.</p>
-            {% endif %}
+            {% else %}<p class="empty">لسة مفيش اختيارات.</p>{% endif %}
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- BOOKS -->
-    <section class="section" id="section-books">
-      <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
-        <div class="kpi"><p class="label">إجمالي الكتب</p><p class="value">{{ stats.books_total }}</p><p class="hint">كل الفترات</p></div>
-        <div class="kpi"><p class="label">هذا الشهر</p><p class="value">{{ stats.books_month }}</p><p class="hint">آخر 7 أيام: {{ stats.books_week }}</p></div>
-        <div class="kpi"><p class="label">متوسط الصفحات</p><p class="value">{{ stats.avg_pages }}</p><p class="hint">من أصل {{ stats.pages_total }} صفحة</p></div>
-      </div>
-      <div class="panel">
-        <div class="panel-head"><h2>سجل الكتب</h2><span class="sub">آخر {{ stats.recent_books|length }} كتاب</span></div>
-        <div class="panel-body flush">
-          {% if stats.recent_books %}
-          <table>
-            <thead>
-              <tr><th>#</th><th>المستخدم</th><th>الإيميل</th><th>صفحات</th><th>IP</th><th>التاريخ</th></tr>
-            </thead>
-            <tbody>
-              {% for b in stats.recent_books %}
-              <tr>
-                <td class="mono">{{ b.id }}</td>
-                <td>{{ b.username or '—' }}</td>
-                <td class="muted">{{ b.email or '—' }}</td>
-                <td><span class="badge">{{ b.pages }}</span></td>
-                <td class="mono muted">{{ b.ip or '—' }}</td>
-                <td class="mono muted">{{ (b.created_at or '')[:19].replace('T',' ') }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-          {% else %}
-          <p class="empty">لسة مفيش كتب.</p>
-          {% endif %}
         </div>
       </div>
     </section>
@@ -484,35 +581,176 @@
     <!-- USERS -->
     <section class="section" id="section-users">
       <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
-        <div class="kpi"><p class="label">كل المستخدمين</p><p class="value">{{ stats.users_total }}</p><p class="hint">حسابات مسجّلة</p></div>
-        <div class="kpi"><p class="label">اليوم</p><p class="value">{{ stats.users_today }}</p><p class="hint">تسجيلات جديدة</p></div>
-        <div class="kpi"><p class="label">هذا الأسبوع</p><p class="value">{{ stats.users_week }}</p><p class="hint">آخر 7 أيام</p></div>
+        <div class="kpi kpi-green">
+          <div class="kpi-icon">👥</div><div class="glow"></div>
+          <p class="label">كل المستخدمين</p><p class="value">{{ stats.users_total }}</p>
+          <p class="hint">حسابات مسجّلة</p>
+        </div>
+        <div class="kpi kpi-blue">
+          <div class="kpi-icon">🆕</div><div class="glow"></div>
+          <p class="label">اليوم</p><p class="value">{{ stats.users_today }}</p>
+          <p class="hint">تسجيلات جديدة</p>
+        </div>
+        <div class="kpi kpi-indigo">
+          <div class="kpi-icon">📊</div><div class="glow"></div>
+          <p class="label">هذا الأسبوع</p><p class="value">{{ stats.users_week }}</p>
+          <p class="hint">آخر 7 أيام</p>
+        </div>
       </div>
       <div class="panel">
-        <div class="panel-head"><h2>المستخدمون</h2><span class="sub">آخر {{ stats.recent_users|length }}</span></div>
+        <div class="panel-head">
+          <h2>المستخدمون</h2>
+          <span class="sub">آخر {{ stats.recent_users|length }} مستخدم</span>
+        </div>
         <div class="panel-body flush">
           {% if stats.recent_users %}
-          <table>
-            <thead><tr><th>#</th><th>المستخدم</th><th>الإيميل</th><th>تاريخ التسجيل</th></tr></thead>
-            <tbody>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>#</th><th>المستخدم</th><th>البريد</th><th>التسجيل</th><th>Credits</th><th>المزود</th><th>الإجراءات</th></tr>
+              </thead>
+              <tbody id="users-tbody">
               {% for u in stats.recent_users %}
-              <tr>
-                <td class="mono">{{ u.id }}</td>
+              <tr id="user-row-{{ u.id }}">
+                <td class="mono muted">{{ u.id }}</td>
                 <td>
                   <div class="user-row">
                     <span class="avatar">{{ u.username[0]|upper }}</span>
-                    <strong>{{ u.username }}</strong>
+                    <div class="user-cell"><strong>{{ u.username }}</strong></div>
                   </div>
                 </td>
-                <td>{{ u.email }}</td>
-                <td class="mono muted">{{ (u.created_at or '')[:19].replace('T',' ') }}</td>
+                <td class="muted" style="font-size:12px">{{ u.email }}</td>
+                <td class="mono muted">{{ (u.created_at or '')[:10] }}</td>
+                <td><span class="credits-pill" id="credits-{{ u.id }}">✦ {{ u.book_credits or 0 }}</span></td>
+                <td>
+                  <span class="badge {% if u.auth_provider == 'google' %}badge-green{% else %}badge-violet{% endif %}">
+                    {{ u.auth_provider or 'email' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="actions">
+                    <button class="btn btn-sm btn-success" onclick="openCreditsModal({{ u.id }}, '{{ u.username }}', {{ u.book_credits or 0 }})">Credits</button>
+                    <button class="btn btn-sm" onclick="openNotifyModal({{ u.id }}, '{{ u.username }}')">إشعار</button>
+                    <button class="btn btn-sm btn-danger" onclick="confirmDelete({{ u.id }}, '{{ u.username }}')">حذف</button>
+                  </div>
+                </td>
               </tr>
               {% endfor %}
-            </tbody>
-          </table>
-          {% else %}
-          <p class="empty">لسة مفيش مستخدمين.</p>
-          {% endif %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}<p class="empty"><span class="empty-ico">👥</span>لسة مفيش مستخدمين.</p>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- BOOKS -->
+    <section class="section" id="section-books">
+      <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi kpi-blue">
+          <div class="kpi-icon">📚</div><div class="glow"></div>
+          <p class="label">إجمالي الكتب</p><p class="value">{{ stats.books_total }}</p>
+          <p class="hint">كل الفترات</p>
+        </div>
+        <div class="kpi kpi-indigo">
+          <div class="kpi-icon">📅</div><div class="glow"></div>
+          <p class="label">هذا الشهر</p><p class="value">{{ stats.books_month }}</p>
+          <p class="hint">آخر 7 أيام: {{ stats.books_week }}</p>
+        </div>
+        <div class="kpi kpi-yellow">
+          <div class="kpi-icon">📄</div><div class="glow"></div>
+          <p class="label">متوسط الصفحات</p><p class="value">{{ stats.avg_pages }}</p>
+          <p class="hint">من {{ stats.pages_total }} صفحة</p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>سجل الكتب</h2><span class="sub">آخر {{ stats.recent_books|length }} كتاب</span></div>
+        <div class="panel-body flush">
+          {% if stats.recent_books %}
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>المستخدم</th><th>البريد</th><th>صفحات</th><th>IP</th><th>التاريخ</th></tr></thead>
+              <tbody>
+              {% for b in stats.recent_books %}
+              <tr>
+                <td class="mono">{{ b.id }}</td>
+                <td>{{ b.username or '—' }}</td>
+                <td class="muted" style="font-size:12px">{{ b.email or '—' }}</td>
+                <td><span class="badge">{{ b.pages }}</span></td>
+                <td class="mono muted">{{ b.ip or '—' }}</td>
+                <td class="mono muted">{{ (b.created_at or '')[:19].replace('T',' ') }}</td>
+              </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}<p class="empty"><span class="empty-ico">📚</span>لسة مفيش كتب.</p>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- PAYMENTS -->
+    <section class="section" id="section-payments">
+      <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi kpi-violet">
+          <div class="kpi-icon">💰</div><div class="glow"></div>
+          <p class="label">الإيرادات</p>
+          <p class="value" style="font-size:24px">{{ stats.revenue_egp }} ج</p>
+          <p class="hint">من المدفوعات الناجحة</p>
+        </div>
+        <div class="kpi kpi-green">
+          <div class="kpi-icon">✅</div><div class="glow"></div>
+          <p class="label">مدفوعات ناجحة</p><p class="value">{{ stats.payments_paid }}</p>
+          <p class="hint">تم السداد</p>
+        </div>
+        <div class="kpi kpi-blue">
+          <div class="kpi-icon">📋</div><div class="glow"></div>
+          <p class="label">إجمالي الطلبات</p><p class="value">{{ stats.payments_total }}</p>
+          <p class="hint">كل الحالات</p>
+        </div>
+        <div class="kpi kpi-orange">
+          <div class="kpi-icon">📈</div><div class="glow"></div>
+          <p class="label">معدل التحويل</p>
+          <p class="value" style="font-size:24px">{{ stats.conversion_rate }}%</p>
+          <p class="hint">paid / total</p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>سجل المدفوعات</h2><span class="sub">آخر {{ stats.recent_payments|length }} عملية</span></div>
+        <div class="panel-body flush">
+          {% if stats.recent_payments %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>#</th><th>المستخدم</th><th>المبلغ</th><th>Credits</th><th>الحالة</th><th>تاريخ الطلب</th><th>تاريخ الدفع</th><th>Order ID</th></tr>
+              </thead>
+              <tbody>
+              {% for p in stats.recent_payments %}
+              <tr>
+                <td class="mono muted">{{ p.id }}</td>
+                <td>
+                  <div class="user-cell">
+                    <strong>{{ p.username or '—' }}</strong>
+                    <span>{{ p.email or '—' }}</span>
+                  </div>
+                </td>
+                <td class="mono" style="color:var(--ok)">{{ ((p.amount_cents or 0) / 100)|round(2) }} ج</td>
+                <td><span class="badge badge-violet">✦ {{ p.credits }}</span></td>
+                <td>
+                  {% if p.status == 'paid' %}<span class="badge badge-green">✓ مدفوع</span>
+                  {% elif p.status == 'pending' %}<span class="badge badge-yellow">⏳ معلّق</span>
+                  {% elif p.status == 'failed' %}<span class="badge badge-red">✕ فشل</span>
+                  {% else %}<span class="badge">{{ p.status }}</span>{% endif %}
+                </td>
+                <td class="mono muted">{{ (p.created_at or '')[:16].replace('T',' ') }}</td>
+                <td class="mono muted">{{ (p.paid_at or '—')[:16].replace('T',' ') }}</td>
+                <td class="mono muted" style="font-size:11px">{{ p.paymob_order_id or '—' }}</td>
+              </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}<p class="empty"><span class="empty-ico">💳</span>لسة مفيش مدفوعات.</p>{% endif %}
         </div>
       </div>
     </section>
@@ -520,10 +758,7 @@
     <!-- JOBS -->
     <section class="section" id="section-jobs">
       <div class="panel">
-        <div class="panel-head">
-          <h2>ترتيب الوظائف</h2>
-          <span class="sub">حسب عدد مرات الاختيار</span>
-        </div>
+        <div class="panel-head"><h2>ترتيب الوظائف</h2><span class="sub">حسب عدد مرات الاختيار</span></div>
         <div class="panel-body">
           {% if stats.top_scenes %}
             {% for s in stats.top_scenes %}
@@ -533,45 +768,192 @@
               <div class="job-track"><div class="job-fill" style="width:{{ (s.count / max_job * 100)|round(1) }}%"></div></div>
             </div>
             {% endfor %}
-          {% else %}
-            <p class="empty">لسة مفيش بيانات.</p>
-          {% endif %}
+          {% else %}<p class="empty"><span class="empty-ico">✦</span>لسة مفيش بيانات.</p>{% endif %}
         </div>
       </div>
     </section>
   </main>
 </div>
 
+<!-- Toast -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- Credits Modal -->
+<div class="modal-overlay" id="credits-modal">
+  <div class="modal">
+    <h3>💳 إدارة Credits</h3>
+    <p class="modal-sub">المستخدم: <strong id="credits-username"></strong></p>
+    <p style="margin:0 0 16px;font-size:13px;color:var(--muted)">
+      الرصيد الحالي: <span id="credits-current-val" style="color:var(--primary);font-weight:700"></span>
+    </p>
+    <label for="credits-delta">التغيير (موجب = إضافة، سالب = خصم)</label>
+    <input type="number" id="credits-delta" placeholder="مثال: 5 أو -2" min="-1000" max="1000">
+    <div class="modal-msg" id="credits-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="submitCredits()">تطبيق</button>
+      <button class="btn btn-ghost" onclick="closeModal('credits-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notify Modal -->
+<div class="modal-overlay" id="notify-modal">
+  <div class="modal">
+    <h3>🔔 إرسال إشعار</h3>
+    <p class="modal-sub">إرسال رسالة للمستخدم: <strong id="notify-username"></strong></p>
+    <label for="notify-msg-input">نص الرسالة</label>
+    <textarea id="notify-msg-input" placeholder="اكتب الرسالة هنا..."></textarea>
+    <div class="modal-msg" id="notify-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="submitNotify()">إرسال</button>
+      <button class="btn btn-ghost" onclick="closeModal('notify-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <h3>🗑️ حذف المستخدم</h3>
+    <p class="modal-sub" id="delete-sub"></p>
+    <div class="modal-msg" id="delete-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" onclick="submitDelete()">نعم، احذف</button>
+      <button class="btn btn-ghost" onclick="closeModal('delete-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <script>
-const titles = {
-  overview: 'نظرة عامة',
-  books: 'الكتب',
-  users: 'المستخدمون',
-  jobs: 'الوظائف',
+const sectionMeta = {
+  overview: { title: 'نظرة عامة',    sub: 'متابعة الأداء والمستخدمين والكتب' },
+  users:    { title: 'المستخدمون',   sub: 'إدارة الحسابات والـ Credits' },
+  books:    { title: 'الكتب',        sub: 'سجل الكتب المولّدة' },
+  payments: { title: 'المدفوعات',    sub: 'سجل المعاملات المالية' },
+  jobs:     { title: 'الوظائف',      sub: 'ترتيب الوظائف حسب الاستخدام' },
 };
 
 function showSection(id) {
+  if (!sectionMeta[id]) id = 'overview';
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+  document.querySelectorAll('.nav-item[data-section]').forEach(a => a.classList.remove('active'));
   const sec = document.getElementById('section-' + id);
   if (sec) sec.classList.add('active');
-  document.querySelectorAll('.nav-link[data-section="' + id + '"]').forEach(a => a.classList.add('active'));
-  const title = document.getElementById('page-title');
-  if (title) title.textContent = titles[id] || 'Dashboard';
+  document.querySelectorAll(`[data-section="${id}"]`).forEach(el => el.classList.add('active'));
+  document.getElementById('page-title').textContent = sectionMeta[id].title;
+  document.getElementById('page-sub').textContent   = sectionMeta[id].sub;
   history.replaceState(null, '', '#' + id);
 }
 
-document.querySelectorAll('.nav-link, .nav-jump').forEach(el => {
-  el.addEventListener('click', e => {
-    const id = el.dataset.section;
-    if (!id) return;
-    e.preventDefault();
-    showSection(id);
-  });
+document.querySelectorAll('[data-section]').forEach(el => {
+  el.addEventListener('click', e => { e.preventDefault(); showSection(el.dataset.section); });
+});
+const hash = (location.hash || '#overview').slice(1);
+showSection(sectionMeta[hash] ? hash : 'overview');
+
+function showToast(msg, type = '') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 350); }, 3000);
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
 });
 
-const hash = (location.hash || '#overview').slice(1);
-showSection(titles[hash] ? hash : 'overview');
+/* Credits */
+let _creditsUserId = null;
+function openCreditsModal(userId, username, current) {
+  _creditsUserId = userId;
+  document.getElementById('credits-username').textContent    = username;
+  document.getElementById('credits-current-val').textContent = current + ' credits';
+  document.getElementById('credits-delta').value = '';
+  document.getElementById('credits-msg').textContent = '';
+  document.getElementById('credits-msg').className  = 'modal-msg';
+  openModal('credits-modal');
+  setTimeout(() => document.getElementById('credits-delta').focus(), 120);
+}
+async function submitCredits() {
+  const delta = parseInt(document.getElementById('credits-delta').value, 10);
+  const msgEl = document.getElementById('credits-msg');
+  if (isNaN(delta) || delta === 0) {
+    msgEl.textContent = 'ادخل رقم صحيح غير صفر.'; msgEl.className = 'modal-msg err'; return;
+  }
+  try {
+    const res  = await fetch(`/admin/api/user/${_creditsUserId}/credits`, {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({delta}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ');
+    msgEl.textContent = `تم! الرصيد الجديد: ${data.new_credits} credits`;
+    msgEl.className   = 'modal-msg ok';
+    const pill = document.getElementById(`credits-${_creditsUserId}`);
+    if (pill) pill.textContent = `✦ ${data.new_credits}`;
+    showToast('تم تحديث Credits ✓', 'ok');
+    setTimeout(() => closeModal('credits-modal'), 1500);
+  } catch(err) { msgEl.textContent = err.message; msgEl.className = 'modal-msg err'; }
+}
+
+/* Notify */
+let _notifyUserId = null;
+function openNotifyModal(userId, username) {
+  _notifyUserId = userId;
+  document.getElementById('notify-username').textContent = username;
+  document.getElementById('notify-msg-input').value = '';
+  document.getElementById('notify-msg').textContent = '';
+  document.getElementById('notify-msg').className   = 'modal-msg';
+  openModal('notify-modal');
+  setTimeout(() => document.getElementById('notify-msg-input').focus(), 120);
+}
+async function submitNotify() {
+  const message = document.getElementById('notify-msg-input').value.trim();
+  const msgEl   = document.getElementById('notify-msg');
+  if (message.length < 5) {
+    msgEl.textContent = 'الرسالة قصيرة جداً.'; msgEl.className = 'modal-msg err'; return;
+  }
+  try {
+    const res  = await fetch(`/admin/api/user/${_notifyUserId}/notify`, {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({message}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ');
+    msgEl.textContent = 'تم إرسال الإشعار ✓'; msgEl.className = 'modal-msg ok';
+    showToast('تم إرسال الإشعار ✓', 'ok');
+    setTimeout(() => closeModal('notify-modal'), 1500);
+  } catch(err) { msgEl.textContent = err.message; msgEl.className = 'modal-msg err'; }
+}
+
+/* Delete */
+let _deleteUserId = null, _deleteUsername = '';
+function confirmDelete(userId, username) {
+  _deleteUserId = userId; _deleteUsername = username;
+  document.getElementById('delete-sub').textContent =
+    `هتحذف المستخدم "${username}" (ID: ${userId}) وكل بياناته. لا يمكن التراجع!`;
+  document.getElementById('delete-msg').textContent = '';
+  document.getElementById('delete-msg').className   = 'modal-msg';
+  openModal('delete-modal');
+}
+async function submitDelete() {
+  const msgEl = document.getElementById('delete-msg');
+  try {
+    const res  = await fetch(`/admin/api/user/${_deleteUserId}`, {method:'DELETE'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ');
+    msgEl.textContent = `تم حذف "${_deleteUsername}" ✓`; msgEl.className = 'modal-msg ok';
+    const row = document.getElementById(`user-row-${_deleteUserId}`);
+    if (row) { row.style.transition = 'opacity .4s,transform .4s'; row.style.opacity = '0'; row.style.transform = 'translateX(-20px)'; setTimeout(() => row.remove(), 400); }
+    showToast(`تم حذف "${_deleteUsername}" ✓`, 'ok');
+    setTimeout(() => closeModal('delete-modal'), 1500);
+  } catch(err) { msgEl.textContent = err.message; msgEl.className = 'modal-msg err'; }
+}
 </script>
 </body>
 </html>
