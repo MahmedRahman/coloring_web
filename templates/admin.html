@@ -488,6 +488,34 @@
     color: var(--muted); font-size: 14px;
   }
   .so-empty .so-empty-ico { font-size: 40px; margin-bottom: 12px; display: block; }
+
+  /* Modal photo upload drop zone */
+  .o-photo-drop {
+    display: flex; align-items: center; justify-content: center;
+    border: 1.5px dashed var(--border-2); border-radius: 10px;
+    padding: 16px; margin-bottom: 12px;
+    cursor: pointer; transition: border-color .2s, background .2s;
+    color: var(--muted); font-size: 13px; text-align: center;
+    min-height: 60px;
+  }
+  .o-photo-drop:hover, .o-photo-drop.drag { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); }
+  .o-photo-preview {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
+  }
+  .o-prev-wrap {
+    position: relative; width: 70px; height: 70px;
+  }
+  .o-prev-img {
+    width: 70px; height: 70px; border-radius: 9px;
+    object-fit: cover; border: 1px solid var(--border-2);
+  }
+  .o-prev-rm {
+    position: absolute; top: -5px; right: -5px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--danger); color: white; border: 0;
+    font-size: 10px; display: grid; place-items: center; cursor: pointer;
+    line-height: 1;
+  }
 </style>
 </head>
 <body>
@@ -933,6 +961,17 @@
     </div>
     <label for="o-notes">ملاحظات</label>
     <textarea id="o-notes" placeholder="أي تفاصيل إضافية عن الطلب..."></textarea>
+
+    <!-- Photo upload section -->
+    <label>صور الطفل <span style="color:var(--muted);font-weight:400">(اختياري — حتى 8 صور)</span></label>
+    <label id="o-photo-drop" class="o-photo-drop">
+      <span id="o-photo-drop-text">
+        🖼️ اختر صور أو اسحبها هنا &mdash; يمكن تحديد أكتر من صورة
+      </span>
+      <input type="file" id="o-photos" accept="image/*" multiple hidden onchange="previewModalPhotos(this)">
+    </label>
+    <div id="o-photo-preview" class="o-photo-preview"></div>
+
     <div class="modal-msg" id="order-msg"></div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="submitOrderForm()">حفظ الطلب</button>
@@ -1283,8 +1322,63 @@ async function deletePhoto(orderId, filename, btn) {
 }
 
 /* Order form modal */
+let _modalFiles = []; // DataTransfer-like accumulator for selected files
+
+function previewModalPhotos(input) {
+  const newFiles = Array.from(input.files);
+  // Merge into _modalFiles (up to 8)
+  for (const f of newFiles) {
+    if (_modalFiles.length >= 8) break;
+    _modalFiles.push(f);
+  }
+  input.value = ''; // reset so same file can be re-added if needed
+  renderModalPreviews();
+}
+
+function renderModalPreviews() {
+  const wrap = document.getElementById('o-photo-preview');
+  const dropText = document.getElementById('o-photo-drop-text');
+  wrap.innerHTML = '';
+  _modalFiles.forEach((f, idx) => {
+    const url = URL.createObjectURL(f);
+    const div = document.createElement('div');
+    div.className = 'o-prev-wrap';
+    div.innerHTML = `
+      <img class="o-prev-img" src="${url}" alt="صورة">
+      <button class="o-prev-rm" onclick="removeModalPhoto(${idx})" type="button">✕</button>`;
+    wrap.appendChild(div);
+  });
+  const left = 8 - _modalFiles.length;
+  dropText.innerHTML = _modalFiles.length
+    ? `🖼️ ${_modalFiles.length} صورة مختارة — يمكن إضافة ${left} أكتر`
+    : '🖼️ اختر صور أو اسحبها هنا &mdash; يمكن تحديد أكتر من صورة';
+}
+
+function removeModalPhoto(idx) {
+  _modalFiles.splice(idx, 1);
+  renderModalPreviews();
+}
+
+// Drag & drop support for the drop zone
+(function() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const drop = document.getElementById('o-photo-drop');
+    if (!drop) return;
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+    drop.addEventListener('drop', e => {
+      e.preventDefault(); drop.classList.remove('drag');
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      for (const f of files) { if (_modalFiles.length >= 8) break; _modalFiles.push(f); }
+      renderModalPreviews();
+    });
+  });
+})();
+
 function openOrderModal(id) {
   _soEditId = id;
+  _modalFiles = []; // reset photos
+  renderModalPreviews();
   const isEdit = id !== null;
   document.getElementById('order-modal-title').textContent = isEdit ? '✏️ تعديل الطلب' : '📱 طلب جديد';
   document.getElementById('order-msg').textContent = '';
@@ -1300,8 +1394,8 @@ function openOrderModal(id) {
       document.getElementById('o-notes').value  = o.notes       || '';
     }
   } else {
-    ['o-child','o-client','o-phone','o-email','o-notes'].forEach(id => {
-      document.getElementById(id).value = '';
+    ['o-child','o-client','o-phone','o-email','o-notes'].forEach(fid => {
+      document.getElementById(fid).value = '';
     });
   }
   openModal('order-modal');
@@ -1325,15 +1419,35 @@ async function submitOrderForm() {
   const method  = isEdit ? 'PUT' : 'POST';
 
   try {
+    // Step 1: save order data
+    msgEl.textContent = 'جاري الحفظ...'; msgEl.className = 'modal-msg';
     const res  = await fetch(url, {
       method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'خطأ');
+
+    const orderId = isEdit ? _soEditId : data.order.id;
+
+    // Step 2: upload photos if any selected
+    if (_modalFiles.length > 0) {
+      msgEl.textContent = `جاري رفع ${_modalFiles.length} صورة...`;
+      const fd = new FormData();
+      for (const f of _modalFiles) fd.append('photos', f);
+      const pRes  = await fetch(`/admin/api/special-orders/${orderId}/photos`, {method:'POST', body: fd});
+      const pData = await pRes.json();
+      if (!pRes.ok) {
+        // Order saved but photos failed — warn not block
+        showToast(`❗ تم حفظ الطلب بس فيه مشكلة في الصور: ${pData.error}`, 'err');
+      } else {
+        showToast(`تم رفع ${pData.uploaded.length} صورة ✓`, 'ok');
+      }
+    }
+
     msgEl.textContent = isEdit ? 'تم التعديل ✓' : 'تم إضافة الطلب ✓';
     msgEl.className   = 'modal-msg ok';
     showToast(isEdit ? 'تم تعديل الطلب ✓' : 'تم إضافة الطلب ✓', 'ok');
-    setTimeout(() => { closeModal('order-modal'); loadOrders(); }, 900);
+    setTimeout(() => { closeModal('order-modal'); loadOrders(); }, 700);
   } catch(e) { msgEl.textContent = e.message; msgEl.className = 'modal-msg err'; }
 }
 
