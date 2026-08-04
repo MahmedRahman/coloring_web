@@ -1313,7 +1313,15 @@
 </div>
 
 <script>
-/* ─── Special Orders ─── */
+/* ─── Global State Variables ─── */
+let _soAll = [];          // all loaded special orders
+let _soFilter = 'all';    // current filter (all/pending/done)
+let _soEditId = null;     // null = new order, number = edit
+let _modalOrderId = null;
+let _existingPhotos = []; // filenames currently on server
+let _modalFiles = [];     // preview photos for modal upload
+let _creditsUserId = null;
+
 const sectionMeta = {
   overview:        { title: 'نظرة عامة',       sub: 'متابعة الأداء والمستخدمين والكتب' },
   users:           { title: 'المستخدمون',      sub: 'إدارة الحسابات والـ Credits' },
@@ -1335,12 +1343,6 @@ function showSection(id) {
   history.replaceState(null, '', '#' + id);
   if (id === 'special-orders') loadOrders();
 }
-
-document.querySelectorAll('[data-section]').forEach(el => {
-  el.addEventListener('click', e => { e.preventDefault(); showSection(el.dataset.section); });
-});
-const hash = (location.hash || '#overview').slice(1);
-showSection(sectionMeta[hash] ? hash : 'overview');
 
 function showToast(msg, type = '') {
   const wrap = document.getElementById('toast-wrap');
@@ -1447,9 +1449,6 @@ async function submitDelete() {
 }
 
 /* ════════════════ Special Orders JS ════════════════ */
-let _soAll = [];          // all loaded orders
-let _soFilter = 'all';    // current filter
-let _soEditId = null;     // null = new, number = editing
 
 /* Status helper */
 function setOrderStatus(val) {
@@ -1465,9 +1464,6 @@ function setOrderStatus(val) {
 }
 
 /* Existing photos in modal */
-let _modalOrderId = null;
-let _existingPhotos = []; // filenames currently on server
-
 function renderExistingPhotos(orderId, photos) {
   _modalOrderId = orderId;
   _existingPhotos = [...photos];
@@ -1512,18 +1508,26 @@ async function deleteModalPhoto(filename) {
 async function loadOrders(filter) {
   if (filter !== undefined) _soFilter = filter;
   const params = new URLSearchParams();
-  if (_soFilter !== 'all') params.set('status', _soFilter);
+  if (_soFilter && _soFilter !== 'all') params.set('status', _soFilter);
   const clientQ = (document.getElementById('so-search')?.value || '').trim();
   if (clientQ) params.set('client', clientQ);
   const url = '/admin/api/special-orders' + (params.toString() ? '?' + params.toString() : '');
   try {
-    const res  = await fetch(url);
+    const res = await fetch(url);
+    if (res.status === 401) {
+      window.location.href = '/admin/login';
+      return;
+    }
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'فشل التحميل');
     _soAll = data.orders || [];
     renderOrders(_soAll);
   } catch(e) {
-    document.getElementById('so-grid').innerHTML =
-      '<div class="so-empty"><span class="so-empty-ico">⚠️</span>خطأ في تحميل الطلبات.</div>';
+    console.error('loadOrders error:', e);
+    const grid = document.getElementById('so-grid');
+    if (grid) {
+      grid.innerHTML = '<div class="so-empty"><span class="so-empty-ico">⚠️</span>حدث خطأ أثناء تحميل الطلبات. حاول مجدداً.</div>';
+    }
   }
 }
 
@@ -2058,6 +2062,20 @@ function openLightbox(src) {
   document.getElementById('so-lb-img').src = src;
   lb.classList.add('open');
 }
+
+/* ─── Navigation & Hash Listener Initialization ─── */
+document.querySelectorAll('[data-section]').forEach(el => {
+  el.addEventListener('click', e => { e.preventDefault(); showSection(el.dataset.section); });
+});
+
+window.addEventListener('hashchange', () => {
+  const h = (location.hash || '#overview').slice(1);
+  showSection(sectionMeta[h] ? h : 'overview');
+});
+
+// Initial tab activation on page load
+const initialHash = (location.hash || '#overview').slice(1);
+showSection(sectionMeta[initialHash] ? initialHash : 'overview');
 </script>
 </body>
 </html>
