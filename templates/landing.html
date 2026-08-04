@@ -847,7 +847,6 @@ img{max-width:100%;display:block}
       <button type="button" class="lnd-close-x" id="lnd-close-modal" aria-label="Close">&times;</button>
     </div>
     <p class="lnd-modal-sub">ادخل على حسابك أو سجّل اسمك عشان تبدأ تصنع كتب التلوين.</p>
-    {% if google_ready %}
     <a class="lnd-btn-google" href="/auth/google">
       <svg width="22" height="22" viewBox="0 0 24 24">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -858,7 +857,6 @@ img{max-width:100%;display:block}
       <span>دخول عبر Google</span>
     </a>
     <div class="lnd-auth-divider"><span>أو بالإيميل</span></div>
-    {% endif %}
     <div class="lnd-auth-tabs">
       <button type="button" class="active" id="lnd-tab-login">تسجيل الدخول</button>
       <button type="button" id="lnd-tab-register">حساب جديد</button>
@@ -978,6 +976,21 @@ document.getElementById('lnd-auth-form').onsubmit = async (e) => {
 };
 
 lndRefreshAuth();
+
+/* Check for Auth Error from Google Auth */
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('login') === '1') {
+  lndModal.classList.add('open');
+  const authErr = urlParams.get('auth_error');
+  if (authErr) {
+    if (authErr === 'google_off') lndError.textContent = 'تسجيل الدخول عبر Google غير مفعّل (لم يتم إضافة المفاتيح).';
+    else if (authErr === 'google_unverified') lndError.textContent = 'الإيميل غير موثق في Google.';
+    else lndError.textContent = 'فشل تسجيل الدخول عبر Google. حاول مرة أخرى.';
+    
+    // Clean up URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
 </script>
 </body>
 </html>
