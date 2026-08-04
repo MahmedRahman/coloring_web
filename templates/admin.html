@@ -314,6 +314,21 @@
     padding: 12px 16px; background: rgba(6,11,20,0.97);
     border-bottom: 1px solid var(--border); backdrop-filter: blur(12px);
   }
+  .mobile-nav-strip {
+    display: none; padding: 8px 12px; background: rgba(12,20,35,0.95);
+    border-bottom: 1px solid var(--border-2); overflow-x: auto;
+    gap: 6px; scrollbar-width: none; white-space: nowrap;
+    position: sticky; top: 56px; z-index: 25; backdrop-filter: blur(10px);
+  }
+  .mobile-nav-strip::-webkit-scrollbar { display: none; }
+  .mobile-nav-btn {
+    padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border-2);
+    background: var(--bg-2); color: var(--muted); font-size: 12.5px; font-weight: 700;
+    cursor: pointer; transition: all .18s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .mobile-nav-btn.active {
+    background: var(--primary-dim); color: var(--primary); border-color: rgba(56,189,248,0.5);
+  }
 
   /* Modal */
   .modal-overlay {
@@ -374,6 +389,7 @@
   @media (max-width: 860px) {
     .sidebar { display: none; }
     .mobile-bar { display: flex; align-items: center; justify-content: space-between; }
+    .mobile-nav-strip { display: flex; }
     .main { padding: 16px 16px 48px; }
     .kpis { grid-template-columns: repeat(2, 1fr); }
   }
@@ -700,10 +716,21 @@
 
 <!-- Mobile bar -->
 <div class="mobile-bar">
-  <strong style="font-size:15px">لوحة التحكم</strong>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo-mark" style="width:28px;height:28px;font-size:11px">CB</div>
+    <strong style="font-size:15px;color:var(--text)">لوحة التحكم</strong>
+  </div>
   <form method="post" action="{{ url_for('admin_logout') }}" style="margin:0">
-    <button class="btn btn-sm" type="submit">خروج</button>
+    <button class="btn btn-sm btn-ghost" type="submit">خروج</button>
   </form>
+</div>
+<div class="mobile-nav-strip">
+  <button type="button" class="mobile-nav-btn active" data-section="overview" onclick="showSection('overview')">◆ الرئيسية</button>
+  <button type="button" class="mobile-nav-btn" data-section="special-orders" onclick="showSection('special-orders')">📱 طلبات خاصة</button>
+  <button type="button" class="mobile-nav-btn" data-section="users" onclick="showSection('users')">◎ المستخدمين</button>
+  <button type="button" class="mobile-nav-btn" data-section="books" onclick="showSection('books')">▤ الكتب</button>
+  <button type="button" class="mobile-nav-btn" data-section="payments" onclick="showSection('payments')">💳 المدفوعات</button>
+  <button type="button" class="mobile-nav-btn" data-section="jobs" onclick="showSection('jobs')">✦ الوظائف</button>
 </div>
 
 <div class="shell">
@@ -716,22 +743,22 @@
 
     <div class="nav-label">القائمة</div>
     <nav>
-      <button class="nav-item active" data-section="overview">
+      <button type="button" class="nav-item active" data-section="overview" onclick="showSection('overview')">
         <span class="nav-ico">◆</span> نظرة عامة
       </button>
-      <button class="nav-item" data-section="users">
+      <button type="button" class="nav-item" data-section="users" onclick="showSection('users')">
         <span class="nav-ico">◎</span> المستخدمون
       </button>
-      <button class="nav-item" data-section="books">
+      <button type="button" class="nav-item" data-section="books" onclick="showSection('books')">
         <span class="nav-ico">▤</span> الكتب
       </button>
-      <button class="nav-item" data-section="payments">
+      <button type="button" class="nav-item" data-section="payments" onclick="showSection('payments')">
         <span class="nav-ico">💳</span> المدفوعات
       </button>
-      <button class="nav-item" data-section="jobs">
+      <button type="button" class="nav-item" data-section="jobs" onclick="showSection('jobs')">
         <span class="nav-ico">✦</span> الوظائف
       </button>
-      <button class="nav-item" data-section="special-orders" id="nav-special-orders">
+      <button type="button" class="nav-item" data-section="special-orders" id="nav-special-orders" onclick="showSection('special-orders')">
         <span class="nav-ico">📱</span> طلبات خاصة
       </button>
     </nav>
@@ -1333,15 +1360,36 @@ const sectionMeta = {
 
 function showSection(id) {
   if (!sectionMeta[id]) id = 'overview';
+  
+  // Hide all sections, show active section
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item[data-section]').forEach(a => a.classList.remove('active'));
-  const sec = document.getElementById('section-' + id);
-  if (sec) sec.classList.add('active');
-  document.querySelectorAll(`[data-section="${id}"]`).forEach(el => el.classList.add('active'));
-  document.getElementById('page-title').textContent = sectionMeta[id].title;
-  document.getElementById('page-sub').textContent   = sectionMeta[id].sub;
-  history.replaceState(null, '', '#' + id);
-  if (id === 'special-orders') loadOrders();
+  const targetSec = document.getElementById('section-' + id);
+  if (targetSec) targetSec.classList.add('active');
+
+  // Highlight active state on all nav elements (desktop sidebar + mobile strip)
+  document.querySelectorAll('[data-section]').forEach(el => {
+    if (el.getAttribute('data-section') === id) {
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
+    }
+  });
+
+  // Update header text
+  const titleEl = document.getElementById('page-title');
+  const subEl   = document.getElementById('page-sub');
+  if (titleEl && sectionMeta[id]) titleEl.textContent = sectionMeta[id].title;
+  if (subEl && sectionMeta[id])   subEl.textContent   = sectionMeta[id].sub;
+
+  // Update URL hash
+  if (location.hash !== '#' + id) {
+    history.pushState(null, '', '#' + id);
+  }
+
+  // Auto load special orders if selected
+  if (id === 'special-orders') {
+    loadOrders();
+  }
 }
 
 function showToast(msg, type = '') {
@@ -2064,8 +2112,16 @@ function openLightbox(src) {
 }
 
 /* ─── Navigation & Hash Listener Initialization ─── */
-document.querySelectorAll('[data-section]').forEach(el => {
-  el.addEventListener('click', e => { e.preventDefault(); showSection(el.dataset.section); });
+// Global Event Delegation for data-section elements
+document.addEventListener('click', (e) => {
+  const target = e.target.closest('[data-section]');
+  if (target) {
+    const secId = target.getAttribute('data-section');
+    if (secId) {
+      e.preventDefault();
+      showSection(secId);
+    }
+  }
 });
 
 window.addEventListener('hashchange', () => {
@@ -2073,9 +2129,22 @@ window.addEventListener('hashchange', () => {
   showSection(sectionMeta[h] ? h : 'overview');
 });
 
-// Initial tab activation on page load
-const initialHash = (location.hash || '#overview').slice(1);
-showSection(sectionMeta[initialHash] ? initialHash : 'overview');
+window.addEventListener('popstate', () => {
+  const h = (location.hash || '#overview').slice(1);
+  showSection(sectionMeta[h] ? h : 'overview');
+});
+
+// Initial tab activation on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+  const initialHash = (location.hash || '#overview').slice(1);
+  showSection(sectionMeta[initialHash] ? initialHash : 'overview');
+});
+
+// Immediate execution fallback
+(function() {
+  const initialHash = (location.hash || '#overview').slice(1);
+  showSection(sectionMeta[initialHash] ? initialHash : 'overview');
+})();
 </script>
 </body>
 </html>
