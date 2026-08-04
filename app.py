@@ -2263,6 +2263,24 @@ def admin_list_special_orders():
     return jsonify({"orders": orders, "total": len(orders)})
 
 
+@app.route("/admin/api/special-orders/<int:order_id>", methods=["GET"])
+@admin_required
+def admin_get_special_order(order_id: int):
+    """Get single special order details with photos."""
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "الطلب مش موجود."}), 404
+        photo_rows = conn.execute(
+            "SELECT filename FROM special_order_photos WHERE order_id = ?", (order_id,)
+        ).fetchall()
+        conn.close()
+    photos = [r["filename"] for r in photo_rows]
+    return jsonify({"ok": True, "order": _order_to_dict(row, photos)})
+
+
 @app.route("/admin/api/special-orders", methods=["POST"])
 @admin_required
 def admin_create_special_order():

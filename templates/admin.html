@@ -379,7 +379,7 @@
   }
   @media (max-width: 500px) { .kpis { grid-template-columns: 1fr; } }
 
-  /* ── Special Orders ── */
+  /* ── Special Orders Cards & Grid ── */
   .so-toolbar {
     display: flex; align-items: center; justify-content: space-between;
     gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
@@ -414,156 +414,189 @@
   }
   .so-search:focus { border-color: var(--primary); }
   .so-search::placeholder { color: var(--muted); }
-  /* Divider between filter groups */
-  .filter-divider {
-    width: 1px; height: 22px; background: var(--border-2);
-    flex-shrink: 0;
-  }
+  .filter-divider { width: 1px; height: 22px; background: var(--border-2); flex-shrink: 0; }
+
   /* Grid */
   .so-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 18px;
   }
-  /* Card */
+  /* Card Redesign */
   .so-card {
     background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 14px; overflow: hidden;
+    border-radius: 16px; overflow: hidden;
     transition: border-color .2s, box-shadow .2s, transform .2s;
     display: flex; flex-direction: column;
+    position: relative;
   }
   .so-card:hover {
-    border-color: var(--border-2);
-    box-shadow: 0 4px 24px rgba(0,0,0,.18);
-    transform: translateY(-2px);
+    border-color: rgba(167,139,250,0.5);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    transform: translateY(-3px);
   }
-  .so-card.status-done   { border-top: 3px solid var(--ok); }
-  .so-card.status-pending { border-top: 3px solid var(--warn); }
+  .so-card.status-done   { border-top: 4px solid var(--ok); }
+  .so-card.status-pending { border-top: 4px solid var(--warn); }
 
-  /* Card header — child name + parent name + status */
+  /* Card Header */
   .so-card-head {
-    padding: 14px 16px 10px;
+    padding: 16px 18px 12px;
     border-bottom: 1px solid var(--border);
-    display: flex; flex-direction: column; gap: 4px;
+    display: flex; flex-direction: column; gap: 8px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);
   }
-  .so-card-head-row {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 8px;
+  .so-card-head-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
   }
-  .so-child-name {
-    font-weight: 800; font-size: 17px; color: var(--text);
-    display: flex; align-items: center; gap: 6px; line-height: 1.2;
+  .so-child-title-wrap {
+    display: flex; align-items: center; gap: 10px;
   }
-  .so-child-icon {
-    width: 28px; height: 28px; border-radius: 50%;
-    background: linear-gradient(135deg,#a78bfa,#38bdf8);
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 14px; flex-shrink: 0;
+  .so-child-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa 0%, #38bdf8 100%);
+    display: grid; place-items: center; font-size: 18px; flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(167,139,250,0.3);
   }
-  .so-parent-name {
-    font-size: 13px; color: var(--muted); font-weight: 500;
-    display: flex; align-items: center; gap: 5px;
+  .so-child-name-text {
+    font-weight: 800; font-size: 18px; color: var(--text); line-height: 1.2;
   }
-  .so-parent-name strong { color: var(--text-2); font-weight: 600; }
-  .so-id-badge {
-    font-family: var(--mono); font-size: 10.5px; color: var(--muted);
-    background: var(--bg-2); padding: 2px 7px; border-radius: 999px;
-    border: 1px solid var(--border);
+  .so-card-head-sub {
+    font-size: 13.5px; color: var(--muted); font-weight: 500;
+    display: flex; align-items: center; gap: 6px; margin-top: 2px;
   }
+  .so-card-head-sub strong { color: #f3f4f6; font-weight: 700; }
 
-  /* Card body */
+  /* Card Body */
   .so-card-body {
-    padding: 12px 16px;
-    flex: 1;
-    display: flex; flex-direction: column; gap: 10px;
+    padding: 14px 18px; flex: 1;
+    display: flex; flex-direction: column; gap: 12px;
   }
-  .so-info-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 6px 8px;
+  .so-chips-row {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
   }
-  .so-info-item {
-    display: flex; flex-direction: column; gap: 1px;
-  }
-  .so-info-label {
-    font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
-    color: var(--muted); font-weight: 600;
-  }
-  .so-info-value {
-    font-size: 13px; color: var(--text); font-weight: 500;
-    word-break: break-all;
-  }
-  .so-info-value a { color: var(--primary); }
-  .so-assigned-row {
-    background: var(--primary-dim); border: 1px solid rgba(56,189,248,.2);
-    border-radius: 8px; padding: 6px 10px;
-    display: flex; align-items: center; gap: 7px;
-    font-size: 12.5px; color: var(--primary); font-weight: 600;
-  }
-  .so-notes {
-    background: var(--bg-2); border: 1px solid var(--border);
-    border-radius: 8px; padding: 8px 10px;
-    font-size: 12.5px; color: var(--text-2); line-height: 1.5;
-    white-space: pre-wrap;
-  }
-  /* Photos */
-  .so-photos { display: flex; flex-wrap: wrap; gap: 8px; }
-  .so-photo-wrap { position: relative; width: 70px; height: 70px; }
-  .so-photo {
-    width: 70px; height: 70px; border-radius: 9px;
-    object-fit: cover; cursor: pointer;
-    border: 1px solid var(--border-2);
-    transition: opacity .2s;
-  }
-  .so-photo:hover { opacity: .82; }
-  .so-photo-del {
-    position: absolute; top: -5px; right: -5px;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: var(--danger); color: white; border: 0;
-    font-size: 10px; display: grid; place-items: center; cursor: pointer;
-    opacity: 0; transition: opacity .2s; line-height: 1;
-  }
-  .so-photo-wrap:hover .so-photo-del { opacity: 1; }
-  .so-upload-btn {
-    width: 70px; height: 70px; border-radius: 9px;
-    border: 1.5px dashed var(--border-2); background: transparent;
-    color: var(--muted); font-size: 22px; cursor: pointer;
-    display: grid; place-items: center;
-    transition: border-color .2s, color .2s;
-  }
-  .so-upload-btn:hover { border-color: var(--primary); color: var(--primary); }
-
-  /* Card footer */
-  .so-card-foot {
-    display: flex; align-items: center; gap: 6px;
-    padding: 10px 14px;
-    border-top: 1px solid var(--border);
-    background: var(--bg-2);
-  }
-  .so-date {
-    font-size: 10.5px; color: var(--muted);
-    font-family: var(--mono); margin-right: auto;
-  }
-
-  /* PDF in card */
-  .so-pdf-row {
-    display: flex; align-items: center; gap: 8px;
-  }
-  .pdf-badge {
+  .so-chip {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 5px 10px; border-radius: 8px;
-    background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.28);
-    color: #a78bfa; font-size: 12px; font-weight: 600;
+    padding: 5px 11px; border-radius: 8px;
+    background: var(--bg-2); border: 1px solid var(--border-2);
+    font-size: 12.5px; color: var(--text-2); font-weight: 600;
   }
-  .pdf-badge a { color: inherit; text-decoration: none; }
-  .pdf-badge a:hover { text-decoration: underline; }
-  .so-empty {
-    grid-column: 1 / -1; padding: 60px 20px; text-align: center;
-    color: var(--muted); font-size: 14px;
+  .so-chip-assigned {
+    background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3);
+    color: var(--primary);
   }
-  .so-empty .so-empty-ico { font-size: 40px; margin-bottom: 12px; display: block; }
-  /* Order form modal wider */
-  .modal-lg { max-width: 580px; }
-  .modal-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .so-chip-pdf {
+    background: rgba(167,139,250,0.12); border-color: rgba(167,139,250,0.3);
+    color: #a78bfa;
+  }
+  .btn-whatsapp-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: #25d366; color: white; text-decoration: none;
+    font-size: 13px; font-weight: bold; transition: transform .15s, opacity .15s;
+  }
+  .btn-whatsapp-icon:hover { transform: scale(1.1); opacity: .9; }
+  .btn-whatsapp {
+    background: #25d366 !important; color: white !important;
+    font-weight: 700 !important; border: 0 !important;
+  }
+  .btn-whatsapp:hover { opacity: .9; }
+
+  .so-notes-snippet {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px;
+    font-size: 12.5px; color: var(--text-2); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .so-photos-strip {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .so-photo-thumb {
+    width: 54px; height: 54px; border-radius: 8px;
+    object-fit: cover; border: 1.5px solid var(--border-2);
+    cursor: pointer; transition: transform .15s;
+  }
+  .so-photo-thumb:hover { transform: scale(1.06); border-color: var(--primary); }
+
+  /* Card Footer */
+  .so-card-foot {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 18px; border-top: 1px solid var(--border);
+    background: var(--bg-2); flex-wrap: wrap;
+  }
+  .btn-details {
+    background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+    color: white; font-weight: 700; border: none; padding: 7px 14px;
+    border-radius: 8px; font-size: 13px; transition: opacity .15s;
+  }
+  .btn-details:hover { opacity: .9; }
+
+  /* ── Order Details Modal Styling ── */
+  .modal-xl { max-width: 780px; width: 92%; }
+  .so-detail-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 16px; margin-bottom: 20px;
+    border-bottom: 1.5px solid var(--border-2);
+  }
+  .so-detail-title-wrap { display: flex; align-items: center; gap: 14px; }
+  .so-detail-icon {
+    width: 46px; height: 46px; border-radius: 12px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #38bdf8 100%);
+    display: grid; place-items: center; font-size: 24px; color: white;
+  }
+  .so-detail-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+  }
+  @media (max-width: 700px) {
+    .so-detail-grid { grid-template-columns: 1fr; }
+  }
+  .so-detail-card {
+    background: var(--bg-2); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .so-detail-section-title {
+    font-size: 15px; font-weight: 800; color: var(--text);
+    margin-bottom: 4px; display: flex; align-items: center; gap: 8px;
+  }
+  .so-detail-rows { display: flex; flex-direction: column; gap: 10px; }
+  .so-detail-row {
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .so-d-label {
+    font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 700;
+  }
+  .so-d-value {
+    font-size: 14px; color: var(--text); font-weight: 600;
+  }
+  .so-d-value.highlight {
+    font-size: 17px; font-weight: 800; color: #38bdf8;
+  }
+  .so-phone-link { color: var(--primary); text-decoration: none; font-weight: 700; font-size: 15px; }
+  .so-detail-notes-box {
+    margin-top: 6px; background: var(--surface); border: 1px solid var(--border-2);
+    border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.6;
+    color: var(--text-2); white-space: pre-wrap;
+  }
+  .so-detail-photos-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px;
+  }
+  .so-detail-photo-card {
+    position: relative; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border-2); background: var(--surface);
+  }
+  .so-detail-photo-card img {
+    width: 100%; height: 90px; object-fit: cover; cursor: pointer; display: block;
+  }
+  .so-photo-card-actions {
+    display: flex; justify-content: space-between; padding: 4px 6px;
+    background: rgba(0,0,0,0.6);
+  }
+  .so-detail-pdf-card {
+    background: var(--surface); border: 1px dashed rgba(167,139,250,0.4);
+    border-radius: 12px; padding: 14px; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
   /* Full-size photo lightbox */
   .lightbox {
     display: none; position: fixed; inset: 0; z-index: 300;
@@ -1141,6 +1174,78 @@
   </div>
 </div>
 
+<!-- Order Detail Modal (Full view) -->
+<div class="modal-overlay" id="order-detail-modal">
+  <div class="modal modal-xl">
+    <div class="so-detail-header">
+      <div class="so-detail-title-wrap">
+        <div class="so-detail-icon">📋</div>
+        <div>
+          <h3 id="so-detail-title" style="margin:0;font-size:20px">تفاصيل الطلب</h3>
+          <p class="modal-sub" id="so-detail-sub" style="margin:2px 0 0">تاريخ الطلب: --</p>
+        </div>
+      </div>
+      <div id="so-detail-status-badge"></div>
+    </div>
+
+    <div class="so-detail-grid">
+      <!-- Info Column -->
+      <div class="so-detail-card">
+        <h4 class="so-detail-section-title">👤 البيانات الأساسية</h4>
+        <div class="so-detail-rows">
+          <div class="so-detail-row">
+            <span class="so-d-label">🧒 اسم الطفل:</span>
+            <span class="so-d-value highlight" id="so-detail-child"></span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">👤 ولي الأمر / الأب:</span>
+            <span class="so-d-value" id="so-detail-client"></span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">📞 رقم التليفون:</span>
+            <div id="so-detail-phone-wrap" style="display:flex;align-items:center;gap:8px"></div>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">📧 البريد الإلكتروني:</span>
+            <span class="so-d-value" id="so-detail-email"></span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">👷 الشخص المسؤول:</span>
+            <span class="so-d-value" id="so-detail-assigned"></span>
+          </div>
+        </div>
+
+        <div>
+          <span class="so-d-label" style="display:block;margin-bottom:4px">📝 الملاحظات والتفاصيل:</span>
+          <div id="so-detail-notes" class="so-detail-notes-box"></div>
+        </div>
+      </div>
+
+      <!-- Attachments & Media Column -->
+      <div class="so-detail-card">
+        <h4 class="so-detail-section-title">🖼️ المرفقات والملفات</h4>
+        
+        <div>
+          <label class="so-d-label" style="display:block;margin-bottom:8px">📷 صور الطفل المرفوعة:</label>
+          <div id="so-detail-photos" class="so-detail-photos-grid"></div>
+        </div>
+
+        <div style="margin-top:10px">
+          <label class="so-d-label" style="display:block;margin-bottom:8px">📄 ملف الـ PDF الخاص بالطلب:</label>
+          <div id="so-detail-pdf-box"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:20px; justify-content:space-between; flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="so-detail-quick-actions">
+        <!-- Quick action buttons rendered via JS -->
+      </div>
+      <button class="btn btn-ghost" onclick="closeModal('order-detail-modal')">إلغاء وإغلاق</button>
+    </div>
+  </div>
+</div>
+
 <!-- Credits Modal -->
 <div class="modal-overlay" id="credits-modal">
   <div class="modal">
@@ -1438,51 +1543,47 @@ function orderCardHTML(o) {
     ? '<span class="badge badge-green">✓ مكتمل</span>'
     : '<span class="badge badge-yellow">⏳ معلّق</span>';
 
-  // Photos
-  const photos = (o.photos || []).map(fn => `
-    <div class="so-photo-wrap">
-      <img class="so-photo" src="${photoURL(o.id, fn)}" alt="صورة"
-           onclick="openLightbox('${photoURL(o.id, fn)}')">
-      <button class="so-photo-del" onclick="deletePhoto(${o.id},'${fn}',this)" title="حذف">✕</button>
-    </div>`).join('');
+  // Phone & WhatsApp link
+  let phoneChip = '';
+  if (o.phone) {
+    const rawPhone = o.phone.replace(/[^0-9]/g, '');
+    const waPhone = rawPhone.startsWith('0') ? '2' + rawPhone : rawPhone;
+    phoneChip = `
+      <div class="so-chip">
+        <a href="https://wa.me/${waPhone}" target="_blank" class="btn-whatsapp-icon" title="مراسلة واتساب">💬</a>
+        <a href="tel:${escHtml(o.phone)}" style="color:var(--text-2);text-decoration:none">${escHtml(o.phone)}</a>
+      </div>`;
+  }
 
-  const uploadSlots = (o.photos || []).length < 8
-    ? `<label class="so-upload-btn" title="رفع صور">
-         +
-         <input type="file" accept="image/*" multiple hidden onchange="uploadPhotos(${o.id}, this)">
-       </label>` : '';
-
-  // Info rows
-  const phoneHTML  = o.phone ? `<a href="tel:${escHtml(o.phone)}">${escHtml(o.phone)}</a>` : '—';
-  const emailHTML  = o.email ? escHtml(o.email) : '—';
-
-  const infoGrid = (o.phone || o.email) ? `
-    <div class="so-info-grid">
-      ${o.phone ? `<div class="so-info-item">
-        <span class="so-info-label">📞 تليفون</span>
-        <span class="so-info-value">${phoneHTML}</span>
-      </div>` : ''}
-      ${o.email ? `<div class="so-info-item">
-        <span class="so-info-label">📧 بريد</span>
-        <span class="so-info-value" style="font-size:11.5px">${emailHTML}</span>
-      </div>` : ''}
+  // Assigned person chip
+  const assignedChip = o.assigned_to ? `
+    <div class="so-chip so-chip-assigned">
+      👷 ${escHtml(o.assigned_to)}
     </div>` : '';
 
-  const assignedRow = o.assigned_to ? `
-    <div class="so-assigned-row">
-      👷 مسؤول: <strong>${escHtml(o.assigned_to)}</strong>
+  // PDF Chip
+  const pdfChip = o.pdf_filename ? `
+    <div class="so-chip so-chip-pdf">
+      📄 PDF مرفق
     </div>` : '';
 
+  // Photos thumbnail strip (up to 4 thumbnails + count)
+  let photosStrip = '';
+  if (o.photos && o.photos.length) {
+    const visiblePhotos = o.photos.slice(0, 4);
+    const countBadge = o.photos.length > 4 ? `<span style="font-size:12px;color:var(--muted);font-weight:600;align-self:center">+${o.photos.length - 4} صور</span>` : '';
+    photosStrip = `
+      <div class="so-photos-strip">
+        ${visiblePhotos.map(fn => `
+          <img class="so-photo-thumb" src="${photoURL(o.id, fn)}" alt="صورة" onclick="openLightbox('${photoURL(o.id, fn)}')">
+        `).join('')}
+        ${countBadge}
+      </div>`;
+  }
+
+  // Notes snippet
   const notesHTML = o.notes
-    ? `<div class="so-notes">${escHtml(o.notes)}</div>` : '';
-
-  const pdfRow = o.pdf_filename ? `
-    <div class="so-pdf-row">
-      <span class="pdf-badge">
-        📄 <a href="/admin/special-orders/${o.id}/pdf/${o.pdf_filename}" target="_blank">تحميل PDF</a>
-      </span>
-      <button class="btn btn-sm btn-danger" onclick="deletePdf(${o.id},'${o.pdf_filename}',this)">× PDF</button>
-    </div>` : '';
+    ? `<div class="so-notes-snippet">📝 ${escHtml(o.notes)}</div>` : '';
 
   const date = (o.created_at || '').slice(0, 16).replace('T', ' ');
   const toggleLabel = isDone ? '↩ معلّق' : '✓ مكتمل';
@@ -1491,10 +1592,10 @@ function orderCardHTML(o) {
   return `
   <div class="so-card status-${o.status}" id="so-card-${o.id}">
     <div class="so-card-head">
-      <div class="so-card-head-row">
-        <div class="so-child-name">
-          <span class="so-child-icon">🧒</span>
-          ${escHtml(o.child_name)}
+      <div class="so-card-head-top">
+        <div class="so-child-title-wrap">
+          <div class="so-child-avatar">🧒</div>
+          <div class="so-child-name-text">${escHtml(o.child_name)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px">
           <span class="so-id-badge">#${o.id}</span>
@@ -1502,24 +1603,141 @@ function orderCardHTML(o) {
         </div>
       </div>
       ${o.client_name ? `
-      <div class="so-parent-name">
-        👤 الأب: <strong>${escHtml(o.client_name)}</strong>
+      <div class="so-card-head-sub">
+        👤 ولي الأمر: <strong>${escHtml(o.client_name)}</strong>
       </div>` : ''}
     </div>
+
     <div class="so-card-body">
-      ${infoGrid}
-      ${assignedRow}
+      <div class="so-chips-row">
+        ${phoneChip}
+        ${assignedChip}
+        ${pdfChip}
+      </div>
       ${notesHTML}
-      ${pdfRow}
-      ${(o.photos || []).length || true ? `<div class="so-photos">${photos}${uploadSlots}</div>` : ''}
+      ${photosStrip}
     </div>
+
     <div class="so-card-foot">
+      <button class="btn btn-sm btn-details" onclick="openOrderDetailModal(${o.id})">👁️ التفاصيل</button>
       <button class="btn btn-sm ${toggleClass}" onclick="toggleStatus(${o.id},'${o.status}',this)">${toggleLabel}</button>
-      <button class="btn btn-sm" onclick="openOrderModal(${o.id})">✏️ تعديل</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteOrder(${o.id})">حذف</button>
-      <span class="so-date">${date}</span>
+      <button class="btn btn-sm btn-ghost" onclick="openOrderModal(${o.id})" title="تعديل">✏️</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteOrder(${o.id})" title="حذف">🗑️</button>
+      <span class="so-date" style="margin-right:auto">${date}</span>
     </div>
   </div>`;
+}
+
+/* Order Details Modal JS */
+function openOrderDetailModal(id) {
+  const o = _soAll.find(x => x.id === id);
+  if (!o) return;
+
+  const isDone = o.status === 'done';
+  const statusBadge = isDone
+    ? '<span class="badge badge-green" style="font-size:13px">✓ مكتمل</span>'
+    : '<span class="badge badge-yellow" style="font-size:13px">⏳ معلّق</span>';
+
+  document.getElementById('so-detail-title').textContent = `طلب رقم #${o.id} - ${o.child_name}`;
+  document.getElementById('so-detail-sub').textContent  = `تاريخ الإنشاء: ${(o.created_at || '').slice(0,16).replace('T',' ')}`;
+  document.getElementById('so-detail-status-badge').innerHTML = statusBadge;
+
+  document.getElementById('so-detail-child').textContent  = o.child_name || '—';
+  document.getElementById('so-detail-client').textContent = o.client_name || 'غير محدد';
+  
+  // Phone + WhatsApp
+  const phoneWrap = document.getElementById('so-detail-phone-wrap');
+  if (o.phone) {
+    const rawPhone = o.phone.replace(/[^0-9]/g, '');
+    const waPhone = rawPhone.startsWith('0') ? '2' + rawPhone : rawPhone;
+    phoneWrap.innerHTML = `
+      <a href="tel:${escHtml(o.phone)}" class="so-phone-link">📞 ${escHtml(o.phone)}</a>
+      <a href="https://wa.me/${waPhone}" target="_blank" class="btn btn-sm btn-whatsapp" style="margin-right:6px">
+        💬 مراسلة واتساب
+      </a>`;
+  } else {
+    phoneWrap.innerHTML = '<span class="muted">—</span>';
+  }
+
+  document.getElementById('so-detail-email').textContent    = o.email || 'غير محدد';
+  document.getElementById('so-detail-assigned').textContent = o.assigned_to ? `👷 ${o.assigned_to}` : 'غير محدد';
+
+  // Notes
+  const notesEl = document.getElementById('so-detail-notes');
+  notesEl.textContent = o.notes || 'لا توجد ملاحظات إضافية لهذا الطلب.';
+
+  // Photos Gallery
+  const photosWrap = document.getElementById('so-detail-photos');
+  if (o.photos && o.photos.length) {
+    photosWrap.innerHTML = o.photos.map(fn => `
+      <div class="so-detail-photo-card">
+        <img src="${photoURL(o.id, fn)}" onclick="openLightbox('${photoURL(o.id, fn)}')">
+        <div class="so-photo-card-actions">
+          <a href="${photoURL(o.id, fn)}" target="_blank" class="btn btn-sm btn-ghost" style="padding:2px 6px;font-size:11px" title="تحميل">📥</a>
+          <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:11px" onclick="deleteDetailPhoto(${o.id}, '${fn}')" title="حذف">✕</button>
+        </div>
+      </div>`).join('');
+  } else {
+    photosWrap.innerHTML = '<p class="muted" style="font-size:12.5px;margin:4px 0">مفيش صور مرفوعة للطلب ده حتى الآن.</p>';
+  }
+
+  // PDF Box
+  const pdfBox = document.getElementById('so-detail-pdf-box');
+  if (o.pdf_filename) {
+    pdfBox.innerHTML = `
+      <div class="so-detail-pdf-card">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:26px">📄</span>
+          <div>
+            <strong style="color:var(--text);display:block;font-size:13px;word-break:break-all">${o.pdf_filename}</strong>
+            <span style="color:var(--muted);font-size:11.5px">ملف PDF مرفق وجاهز</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <a href="/admin/special-orders/${o.id}/pdf/${o.pdf_filename}" target="_blank" class="btn btn-sm btn-primary">📥 تحميل PDF</a>
+          <button class="btn btn-sm btn-danger" onclick="deleteDetailPdf(${o.id})">✕ حذف</button>
+        </div>
+      </div>`;
+  } else {
+    pdfBox.innerHTML = '<p class="muted" style="font-size:12.5px;margin:4px 0">مفيش ملف PDF مرفق للطلب ده.</p>';
+  }
+
+  // Bottom Quick Actions
+  const toggleLabel = isDone ? '↩ تحويل لمعلّق' : '✓ تحديد كمكتمل';
+  const toggleClass = isDone ? 'btn-ghost' : 'btn-success';
+  const rawPhone = (o.phone || '').replace(/[^0-9]/g, '');
+  const waPhone  = rawPhone.startsWith('0') ? '2' + rawPhone : rawPhone;
+
+  document.getElementById('so-detail-quick-actions').innerHTML = `
+    ${o.phone ? `<a href="https://wa.me/${waPhone}" target="_blank" class="btn btn-whatsapp">💬 محادثة الواتساب المباشرة</a>` : ''}
+    <button class="btn ${toggleClass}" onclick="toggleStatus(${o.id}, '${o.status}'); closeModal('order-detail-modal');">${toggleLabel}</button>
+    <button class="btn btn-ghost" onclick="closeModal('order-detail-modal'); openOrderModal(${o.id});">✏️ تعديل البيانات</button>
+    <button class="btn btn-danger" onclick="deleteOrder(${o.id}); closeModal('order-detail-modal');">🗑️ حذف الطلب</button>
+  `;
+
+  openModal('order-detail-modal');
+}
+
+async function deleteDetailPhoto(orderId, filename) {
+  if (!confirm('تحذف الصورة دي من الطلب؟')) return;
+  try {
+    const res = await fetch(`/admin/api/special-orders/${orderId}/photo/${filename}`, {method:'DELETE'});
+    if (!res.ok) throw new Error('خطأ في الحذف');
+    showToast('تم حذف الصورة ✓', 'ok');
+    await loadOrders();
+    openOrderDetailModal(orderId);
+  } catch(e) { showToast(e.message, 'err'); }
+}
+
+async function deleteDetailPdf(orderId) {
+  if (!confirm('تحذف ملف PDF من الطلب ده؟')) return;
+  try {
+    const res = await fetch(`/admin/api/special-orders/${orderId}/pdf`, {method:'DELETE'});
+    if (!res.ok) throw new Error('خطأ في الحذف');
+    showToast('تم حذف PDF ✓', 'ok');
+    await loadOrders();
+    openOrderDetailModal(orderId);
+  } catch(e) { showToast(e.message, 'err'); }
 }
 
 function escHtml(s) {
