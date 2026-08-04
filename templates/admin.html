@@ -716,22 +716,22 @@
 
     <div class="nav-label">القائمة</div>
     <nav>
-      <button class="nav-item active" data-section="overview">
+      <button type="button" class="nav-item active" data-section="overview" onclick="showSection('overview')">
         <span class="nav-ico">◆</span> نظرة عامة
       </button>
-      <button class="nav-item" data-section="users">
+      <button type="button" class="nav-item" data-section="users" onclick="showSection('users')">
         <span class="nav-ico">◎</span> المستخدمون
       </button>
-      <button class="nav-item" data-section="books">
+      <button type="button" class="nav-item" data-section="books" onclick="showSection('books')">
         <span class="nav-ico">▤</span> الكتب
       </button>
-      <button class="nav-item" data-section="payments">
+      <button type="button" class="nav-item" data-section="payments" onclick="showSection('payments')">
         <span class="nav-ico">💳</span> المدفوعات
       </button>
-      <button class="nav-item" data-section="jobs">
+      <button type="button" class="nav-item" data-section="jobs" onclick="showSection('jobs')">
         <span class="nav-ico">✦</span> الوظائف
       </button>
-      <button class="nav-item" data-section="special-orders" id="nav-special-orders">
+      <button type="button" class="nav-item" data-section="special-orders" id="nav-special-orders" onclick="showSection('special-orders')">
         <span class="nav-ico">📱</span> طلبات خاصة
       </button>
     </nav>
@@ -845,7 +845,7 @@
         <div class="panel">
           <div class="panel-head">
             <h2>آخر الكتب</h2>
-            <button class="btn btn-sm btn-ghost" data-section="books">عرض الكل</button>
+            <button type="button" class="btn btn-sm btn-ghost" data-section="books" onclick="showSection('books')">عرض الكل</button>
           </div>
           <div class="panel-body flush">
             {% if stats.recent_books[:6] %}
@@ -877,7 +877,7 @@
         <div class="panel">
           <div class="panel-head">
             <h2>أكثر الوظائف</h2>
-            <button class="btn btn-sm btn-ghost" data-section="jobs">التفاصيل</button>
+            <button type="button" class="btn btn-sm btn-ghost" data-section="jobs" onclick="showSection('jobs')">التفاصيل</button>
           </div>
           <div class="panel-body">
             {% if stats.top_scenes[:5] %}
@@ -1333,15 +1333,42 @@ const sectionMeta = {
 
 function showSection(id) {
   if (!sectionMeta[id]) id = 'overview';
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item[data-section]').forEach(a => a.classList.remove('active'));
+  
+  // Update section visibility
+  document.querySelectorAll('.section').forEach(s => {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
   const sec = document.getElementById('section-' + id);
-  if (sec) sec.classList.add('active');
-  document.querySelectorAll(`[data-section="${id}"]`).forEach(el => el.classList.add('active'));
-  document.getElementById('page-title').textContent = sectionMeta[id].title;
-  document.getElementById('page-sub').textContent   = sectionMeta[id].sub;
-  history.replaceState(null, '', '#' + id);
-  if (id === 'special-orders') loadOrders();
+  if (sec) {
+    sec.classList.add('active');
+    sec.style.display = 'block';
+  }
+
+  // Update active state on nav items
+  document.querySelectorAll('[data-section]').forEach(el => {
+    if (el.getAttribute('data-section') === id) {
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
+    }
+  });
+
+  // Update title & subtitle
+  const titleEl = document.getElementById('page-title');
+  const subEl   = document.getElementById('page-sub');
+  if (titleEl && sectionMeta[id]) titleEl.textContent = sectionMeta[id].title;
+  if (subEl && sectionMeta[id])   subEl.textContent   = sectionMeta[id].sub;
+
+  // Update URL hash without breaking history
+  if (location.hash !== '#' + id) {
+    history.pushState(null, '', '#' + id);
+  }
+
+  // Auto load special orders if active
+  if (id === 'special-orders') {
+    loadOrders();
+  }
 }
 
 function showToast(msg, type = '') {
@@ -2064,18 +2091,40 @@ function openLightbox(src) {
 }
 
 /* ─── Navigation & Hash Listener Initialization ─── */
-document.querySelectorAll('[data-section]').forEach(el => {
-  el.addEventListener('click', e => { e.preventDefault(); showSection(el.dataset.section); });
+// Global Event Delegation for data-section elements
+document.addEventListener('click', (e) => {
+  const target = e.target.closest('[data-section]');
+  if (target) {
+    const secId = target.getAttribute('data-section');
+    if (secId) {
+      e.preventDefault();
+      showSection(secId);
+    }
+  }
 });
 
+// Dynamic hash & history popstate listeners
 window.addEventListener('hashchange', () => {
   const h = (location.hash || '#overview').slice(1);
   showSection(sectionMeta[h] ? h : 'overview');
 });
 
-// Initial tab activation on page load
-const initialHash = (location.hash || '#overview').slice(1);
-showSection(sectionMeta[initialHash] ? initialHash : 'overview');
+window.addEventListener('popstate', () => {
+  const h = (location.hash || '#overview').slice(1);
+  showSection(sectionMeta[h] ? h : 'overview');
+});
+
+// Initial tab activation on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+  const initialHash = (location.hash || '#overview').slice(1);
+  showSection(sectionMeta[initialHash] ? initialHash : 'overview');
+});
+
+// Immediate execution fallback
+(function() {
+  const initialHash = (location.hash || '#overview').slice(1);
+  showSection(sectionMeta[initialHash] ? initialHash : 'overview');
+})();
 </script>
 </body>
 </html>
