@@ -516,6 +516,22 @@
     font-size: 10px; display: grid; place-items: center; cursor: pointer;
     line-height: 1;
   }
+  /* Status toggle buttons inside modal */
+  .status-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+  .status-opt {
+    flex: 1; padding: 10px 8px; border-radius: 9px; border: 1.5px solid var(--border-2);
+    background: transparent; color: var(--muted); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .18s; display: flex; align-items: center;
+    justify-content: center; gap: 6px;
+  }
+  .status-opt.sel-pending {
+    background: var(--warn-dim); border-color: rgba(251,191,36,0.45);
+    color: var(--warn);
+  }
+  .status-opt.sel-done {
+    background: var(--ok-dim); border-color: rgba(52,211,153,0.45);
+    color: var(--ok);
+  }
 </style>
 </head>
 <body>
@@ -962,6 +978,19 @@
     <label for="o-notes">ملاحظات</label>
     <textarea id="o-notes" placeholder="أي تفاصيل إضافية عن الطلب..."></textarea>
 
+    <!-- Status selector -->
+    <label>حالة الطلب</label>
+    <div class="status-toggle">
+      <button type="button" id="o-status-pending" class="status-opt sel-pending"
+              onclick="setOrderStatus('pending')">
+        ⏳ معلّق
+      </button>
+      <button type="button" id="o-status-done" class="status-opt"
+              onclick="setOrderStatus('done')">
+        ✅ مكتمل
+      </button>
+    </div>
+
     <!-- Photo upload section -->
     <label>صور الطفل <span style="color:var(--muted);font-weight:400">(اختياري — حتى 8 صور)</span></label>
     <label id="o-photo-drop" class="o-photo-drop">
@@ -1164,6 +1193,19 @@ async function submitDelete() {
 let _soAll = [];          // all loaded orders
 let _soFilter = 'all';    // current filter
 let _soEditId = null;     // null = new, number = editing
+
+/* Status helper */
+function setOrderStatus(val) {
+  const btnPending = document.getElementById('o-status-pending');
+  const btnDone    = document.getElementById('o-status-done');
+  if (val === 'done') {
+    btnPending.classList.remove('sel-pending');
+    btnDone.classList.add('sel-done');
+  } else {
+    btnPending.classList.add('sel-pending');
+    btnDone.classList.remove('sel-done');
+  }
+}
 
 async function loadOrders(filter) {
   if (filter !== undefined) _soFilter = filter;
@@ -1392,11 +1434,13 @@ function openOrderModal(id) {
       document.getElementById('o-phone').value  = o.phone       || '';
       document.getElementById('o-email').value  = o.email       || '';
       document.getElementById('o-notes').value  = o.notes       || '';
+      setOrderStatus(o.status || 'pending');
     }
   } else {
     ['o-child','o-client','o-phone','o-email','o-notes'].forEach(fid => {
       document.getElementById(fid).value = '';
     });
+    setOrderStatus('pending');
   }
   openModal('order-modal');
   setTimeout(() => document.getElementById('o-child').focus(), 120);
@@ -1409,11 +1453,12 @@ async function submitOrderForm() {
   const phone       = document.getElementById('o-phone').value.trim();
   const email       = document.getElementById('o-email').value.trim();
   const notes       = document.getElementById('o-notes').value.trim();
+  const status      = document.getElementById('o-status-done').classList.contains('sel-done') ? 'done' : 'pending';
 
   if (!child_name) {
     msgEl.textContent = 'اسم الطفل مطلوب!'; msgEl.className = 'modal-msg err'; return;
   }
-  const payload = { child_name, client_name, phone, email, notes };
+  const payload = { child_name, client_name, phone, email, notes, status };
   const isEdit  = _soEditId !== null;
   const url     = isEdit ? `/admin/api/special-orders/${_soEditId}` : '/admin/api/special-orders';
   const method  = isEdit ? 'PUT' : 'POST';
