@@ -307,6 +307,8 @@ def init_db():
         so_cols = {r[1] for r in conn.execute("PRAGMA table_info(special_orders)").fetchall()}
         if "pdf_filename" not in so_cols:
             conn.execute("ALTER TABLE special_orders ADD COLUMN pdf_filename TEXT")
+        if "assigned_to" not in so_cols:
+            conn.execute("ALTER TABLE special_orders ADD COLUMN assigned_to TEXT")
         conn.commit()
         conn.close()
 
@@ -2218,28 +2220,36 @@ def _safe_photo_name(filename: str) -> Optional[str]:
 def _order_to_dict(row: sqlite3.Row, photos: list) -> dict:
     d = dict(row)
     d["photos"] = photos
-    # pdf_filename may not exist in older rows
+    # pdf_filename / assigned_to may not exist in older rows
     if "pdf_filename" not in d:
         d["pdf_filename"] = None
+    if "assigned_to" not in d:
+        d["assigned_to"] = None
     return d
 
 
 @app.route("/admin/api/special-orders", methods=["GET"])
 @admin_required
 def admin_list_special_orders():
-    """List special orders, optional ?status=pending|done filter."""
+    """List special orders. Supports ?status=pending|done and ?client=<search>."""
     status_filter = request.args.get("status", "").strip().lower()
+    client_search = request.args.get("client", "").strip()
     with _db_lock:
         conn = db_connect()
+        conditions = []
+        params: list = []
         if status_filter in ("pending", "done"):
-            rows = conn.execute(
-                "SELECT * FROM special_orders WHERE status = ? ORDER BY id DESC",
-                (status_filter,),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT * FROM special_orders ORDER BY id DESC"
-            ).fetchall()
+            conditions.append("status = ?")
+            params.append(status_filter)
+        if client_search:
+            conditions.append("(client_name LIKE ? OR assigned_to LIKE ?)")
+            like = f"%{client_search}%"
+            params.extend([like, like])
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+        rows = conn.execute(
+            f"SELECT * FROM special_orders {where} ORDER BY id DESC",
+            params,
+        ).fetchall()
         photo_rows = conn.execute(
             "SELECT order_id, filename FROM special_order_photos"
         ).fetchall()
@@ -2267,8 +2277,9 @@ def admin_create_special_order():
         conn = db_connect()
         cur = conn.execute(
             """
-            INSERT INTO special_orders (child_name, client_name, phone, email, notes, status, created_at)
-            VALUES (?, ?, ?, ?, ?, 'pending', ?)
+            INSERT INTO special_orders
+              (child_name, client_name, phone, email, notes, status, assigned_to, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 child_name,
@@ -2276,6 +2287,8 @@ def admin_create_special_order():
                 (data.get("phone") or "").strip() or None,
                 (data.get("email") or "").strip() or None,
                 (data.get("notes") or "").strip() or None,
+                data.get("status", "pending") if data.get("status") in ("pending", "done") else "pending",
+                (data.get("assigned_to") or "").strip() or None,
                 now,
             ),
         )
@@ -2306,17 +2319,18 @@ def admin_update_special_order(order_id: int):
         email       = (data.get("email")       if "email"       in data else row["email"])
         notes       = (data.get("notes")       if "notes"       in data else row["notes"])
         status      = (data.get("status")      if "status"      in data else row["status"])
+        assigned_to = (data.get("assigned_to") if "assigned_to" in data else row["assigned_to"])
         if status not in ("pending", "done"):
             status = row["status"]
 
         conn.execute(
             """
             UPDATE special_orders
-            SET child_name=?, client_name=?, phone=?, email=?, notes=?, status=?, updated_at=?
+            SET child_name=?, client_name=?, phone=?, email=?, notes=?, status=?, assigned_to=?, updated_at=?
             WHERE id=?
             """,
             (child_name, client_name or None, phone or None, email or None,
-             notes or None, status, now, order_id),
+             notes or None, status, assigned_to or None, now, order_id),
         )
         conn.commit()
         updated = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()

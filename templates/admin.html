@@ -959,6 +959,9 @@
           <button class="filter-btn active" data-filter="all" onclick="filterOrders('all', this)">📋 الكل</button>
           <button class="filter-btn" data-filter="pending" onclick="filterOrders('pending', this)">⏳ معلّق</button>
           <button class="filter-btn" data-filter="done" onclick="filterOrders('done', this)">✅ مكتمل</button>
+          <input id="so-search" class="so-search" type="search"
+                 placeholder="🔍 بحث باسم الأب أو المسؤول..."
+                 oninput="searchOrders(this.value)">
         </div>
         <button class="btn btn-primary" onclick="openOrderModal(null)">
           + طلب جديد
@@ -999,6 +1002,9 @@
     </div>
     <label for="o-notes">ملاحظات</label>
     <textarea id="o-notes" placeholder="أي تفاصيل إضافية عن الطلب..."></textarea>
+
+    <label for="o-assigned">👷 الشخص المسؤول <span style="color:var(--muted);font-weight:400">(اختياري)</span></label>
+    <input type="text" id="o-assigned" placeholder="اسم الشخص المسؤول عن التنفيذ">
 
     <!-- Status selector -->
     <label>حالة الطلب</label>
@@ -1296,9 +1302,11 @@ async function deleteModalPhoto(filename) {
 
 async function loadOrders(filter) {
   if (filter !== undefined) _soFilter = filter;
-  const url = _soFilter === 'all'
-    ? '/admin/api/special-orders'
-    : `/admin/api/special-orders?status=${_soFilter}`;
+  const params = new URLSearchParams();
+  if (_soFilter !== 'all') params.set('status', _soFilter);
+  const clientQ = (document.getElementById('so-search')?.value || '').trim();
+  if (clientQ) params.set('client', clientQ);
+  const url = '/admin/api/special-orders' + (params.toString() ? '?' + params.toString() : '');
   try {
     const res  = await fetch(url);
     const data = await res.json();
@@ -1308,6 +1316,12 @@ async function loadOrders(filter) {
     document.getElementById('so-grid').innerHTML =
       '<div class="so-empty"><span class="so-empty-ico">⚠️</span>خطأ في تحميل الطلبات.</div>';
   }
+}
+
+function searchOrders(val) {
+  // debounce 350ms
+  clearTimeout(window._soSearchTimer);
+  window._soSearchTimer = setTimeout(() => loadOrders(), 350);
 }
 
 function filterOrders(f, btn) {
@@ -1356,6 +1370,7 @@ function orderCardHTML(o) {
     o.client_name ? `<div class="so-meta-row"><span class="ico">👤</span><span>العميل</span>${escHtml(o.client_name)}</div>` : '',
     o.phone       ? `<div class="so-meta-row"><span class="ico">📞</span><span>تليفون</span><a href="tel:${escHtml(o.phone)}" style="color:var(--primary)">${escHtml(o.phone)}</a></div>` : '',
     o.email       ? `<div class="so-meta-row"><span class="ico">📧</span><span>بريد</span>${escHtml(o.email)}</div>` : '',
+    o.assigned_to ? `<div class="so-meta-row"><span class="ico">👷</span><span>مسؤول</span><strong style="color:var(--primary)">${escHtml(o.assigned_to)}</strong></div>` : '',
   ].join('');
 
   const notes = o.notes
@@ -1526,11 +1541,12 @@ function openOrderModal(id) {
   if (isEdit) {
     const o = _soAll.find(x => x.id === id);
     if (o) {
-      document.getElementById('o-child').value  = o.child_name  || '';
-      document.getElementById('o-client').value = o.client_name || '';
-      document.getElementById('o-phone').value  = o.phone       || '';
-      document.getElementById('o-email').value  = o.email       || '';
-      document.getElementById('o-notes').value  = o.notes       || '';
+      document.getElementById('o-child').value    = o.child_name  || '';
+      document.getElementById('o-client').value   = o.client_name || '';
+      document.getElementById('o-phone').value    = o.phone       || '';
+      document.getElementById('o-email').value    = o.email       || '';
+      document.getElementById('o-notes').value    = o.notes       || '';
+      document.getElementById('o-assigned').value = o.assigned_to || '';
       setOrderStatus(o.status || 'pending');
       renderExistingPhotos(o.id, o.photos || []);
       // Show existing PDF info
@@ -1543,7 +1559,7 @@ function openOrderModal(id) {
       }
     }
   } else {
-    ['o-child','o-client','o-phone','o-email','o-notes'].forEach(fid => {
+    ['o-child','o-client','o-phone','o-email','o-notes','o-assigned'].forEach(fid => {
       document.getElementById(fid).value = '';
     });
     setOrderStatus('pending');
@@ -1561,12 +1577,13 @@ async function submitOrderForm() {
   const email       = document.getElementById('o-email').value.trim();
   const notes       = document.getElementById('o-notes').value.trim();
   const status      = document.getElementById('o-status-done').classList.contains('sel-done') ? 'done' : 'pending';
+  const assigned_to = document.getElementById('o-assigned').value.trim();
   const pdfFile     = document.getElementById('o-pdf-input').files[0] || null;
 
   if (!child_name) {
     msgEl.textContent = 'اسم الطفل مطلوب!'; msgEl.className = 'modal-msg err'; return;
   }
-  const payload = { child_name, client_name, phone, email, notes, status };
+  const payload = { child_name, client_name, phone, email, notes, status, assigned_to };
   const isEdit  = _soEditId !== null;
   const url     = isEdit ? `/admin/api/special-orders/${_soEditId}` : '/admin/api/special-orders';
   const method  = isEdit ? 'PUT' : 'POST';
