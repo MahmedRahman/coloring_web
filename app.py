@@ -2420,9 +2420,9 @@ def admin_upload_order_photos(order_id: int):
             # Cap at 1600px
             if max(img.size) > 1600:
                 img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
-            # Save as JPEG regardless of original format
+            # Save as JPEG regardless of original format with max quality
             jpeg_name = safe_name.rsplit(".", 1)[0] + ".jpg"
-            img.save(photo_dir / jpeg_name, "JPEG", quality=85)
+            img.save(photo_dir / jpeg_name, "JPEG", quality=95)
             saved.append(jpeg_name)
         except Exception:
             continue
