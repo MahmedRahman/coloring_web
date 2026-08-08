@@ -61,6 +61,11 @@ from paymob_client import (
     verify_redirect_hmac,
     verify_transaction_post_hmac,
 )
+from kie_client import (
+    generate_image_to_image,
+    kie_configured,
+    upload_image as kie_upload_image,
+)
 
 ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
 API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
@@ -1028,20 +1033,23 @@ def make_cover_page(child_name: str) -> Image.Image:
 
 
 def friendly_error(exc: Exception) -> str:
-    if isinstance(exc, (httpx.TimeoutException, asyncio.TimeoutError)):
+    if isinstance(exc, (httpx.TimeoutException, asyncio.TimeoutError, TimeoutError)):
         return "انتهى وقت الانتظار. السيرفر متأخر — جرّب تاني."
     if isinstance(exc, httpx.ConnectError):
         return "مفيش اتصال بالإنترنت أو خدمة التوليد. تأكد من الشبكة وحاول مرة أخرى."
     if isinstance(exc, httpx.HTTPStatusError):
         status = exc.response.status_code if exc.response is not None else None
         if status in (401, 403):
-            return "مفاتيح Cloudflare غير صحيحة أو منتهية. راجع التوكن."
+            return "مفاتيح الخدمة غير صحيحة أو منتهية. راجع التوكن."
         if status == 429:
             return "خدمة التوليد مشغولة دلوقتي. استنى دقيقة وجرّب تاني."
         if status and status >= 500:
             return "خدمة التوليد فيها مشكلة مؤقتة. جرّب بعد شوية."
         return "فشل طلب التوليد. جرّب مرة أخرى."
     msg = str(exc)
+    # Pass through already-localized Kie / app errors
+    if msg.startswith("Kie.ai") or msg.startswith("مفتاح") or msg.startswith("رصيد"):
+        return msg
     if "API error" in msg:
         return "الموديل رفض الطلب. جرّب صورة أوضح أو موقف تاني."
     return "حصل خطأ غير متوقع أثناء التوليد. جرّب مرة أخرى."
@@ -1219,6 +1227,63 @@ async def generate_one_async(
         "emoji": scene.get("emoji", "✨"),
         "image_b64": b64,
         "created": created,
+    }
+
+
+async def generate_one_kie_async(
+    d: Path,
+    scene: dict,
+    force: bool,
+    style: dict,
+    client: httpx.AsyncClient,
+    *,
+    ref_url: Optional[str] = None,
+    sem: Optional[asyncio.Semaphore] = None,
+) -> dict:
+    """Generate one coloring page via Kie.ai GPT Image 2 (image-to-image)."""
+    scene_id = scene["id"]
+    out = page_path(d, scene_id)
+    created = False
+    if force and out.exists():
+        out.unlink()
+    if not out.exists():
+        refs = ensure_multi_refs(d)
+        prompt = build_prompt(
+            scene["scene"],
+            variant=style.get("variant", DEFAULT_VARIANT),
+            line_weight=style.get("line_weight", "normal"),
+            detail=style.get("detail", "normal"),
+            art_style=style.get("art_style", "cartoon"),
+        )
+        # Stronger identity preservation for GPT Image 2
+        prompt = (
+            f"{prompt}. "
+            "This is image-to-image: keep the exact same child face, hair, age and identity "
+            "from the reference photo, converted to simple black-and-white coloring book line art only."
+        )
+        ref_path = refs[0]
+
+        async def _work():
+            img_bytes, _ = await generate_image_to_image(
+                prompt, ref_path, client, input_url=ref_url
+            )
+            Image.open(io.BytesIO(img_bytes)).convert("RGB").save(out, "JPEG", quality=92)
+
+        if sem is not None:
+            async with sem:
+                await _work()
+        else:
+            await _work()
+        created = True
+    b64 = base64.b64encode(out.read_bytes()).decode()
+    return {
+        "scene_id": scene_id,
+        "title": scene.get("title", scene_id),
+        "title_en": scene.get("title_en", scene.get("title", scene_id)),
+        "emoji": scene.get("emoji", "✨"),
+        "image_b64": b64,
+        "created": created,
+        "provider": "kie",
     }
 
 
@@ -2122,9 +2187,11 @@ def admin_quick_book_upload():
 @app.route("/admin/api/quick-book/generate", methods=["POST"])
 @admin_required
 def admin_quick_book_generate():
-    """Admin: generate coloring pages (no freemium / credit checks)."""
-    if not ACCOUNT_ID or not API_TOKEN:
-        return jsonify({"error": "مفاتيح Cloudflare غير مضبوطة على السيرفر."}), 500
+    """Admin: generate coloring pages via Kie.ai GPT Image 2 (no freemium)."""
+    if not kie_configured():
+        return jsonify({
+            "error": "مفتاح Kie.ai مش مضبوط. أضف KIE_API_KEY في ملف .env وأعد تشغيل السيرفر.",
+        }), 500
 
     data = request.get_json(silent=True) or {}
     session_id = (data.get("session_id") or "").strip()
@@ -2157,9 +2224,33 @@ def admin_quick_book_generate():
             return jsonify({"error": f"الوظيفة مش موجودة: {sid}"}), 400
         scenes.append(scene)
 
+    refs = ensure_multi_refs(d)
+    if not refs:
+        return jsonify({"error": "مفيش صورة مرجع. ارفع صورة الطفل تاني."}), 400
+
     async def _run_all():
-        async with httpx.AsyncClient(timeout=180.0) as client:
-            tasks = [generate_one_async(d, sc, force, style, client) for sc in scenes]
+        # Longer timeout: each GPT Image task can take ~60s
+        timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            ref_url = await kie_upload_image(
+                refs[0],
+                client,
+                upload_path="coloring-book",
+                file_name=f"{session_id}.png",
+            )
+            # Cache ref URL on disk for retries in same session
+            try:
+                (d / "kie_ref_url.txt").write_text(ref_url, encoding="utf-8")
+            except OSError:
+                pass
+
+            sem = asyncio.Semaphore(3)  # limit parallel Kie tasks
+            tasks = [
+                generate_one_kie_async(
+                    d, sc, force, style, client, ref_url=ref_url, sem=sem
+                )
+                for sc in scenes
+            ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             out = []
             for sc, res in zip(scenes, results):
@@ -2195,6 +2286,8 @@ def admin_quick_book_generate():
 
     return jsonify({
         "ok": True,
+        "provider": "kie",
+        "model": "gpt-image-2-image-to-image",
         "pages": pages,
         "ok_count": len(ok_ids),
         "failed": [p for p in pages if p.get("error")],

@@ -1412,9 +1412,9 @@
 
         <div class="qb-card">
           <h3>5. إنشاء الكتاب</h3>
-          <p class="hint">التوليد بياخد دقيقة أو دقيقتين حسب عدد الصفحات</p>
+          <p class="hint">التوليد عبر <strong>Kie.ai → GPT Image 2</strong> (صورة→صورة). كل صفحة تقريبًا دقيقة — كتاب 8 صفحات ياخد حوالي 3–6 دقايق.</p>
           <div class="qb-actions">
-            <button type="button" class="btn btn-primary" id="qb-run-btn" onclick="qbCreateBook()">إنشاء PDF</button>
+            <button type="button" class="btn btn-primary" id="qb-run-btn" onclick="qbCreateBook()">إنشاء PDF بـ GPT Image 2</button>
             <div class="qb-result" id="qb-result">
               <a class="btn btn-success" id="qb-download" href="#" download>تحميل PDF</a>
               <button type="button" class="btn btn-ghost" onclick="qbReset()">طلب جديد</button>
@@ -1609,7 +1609,7 @@ let _detailOrderId = null; // current order detail page id
 
 const sectionMeta = {
   overview:        { title: 'نظرة عامة',       sub: 'متابعة الأداء والمستخدمين والكتب' },
-  'quick-book':    { title: 'إنشاء كتاب سريع', sub: 'صورة + اسم + وظائف → PDF جاهز' },
+  'quick-book':    { title: 'إنشاء كتاب سريع', sub: 'Kie.ai GPT Image 2 — صورة + اسم + وظائف → PDF' },
   users:           { title: 'المستخدمون',      sub: 'إدارة الحسابات والـ Credits' },
   books:           { title: 'الكتب',           sub: 'سجل الكتب المولّدة' },
   payments:        { title: 'المدفوعات',       sub: 'سجل المعاملات المالية' },
@@ -1844,12 +1844,12 @@ async function qbCreateBook() {
       _qbSessionId = upData.session_id;
     }
 
-    // 2) Generate in chunks of 4 (safer with server timeout)
-    const chunks = qbChunk(scenes, 4);
+    // 2) Generate in chunks of 2 via Kie GPT Image 2 (each page ~60s)
+    const chunks = qbChunk(scenes, 2);
     const allPages = [];
     for (let i = 0; i < chunks.length; i++) {
       const base = 15 + Math.round((i / chunks.length) * 70);
-      qbSetProgress(base, `جاري توليد الصفحات... دفعة ${i + 1} من ${chunks.length}`);
+      qbSetProgress(base, `GPT Image 2 — توليد دفعة ${i + 1} من ${chunks.length}...`);
       const gRes = await fetch('/admin/api/quick-book/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
