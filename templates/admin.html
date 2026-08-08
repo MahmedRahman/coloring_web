@@ -729,6 +729,57 @@
     display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
     margin-top: 4px;
   }
+  /* Order form page (add / edit) */
+  .of-page { max-width: 760px; }
+  .of-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 18px 16px;
+    margin-bottom: 14px;
+  }
+  .of-card h3 {
+    margin: 0 0 14px; font-size: 14px; font-weight: 800; color: var(--text);
+  }
+  .of-card .modal-sub {
+    margin: -8px 0 14px; color: var(--muted); font-size: 13px;
+  }
+  .of-card label {
+    display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 6px;
+  }
+  .of-card input[type="text"],
+  .of-card input[type="tel"],
+  .of-card input[type="email"],
+  .of-card input[type="number"],
+  .of-card textarea {
+    width: 100%;
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    margin-bottom: 12px;
+  }
+  .of-card input:focus, .of-card textarea:focus {
+    outline: none; border-color: var(--primary);
+  }
+  .of-card textarea { min-height: 96px; resize: vertical; }
+  .modal-grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px;
+  }
+  @media (max-width: 640px) {
+    .modal-grid-2 { grid-template-columns: 1fr; }
+  }
+  .of-actions {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    margin-top: 4px; padding-bottom: 24px;
+  }
+  .of-actions .btn { min-width: 120px; justify-content: center; }
+  .of-msg { margin: 0 0 12px; font-size: 13.5px; font-weight: 600; min-height: 1.2em; }
+  .of-msg.err { color: var(--danger); }
+  .of-msg.ok { color: var(--ok); }
   /* Full-size photo lightbox */
   .lightbox {
     display: none; position: fixed; inset: 0; z-index: 400;
@@ -1553,92 +1604,102 @@
         <div class="so-detail-loading">جاري تحميل التفاصيل...</div>
       </div>
     </section>
+
+    <!-- SPECIAL ORDER FORM (add / edit — standalone page) -->
+    <section class="section" id="section-order-form">
+      <div class="of-page">
+        <button type="button" class="so-detail-back" id="of-back-btn" onclick="cancelOrderForm()">← رجوع</button>
+
+        <div class="so-detail-hero" style="margin-bottom:14px">
+          <div class="so-detail-hero-main">
+            <div class="so-detail-icon" id="of-hero-icon">📱</div>
+            <div>
+              <h2 id="order-form-title">طلب جديد</h2>
+              <p class="sub" id="order-form-sub">اسم الطفل مطلوب، باقي الحقول اختيارية</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="of-card">
+          <h3>البيانات الأساسية</h3>
+          <div class="modal-grid-2">
+            <div>
+              <label for="o-child">اسم الطفل *</label>
+              <input type="text" id="o-child" placeholder="اسم الطفل" required autocomplete="name">
+            </div>
+            <div>
+              <label for="o-client">اسم العميل</label>
+              <input type="text" id="o-client" placeholder="اسم ولي الأمر" autocomplete="name">
+            </div>
+            <div>
+              <label for="o-phone">رقم التليفون</label>
+              <input type="tel" id="o-phone" placeholder="01xxxxxxxxx" autocomplete="tel">
+            </div>
+            <div>
+              <label for="o-email">البريد الإلكتروني</label>
+              <input type="email" id="o-email" placeholder="example@email.com" autocomplete="email">
+            </div>
+          </div>
+          <label for="o-notes">ملاحظات</label>
+          <textarea id="o-notes" placeholder="أي تفاصيل إضافية عن الطلب..."></textarea>
+
+          <label for="o-assigned">الشخص المسؤول <span style="color:var(--muted);font-weight:400">(اختياري)</span></label>
+          <input type="text" id="o-assigned" placeholder="اسم الشخص المسؤول عن التنفيذ">
+
+          <label>حالة الطلب</label>
+          <div class="status-toggle">
+            <button type="button" id="o-status-pending" class="status-opt sel-pending"
+                    onclick="setOrderStatus('pending')">
+              ⏳ معلّق
+            </button>
+            <button type="button" id="o-status-done" class="status-opt"
+                    onclick="setOrderStatus('done')">
+              ✅ مكتمل
+            </button>
+          </div>
+        </div>
+
+        <div class="of-card">
+          <h3>الصور</h3>
+          <div id="o-existing-photos-wrap" style="display:none">
+            <label>صور مرفوعة — اضغط ✕ لحذف أي صورة</label>
+            <div id="o-existing-photos" class="o-photo-preview" style="margin-bottom:10px"></div>
+          </div>
+          <label>إضافة صور <span id="o-slots-label" style="color:var(--muted);font-weight:400">(حتى 8 صور)</span></label>
+          <label id="o-photo-drop" class="o-photo-drop">
+            <span id="o-photo-drop-text">
+              اختر صور أو اسحبها هنا — يمكن تحديد أكتر من صورة في نفس الوقت
+            </span>
+            <input type="file" id="o-photos" accept="image/*" multiple hidden onchange="previewModalPhotos(this)">
+          </label>
+          <div id="o-photo-preview" class="o-photo-preview"></div>
+        </div>
+
+        <div class="of-card">
+          <h3>ملف PDF</h3>
+          <label>PDF <span style="color:var(--muted);font-weight:400">(اختياري — حتى 50 MB)</span></label>
+          <div id="o-pdf-zone" class="pdf-zone">
+            <span id="o-pdf-current"></span>
+            <label style="margin:0">
+              <span class="btn btn-sm btn-ghost" style="pointer-events:none">📤 اختر ملف PDF</span>
+              <input type="file" id="o-pdf-input" accept=".pdf,application/pdf" hidden onchange="previewPdf(this)">
+            </label>
+            <span id="o-pdf-selected" style="font-size:12px;color:var(--ok);display:none"></span>
+          </div>
+        </div>
+
+        <div class="of-msg modal-msg" id="order-msg"></div>
+        <div class="of-actions">
+          <button type="button" class="btn btn-primary" id="of-save-btn" onclick="submitOrderForm()">حفظ الطلب</button>
+          <button type="button" class="btn btn-ghost" onclick="cancelOrderForm()">إلغاء</button>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 
 <!-- Toast -->
 <div class="toast-wrap" id="toast-wrap"></div>
-
-<!-- Order Modal (add/edit) -->
-<div class="modal-overlay" id="order-modal">
-  <div class="modal modal-lg">
-    <h3 id="order-modal-title">📱 طلب جديد</h3>
-    <p class="modal-sub">اسم الطفل مطلوب، باقي الحقول اختيارية</p>
-    <div class="modal-grid-2">
-      <div>
-        <label for="o-child">اسم الطفل *</label>
-        <input type="text" id="o-child" placeholder="اسم الطفل" required>
-      </div>
-      <div>
-        <label for="o-client">اسم العميل</label>
-        <input type="text" id="o-client" placeholder="اسم ولي الأمر">
-      </div>
-      <div>
-        <label for="o-phone">رقم التليفون</label>
-        <input type="tel" id="o-phone" placeholder="01xxxxxxxxx">
-      </div>
-      <div>
-        <label for="o-email">البريد الإلكتروني</label>
-        <input type="email" id="o-email" placeholder="example@email.com">
-      </div>
-    </div>
-    <label for="o-notes">ملاحظات</label>
-    <textarea id="o-notes" placeholder="أي تفاصيل إضافية عن الطلب..."></textarea>
-
-    <label for="o-assigned">👷 الشخص المسؤول <span style="color:var(--muted);font-weight:400">(اختياري)</span></label>
-    <input type="text" id="o-assigned" placeholder="اسم الشخص المسؤول عن التنفيذ">
-
-    <!-- Status selector -->
-    <label>حالة الطلب</label>
-    <div class="status-toggle">
-      <button type="button" id="o-status-pending" class="status-opt sel-pending"
-              onclick="setOrderStatus('pending')">
-        ⏳ معلّق
-      </button>
-      <button type="button" id="o-status-done" class="status-opt"
-              onclick="setOrderStatus('done')">
-        ✅ مكتمل
-      </button>
-    </div>
-
-    <!-- ─── صور الطفل (تظهر في الإضافة والتعديل) ─── -->
-
-    <!-- الصور الموجودة — تعديل فقط -->
-    <div id="o-existing-photos-wrap" style="display:none">
-      <label>📷 صور مرفوعة — اضغط ✕ لحذف أي صورة</label>
-      <div id="o-existing-photos" class="o-photo-preview" style="margin-bottom:10px"></div>
-    </div>
-
-    <!-- إضافة صور جديدة -->
-    <label>🖼️ إضافة صور جديدة <span id="o-slots-label" style="color:var(--muted);font-weight:400">(حتى 8 صور)</span></label>
-    <label id="o-photo-drop" class="o-photo-drop">
-      <span id="o-photo-drop-text">
-        اختر صور أو اسحبها هنا — يمكن تحديد أكتر من صورة في نفس الوقت
-      </span>
-      <input type="file" id="o-photos" accept="image/*" multiple hidden onchange="previewModalPhotos(this)">
-    </label>
-    <!-- منطقة preview الصور الجديدة -->
-    <div id="o-photo-preview" class="o-photo-preview"></div>
-
-    <!-- ─── ملف PDF (تظهر في الإضافة والتعديل) ─── -->
-    <label>📄 ملف PDF <span style="color:var(--muted);font-weight:400">(اختياري — حتى 50 MB)</span></label>
-    <div id="o-pdf-zone" class="pdf-zone">
-      <span id="o-pdf-current"></span>
-      <label style="margin:0">
-        <span class="btn btn-sm btn-ghost" style="pointer-events:none">📤 اختر ملف PDF</span>
-        <input type="file" id="o-pdf-input" accept=".pdf,application/pdf" hidden onchange="previewPdf(this)">
-      </label>
-      <span id="o-pdf-selected" style="font-size:12px;color:var(--ok);display:none"></span>
-    </div>
-
-    <div class="modal-msg" id="order-msg"></div>
-    <div class="modal-actions">
-      <button class="btn btn-primary" onclick="submitOrderForm()">حفظ الطلب</button>
-      <button class="btn btn-ghost" onclick="closeModal('order-modal')">إلغاء</button>
-    </div>
-  </div>
-</div>
-
 
 <!-- Credits Modal -->
 <div class="modal-overlay" id="credits-modal">
@@ -1718,40 +1779,58 @@ const sectionMeta = {
   jobs:            { title: 'الوظائف',         sub: 'ترتيب الوظائف حسب الاستخدام' },
   'special-orders':{ title: 'طلبات خاصة',      sub: 'طلبات الواتساب — تسجيل وإدارة' },
   'order-detail':  { title: 'تفاصيل الطلب',    sub: 'عرض وإدارة الطلب' },
+  'order-form':    { title: 'طلب خاص',         sub: 'إضافة أو تعديل بيانات الطلب' },
 };
 
 function parseRoute(hash) {
   const h = (hash || '').replace(/^#/, '');
-  // #order/123/book or #order/123
-  const m = h.match(/^order[\/-](\d+)(?:\/(book))?$/);
+  // #order/new — add order
+  if (h === 'order/new' || h === 'order-new') {
+    return { section: 'order-form', orderId: null, book: false, formMode: 'new' };
+  }
+  // #order/123/edit | #order/123/book | #order/123
+  const m = h.match(/^order[\/-](\d+)(?:\/(book|edit))?$/);
   if (m) {
+    if (m[2] === 'edit') {
+      return {
+        section: 'order-form',
+        orderId: parseInt(m[1], 10),
+        book: false,
+        formMode: 'edit',
+      };
+    }
     return {
       section: 'order-detail',
       orderId: parseInt(m[1], 10),
       book: m[2] === 'book',
+      formMode: null,
     };
   }
-  if (sectionMeta[h]) return { section: h, orderId: null, book: false };
-  return { section: 'overview', orderId: null, book: false };
+  if (sectionMeta[h]) return { section: h, orderId: null, book: false, formMode: null };
+  return { section: 'overview', orderId: null, book: false, formMode: null };
 }
 
 function showSection(id, orderId) {
   // Support hash strings and detail routes
   if (typeof id === 'string' && (id.startsWith('order/') || id.startsWith('order-'))) {
     const route = parseRoute(id);
+    if (route.section === 'order-form') {
+      openOrderModal(route.formMode === 'edit' ? route.orderId : null);
+      return;
+    }
     id = route.section;
     orderId = route.orderId;
   }
   if (!sectionMeta[id]) id = 'overview';
-  if (id !== 'order-detail') orderId = null;
+  if (id !== 'order-detail' && id !== 'order-form') orderId = null;
 
   // Hide all sections, show active section
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   const targetSec = document.getElementById('section-' + id);
   if (targetSec) targetSec.classList.add('active');
 
-  // Highlight nav — detail keeps "special-orders" active
-  const navHighlight = id === 'order-detail' ? 'special-orders' : id;
+  // Highlight nav — detail/form keep "special-orders" active
+  const navHighlight = (id === 'order-detail' || id === 'order-form') ? 'special-orders' : id;
   document.querySelectorAll('[data-section]').forEach(el => {
     if (el.getAttribute('data-section') === navHighlight) {
       el.classList.add('active');
@@ -1766,10 +1845,12 @@ function showSection(id, orderId) {
   if (titleEl && sectionMeta[id]) titleEl.textContent = sectionMeta[id].title;
   if (subEl && sectionMeta[id])   subEl.textContent   = sectionMeta[id].sub;
 
-  // Update URL hash
+  // Update URL hash (form handles its own)
   let nextHash;
   if (id === 'order-detail' && orderId) {
     nextHash = '#order/' + orderId + (_obView === 'coloring' || _obView === 'products' ? '/book' : '');
+  } else if (id === 'order-form') {
+    nextHash = _soEditId != null ? '#order/' + _soEditId + '/edit' : '#order/new';
   } else {
     nextHash = '#' + id;
   }
@@ -3546,36 +3627,88 @@ function removeModalPhoto(idx) {
   });
 })();
 
-function openOrderModal(id) {
+function openOrderFormPage(id) {
   _soEditId = id;
-  _modalFiles = []; // reset photos
+  _modalFiles = [];
   renderModalPreviews();
   resetPdfZone();
-  const isEdit = id !== null;
-  document.getElementById('order-modal-title').textContent = isEdit ? '✏️ تعديل الطلب' : '📱 طلب جديد';
-  document.getElementById('order-msg').textContent = '';
-  document.getElementById('order-msg').className   = 'modal-msg';
+  const isEdit = id !== null && id !== undefined;
+
+  // Show form section
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const sec = document.getElementById('section-order-form');
+  if (sec) sec.classList.add('active');
+  document.querySelectorAll('[data-section]').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-section') === 'special-orders');
+  });
+
+  const titleEl = document.getElementById('page-title');
+  const subEl   = document.getElementById('page-sub');
+  const hTitle  = document.getElementById('order-form-title');
+  const hSub    = document.getElementById('order-form-sub');
+  const hIcon   = document.getElementById('of-hero-icon');
+  const msgEl   = document.getElementById('order-msg');
+
+  if (titleEl) titleEl.textContent = isEdit ? 'تعديل الطلب' : 'طلب جديد';
+  if (subEl)   subEl.textContent   = isEdit ? 'تحديث بيانات الطلب الخاص' : 'إضافة طلب جديد من الواتساب';
+  if (hTitle)  hTitle.textContent  = isEdit ? 'تعديل الطلب' + (id ? ' #' + id : '') : 'طلب جديد';
+  if (hSub)    hSub.textContent    = 'اسم الطفل مطلوب، باقي الحقول اختيارية';
+  if (hIcon)   hIcon.textContent   = isEdit ? '✏️' : '📱';
+  if (msgEl) {
+    msgEl.textContent = '';
+    msgEl.className = 'of-msg modal-msg';
+  }
+
+  const routeHash = isEdit ? '#order/' + id + '/edit' : '#order/new';
+  if (location.hash !== routeHash) {
+    history.pushState(null, '', routeHash);
+  }
+
+  const fillFromOrder = (o) => {
+    document.getElementById('o-child').value    = o.child_name  || '';
+    document.getElementById('o-client').value   = o.client_name || '';
+    document.getElementById('o-phone').value    = o.phone       || '';
+    document.getElementById('o-email').value    = o.email       || '';
+    document.getElementById('o-notes').value    = o.notes       || '';
+    document.getElementById('o-assigned').value = o.assigned_to || '';
+    setOrderStatus(o.status || 'pending');
+    renderExistingPhotos(o.id, o.photos || []);
+    if (o.pdf_filename) {
+      const zone = document.getElementById('o-pdf-zone');
+      const cur  = document.getElementById('o-pdf-current');
+      zone.classList.add('has-pdf');
+      cur.innerHTML = `<span class="pdf-badge">📄 <a href="/admin/special-orders/${o.id}/pdf/${o.pdf_filename}" target="_blank">PDF موجود</a></span>
+        <button class="btn btn-sm btn-danger" onclick="deletePdfFromModal(${o.id},'${o.pdf_filename}')" type="button">× حذف</button>`;
+    }
+  };
 
   if (isEdit) {
-    const o = _soAll.find(x => x.id === id);
-    if (o) {
-      document.getElementById('o-child').value    = o.child_name  || '';
-      document.getElementById('o-client').value   = o.client_name || '';
-      document.getElementById('o-phone').value    = o.phone       || '';
-      document.getElementById('o-email').value    = o.email       || '';
-      document.getElementById('o-notes').value    = o.notes       || '';
-      document.getElementById('o-assigned').value = o.assigned_to || '';
-      setOrderStatus(o.status || 'pending');
-      renderExistingPhotos(o.id, o.photos || []);
-      // Show existing PDF info
-      if (o.pdf_filename) {
-        const zone = document.getElementById('o-pdf-zone');
-        const cur  = document.getElementById('o-pdf-current');
-        zone.classList.add('has-pdf');
-        cur.innerHTML = `<span class="pdf-badge">📄 <a href="/admin/special-orders/${o.id}/pdf/${o.pdf_filename}" target="_blank">PDF موجود</a></span>
-          <button class="btn btn-sm btn-danger" onclick="deletePdfFromModal(${o.id},'${o.pdf_filename}')" type="button">× حذف</button>`;
-      }
+    const cached = _soAll.find(x => x.id === id);
+    if (cached) {
+      fillFromOrder(cached);
+    } else {
+      ['o-child','o-client','o-phone','o-email','o-notes','o-assigned'].forEach(fid => {
+        document.getElementById(fid).value = '';
+      });
+      setOrderStatus('pending');
+      renderExistingPhotos(null, []);
     }
+    // Always refresh from server for latest photos/pdf
+    fetch(`/admin/api/special-orders/${id}`)
+      .then(r => {
+        if (r.status === 401) { window.location.href = '/admin/login'; return null; }
+        return r.json();
+      })
+      .then(data => {
+        if (!data || !data.order) return;
+        const idx = _soAll.findIndex(x => x.id === id);
+        if (idx >= 0) _soAll[idx] = data.order;
+        else _soAll.unshift(data.order);
+        fillFromOrder(data.order);
+      })
+      .catch(() => {
+        if (!cached) showToast('فشل تحميل بيانات الطلب', 'err');
+      });
   } else {
     ['o-child','o-client','o-phone','o-email','o-notes','o-assigned'].forEach(fid => {
       document.getElementById(fid).value = '';
@@ -3583,12 +3716,28 @@ function openOrderModal(id) {
     setOrderStatus('pending');
     renderExistingPhotos(null, []);
   }
-  openModal('order-modal');
-  setTimeout(() => document.getElementById('o-child').focus(), 120);
+
+  setTimeout(() => {
+    const inp = document.getElementById('o-child');
+    if (inp) inp.focus();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 80);
+}
+
+// Back-compat alias
+function openOrderModal(id) { openOrderFormPage(id); }
+
+function cancelOrderForm() {
+  if (_soEditId != null) {
+    openOrderDetailPage(_soEditId);
+  } else {
+    showSection('special-orders');
+  }
 }
 
 async function submitOrderForm() {
   const msgEl = document.getElementById('order-msg');
+  const saveBtn = document.getElementById('of-save-btn');
   const child_name  = document.getElementById('o-child').value.trim();
   const client_name = document.getElementById('o-client').value.trim();
   const phone       = document.getElementById('o-phone').value.trim();
@@ -3599,7 +3748,7 @@ async function submitOrderForm() {
   const pdfFile     = document.getElementById('o-pdf-input').files[0] || null;
 
   if (!child_name) {
-    msgEl.textContent = 'اسم الطفل مطلوب!'; msgEl.className = 'modal-msg err'; return;
+    msgEl.textContent = 'اسم الطفل مطلوب!'; msgEl.className = 'of-msg modal-msg err'; return;
   }
   const payload = { child_name, client_name, phone, email, notes, status, assigned_to };
   const isEdit  = _soEditId !== null;
@@ -3607,8 +3756,8 @@ async function submitOrderForm() {
   const method  = isEdit ? 'PUT' : 'POST';
 
   try {
-    // Step 1: save order data
-    msgEl.textContent = 'جاري الحفظ...'; msgEl.className = 'modal-msg';
+    if (saveBtn) saveBtn.disabled = true;
+    msgEl.textContent = 'جاري الحفظ...'; msgEl.className = 'of-msg modal-msg';
     const res  = await fetch(url, {
       method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload),
     });
@@ -3617,7 +3766,6 @@ async function submitOrderForm() {
 
     const orderId = isEdit ? _soEditId : data.order.id;
 
-    // Step 2: upload photos if any selected
     if (_modalFiles.length > 0) {
       msgEl.textContent = `جاري رفع ${_modalFiles.length} صورة...`;
       const fd = new FormData();
@@ -3631,7 +3779,6 @@ async function submitOrderForm() {
       }
     }
 
-    // Step 3: upload PDF if selected
     if (pdfFile) {
       msgEl.textContent = 'جاري رفع PDF...';
       const fd = new FormData();
@@ -3646,17 +3793,17 @@ async function submitOrderForm() {
     }
 
     msgEl.textContent = isEdit ? 'تم التعديل ✓' : 'تم إضافة الطلب ✓';
-    msgEl.className   = 'modal-msg ok';
+    msgEl.className   = 'of-msg modal-msg ok';
     showToast(isEdit ? 'تم تعديل الطلب ✓' : 'تم إضافة الطلب ✓', 'ok');
     setTimeout(() => {
-      closeModal('order-modal');
-      if (_detailOrderId && document.getElementById('section-order-detail')?.classList.contains('active')) {
-        openOrderDetailPage(_detailOrderId);
-      } else {
-        loadOrders();
-      }
-    }, 700);
-  } catch(e) { msgEl.textContent = e.message; msgEl.className = 'modal-msg err'; }
+      openOrderDetailPage(orderId);
+    }, 500);
+  } catch(e) {
+    msgEl.textContent = e.message;
+    msgEl.className = 'of-msg modal-msg err';
+  } finally {
+    if (saveBtn) saveBtn.disabled = false;
+  }
 }
 
 /* PDF helpers */
@@ -3665,9 +3812,10 @@ function resetPdfZone() {
   const cur  = document.getElementById('o-pdf-current');
   const sel  = document.getElementById('o-pdf-selected');
   const inp  = document.getElementById('o-pdf-input');
+  if (!zone) return;
   zone.classList.remove('has-pdf');
-  cur.innerHTML  = '';
-  sel.textContent = ''; sel.style.display = 'none';
+  if (cur) cur.innerHTML  = '';
+  if (sel) { sel.textContent = ''; sel.style.display = 'none'; }
   if (inp) inp.value = '';
 }
 
@@ -3702,19 +3850,17 @@ async function deletePdf(orderId, filename, btn) {
   } catch(e) { showToast(e.message, 'err'); }
 }
 
-/* Delete PDF from edit modal */
+/* Delete PDF from edit form */
 async function deletePdfFromModal(orderId, filename) {
   if (!confirm('تحذف ملف PDF من الطلب ده؟')) return;
   try {
     const res  = await fetch(`/admin/api/special-orders/${orderId}/pdf`, {method:'DELETE'});
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'خطأ');
-    // Clear PDF zone in modal
     const zone = document.getElementById('o-pdf-zone');
     const cur  = document.getElementById('o-pdf-current');
     zone.classList.remove('has-pdf');
     cur.innerHTML = '';
-    // Update in-memory cache
     const o = _soAll.find(x => x.id === orderId);
     if (o) o.pdf_filename = null;
     showToast('تم حذف PDF ✓', 'ok');
@@ -3759,7 +3905,9 @@ document.addEventListener('click', (e) => {
 
 function applyHashRoute() {
   const route = parseRoute(location.hash || '#overview');
-  if (route.section === 'order-detail' && route.orderId) {
+  if (route.section === 'order-form') {
+    openOrderFormPage(route.formMode === 'edit' ? route.orderId : null);
+  } else if (route.section === 'order-detail' && route.orderId) {
     openOrderDetailPage(route.orderId, { openBook: !!route.book });
   } else {
     _obView = 'detail';
