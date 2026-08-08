@@ -681,6 +681,54 @@
     text-align: center; padding: 60px 20px; color: var(--muted);
   }
   .so-detail-error { color: var(--danger); }
+  .ob-create-card {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 14px 16px; border-radius: 12px;
+    background: linear-gradient(135deg, rgba(56,189,248,0.08), rgba(99,102,241,0.08));
+    border: 1px solid rgba(56,189,248,0.22);
+  }
+  .ob-create-card .ob-meta { min-width: 0; flex: 1; }
+  .ob-create-card .ob-meta strong { display: block; color: var(--text); font-size: 14px; margin-bottom: 4px; }
+  .ob-create-card .ob-meta span { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+  .ob-products {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;
+  }
+  .ob-product {
+    text-align: right; cursor: pointer; border: 1px solid var(--border-2);
+    background: var(--surface); border-radius: 14px; padding: 14px 14px 12px;
+    transition: border-color .15s, transform .15s, background .15s;
+  }
+  .ob-product:hover { border-color: var(--primary); transform: translateY(-1px); }
+  .ob-product.primary {
+    border-color: rgba(56,189,248,0.45);
+    background: linear-gradient(160deg, rgba(56,189,248,0.12), rgba(15,25,45,0.2));
+  }
+  .ob-product .emoji { font-size: 26px; display: block; margin-bottom: 8px; }
+  .ob-product .name { font-weight: 800; color: var(--text); font-size: 14px; margin-bottom: 4px; }
+  .ob-product .desc { color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .ob-product:disabled, .ob-product[disabled] {
+    opacity: .45; cursor: not-allowed; transform: none;
+  }
+  .ob-photo-pick {
+    display: flex; flex-wrap: wrap; gap: 10px;
+  }
+  .ob-photo-thumb {
+    width: 88px; height: 88px; border-radius: 12px; overflow: hidden;
+    border: 2px solid transparent; cursor: pointer; position: relative;
+    background: var(--bg-2);
+  }
+  .ob-photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ob-photo-thumb.selected { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(56,189,248,0.2); }
+  .ob-photo-thumb .tag {
+    position: absolute; bottom: 4px; inset-inline-start: 4px;
+    font-size: 10px; font-weight: 700; background: rgba(0,0,0,.65);
+    color: #fff; padding: 2px 6px; border-radius: 6px;
+  }
+  .ob-jobs .qb-job { user-select: none; }
+  .ob-sticky-actions {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin-top: 4px;
+  }
   /* Full-size photo lightbox */
   .lightbox {
     display: none; position: fixed; inset: 0; z-index: 400;
@@ -1648,6 +1696,18 @@ let _existingPhotos = []; // filenames currently on server
 let _modalFiles = [];     // preview photos for modal upload
 let _creditsUserId = null;
 let _detailOrderId = null; // current order detail page id
+let _obOrder = null;
+let _obSessionId = null;
+let _obPhoto = null;
+let _obPageCount = 8;
+let _obBusy = false;
+let _obView = 'detail'; // detail | products | coloring
+
+const ALL_SCENES = [
+  {% for s in scenes %}
+  { id: {{ s.id | tojson }}, title: {{ s.title | tojson }}, emoji: {{ s.emoji | tojson }} },
+  {% endfor %}
+];
 
 const sectionMeta = {
   overview:        { title: 'نظرة عامة',       sub: 'متابعة الأداء والمستخدمين والكتب' },
@@ -1662,11 +1722,17 @@ const sectionMeta = {
 
 function parseRoute(hash) {
   const h = (hash || '').replace(/^#/, '');
-  // #order/123 or #order-123
-  const m = h.match(/^order[\/-](\d+)$/);
-  if (m) return { section: 'order-detail', orderId: parseInt(m[1], 10) };
-  if (sectionMeta[h]) return { section: h, orderId: null };
-  return { section: 'overview', orderId: null };
+  // #order/123/book or #order/123
+  const m = h.match(/^order[\/-](\d+)(?:\/(book))?$/);
+  if (m) {
+    return {
+      section: 'order-detail',
+      orderId: parseInt(m[1], 10),
+      book: m[2] === 'book',
+    };
+  }
+  if (sectionMeta[h]) return { section: h, orderId: null, book: false };
+  return { section: 'overview', orderId: null, book: false };
 }
 
 function showSection(id, orderId) {
@@ -1703,7 +1769,7 @@ function showSection(id, orderId) {
   // Update URL hash
   let nextHash;
   if (id === 'order-detail' && orderId) {
-    nextHash = '#order/' + orderId;
+    nextHash = '#order/' + orderId + (_obView === 'coloring' || _obView === 'products' ? '/book' : '');
   } else {
     nextHash = '#' + id;
   }
@@ -1712,6 +1778,7 @@ function showSection(id, orderId) {
   }
 
   if (id === 'special-orders') {
+    _obView = 'detail';
     loadOrders();
   }
   if (id === 'order-detail' && orderId) {
@@ -2498,9 +2565,10 @@ function orderCardHTML(o) {
 }
 
 /* ── Order Detail Page (standalone section) ── */
-async function openOrderDetailPage(id) {
+async function openOrderDetailPage(id, opts = {}) {
   _detailOrderId = id;
-  const routeHash = '#order/' + id;
+  const openBook = !!(opts.openBook || opts.book);
+  const routeHash = openBook ? '#order/' + id + '/book' : '#order/' + id;
 
   // Ensure section is visible + URL is correct without re-entering openOrderDetailPage loop
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -2513,8 +2581,8 @@ async function openOrderDetailPage(id) {
 
   const titleEl = document.getElementById('page-title');
   const subEl   = document.getElementById('page-sub');
-  if (titleEl) titleEl.textContent = 'تفاصيل الطلب #' + id;
-  if (subEl)   subEl.textContent   = 'عرض وإدارة الطلب';
+  if (titleEl) titleEl.textContent = openBook ? 'إنشاء كتاب · طلب #' + id : 'تفاصيل الطلب #' + id;
+  if (subEl)   subEl.textContent   = openBook ? 'اختيار نوع الكتاب وتوليد PDF' : 'عرض وإدارة الطلب';
 
   if (location.hash !== routeHash) {
     history.pushState(null, '', routeHash);
@@ -2543,7 +2611,19 @@ async function openOrderDetailPage(id) {
     return;
   }
 
-  renderOrderDetail(o);
+  _obOrder = o;
+  if (openBook) {
+    // Resume coloring UI if already mid-session on this view, else product picker
+    if (_obView === 'coloring' && _obSessionId && _detailOrderId === id) {
+      renderOrderColoringBook(o);
+      await obEnsureSession({ forceNew: false });
+    } else {
+      renderBookProductPicker(o);
+    }
+  } else {
+    _obView = 'detail';
+    renderOrderDetail(o);
+  }
 }
 
 function renderOrderDetail(o) {
@@ -2629,6 +2709,13 @@ function renderOrderDetail(o) {
       </div>`;
   }
 
+  const bookStatus = o.pdf_filename
+    ? `كتاب محفوظ${o.book_page_count ? ` · ${o.book_page_count} صفحة` : ''}${o.book_session_active ? ' · جلسة نشطة' : ''}`
+    : (o.book_session_active
+      ? `جلسة إنشاء محفوظة${o.book_page_count ? ` · ${o.book_page_count} صفحة` : ''}`
+      : 'من هنا تولّد كتاب التلوين من صورة واسم الطفل على الطلب');
+  const bookBtnLabel = (o.pdf_filename || o.book_session_active) ? 'متابعة / إنشاء كتاب' : 'إنشاء كتاب';
+
   root.innerHTML = `
     <button type="button" class="so-detail-back" onclick="showSection('special-orders')">← رجوع لقائمة الطلبات</button>
 
@@ -2643,12 +2730,24 @@ function renderOrderDetail(o) {
       <div class="so-detail-hero-actions">
         ${statusBadge}
         ${waBtn}
+        <button class="btn btn-primary" onclick="openBookFlow(${o.id})">${bookBtnLabel}</button>
         <button class="btn ${toggleClass}" onclick="toggleStatus(${o.id}, '${escHtml(o.status)}')">${toggleLabel}</button>
         <button class="btn btn-ghost" onclick="openOrderModal(${o.id})">تعديل</button>
       </div>
     </div>
 
     <div class="so-detail-grid">
+      <div class="so-detail-card full">
+        <h3 class="so-detail-section-title">إنشاء كتاب</h3>
+        <div class="ob-create-card">
+          <div class="ob-meta">
+            <strong>${bookBtnLabel}</strong>
+            <span>${escHtml(bookStatus)}</span>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="openBookFlow(${o.id})">${bookBtnLabel}</button>
+        </div>
+      </div>
+
       <div class="so-detail-card">
         <h3 class="so-detail-section-title">البيانات الأساسية</h3>
         <div class="so-detail-rows">
@@ -2702,6 +2801,556 @@ function renderOrderDetail(o) {
       </div>
     </div>
   `;
+}
+
+/* ── Order → Create Book flow ── */
+function openBookFlow(orderId) {
+  _obView = 'products';
+  openOrderDetailPage(orderId, { openBook: true });
+}
+
+function renderBookProductPicker(o) {
+  _obView = 'products';
+  const root = document.getElementById('so-detail-root');
+  if (!root || !o) return;
+  const titleEl = document.getElementById('page-title');
+  const subEl = document.getElementById('page-sub');
+  if (titleEl) titleEl.textContent = 'إنشاء كتاب · طلب #' + o.id;
+  if (subEl) subEl.textContent = 'اختار نوع الكتاب';
+  if (location.hash !== '#order/' + o.id + '/book') {
+    history.pushState(null, '', '#order/' + o.id + '/book');
+  }
+
+  root.innerHTML = `
+    <button type="button" class="so-detail-back" onclick="_obView='detail'; openOrderDetailPage(${o.id})">← رجوع لتفاصيل الطلب</button>
+    <div class="so-detail-hero" style="margin-bottom:16px">
+      <div class="so-detail-hero-main">
+        <div class="so-detail-icon">📚</div>
+        <div>
+          <h2>إنشاء كتاب</h2>
+          <p class="sub">لـ «${escHtml(o.child_name || 'الطفل')}» · طلب #${o.id}</p>
+        </div>
+      </div>
+    </div>
+    <div class="so-detail-card full">
+      <h3 class="so-detail-section-title">نوع الكتاب</h3>
+      <div class="ob-products">
+        <button type="button" class="ob-product primary" onclick="startOrderColoringBook(${o.id})">
+          <span class="emoji">🎨</span>
+          <div class="name">كتاب تلوين</div>
+          <div class="desc">صورة الطفل + الاسم → صفحات تلوين + غلاف + PDF محفوظ على الطلب</div>
+        </button>
+        <button type="button" class="ob-product" disabled title="قريبًا">
+          <span class="emoji">📖</span>
+          <div class="name">كتاب قصة</div>
+          <div class="desc">قريبًا</div>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function sceneTitle(id) {
+  const s = ALL_SCENES.find(x => x.id === id);
+  return s ? s.title : id;
+}
+
+function obSelectedIds() {
+  return Array.from(document.querySelectorAll('#ob-jobs .qb-job.selected')).map(el => el.dataset.id);
+}
+
+function obUpdateSelCount() {
+  const el = document.getElementById('ob-sel-count');
+  if (!el) return;
+  const n = obSelectedIds().length;
+  el.textContent = `مختار ${n} / ${_obPageCount}`;
+  el.classList.toggle('ok', n === _obPageCount);
+  el.classList.toggle('bad', n !== _obPageCount);
+}
+
+function obSetPageCount(n, btn) {
+  _obPageCount = n;
+  document.querySelectorAll('#ob-page-opts .qb-page-opt').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.pages, 10) === n);
+  });
+  const selected = document.querySelectorAll('#ob-jobs .qb-job.selected');
+  if (selected.length > n) {
+    Array.from(selected).slice(n).forEach(el => el.classList.remove('selected'));
+  }
+  if (obSelectedIds().length < n) obSelectAuto();
+  else obUpdateSelCount();
+}
+
+function obToggleJob(el) {
+  if (el.classList.contains('selected')) el.classList.remove('selected');
+  else {
+    if (obSelectedIds().length >= _obPageCount) {
+      showToast(`الحد الأقصى ${_obPageCount} وظائف`, 'err');
+      return;
+    }
+    el.classList.add('selected');
+  }
+  obUpdateSelCount();
+}
+
+function obSelectAuto() {
+  document.querySelectorAll('#ob-jobs .qb-job').forEach(el => el.classList.remove('selected'));
+  Array.from(document.querySelectorAll('#ob-jobs .qb-job')).slice(0, _obPageCount)
+    .forEach(el => el.classList.add('selected'));
+  obUpdateSelCount();
+}
+
+function obClearJobs() {
+  document.querySelectorAll('#ob-jobs .qb-job').forEach(el => el.classList.remove('selected'));
+  obUpdateSelCount();
+}
+
+function obSelectScenes(ids) {
+  const set = new Set(ids || []);
+  document.querySelectorAll('#ob-jobs .qb-job').forEach(el => {
+    el.classList.toggle('selected', set.has(el.dataset.id));
+  });
+  obUpdateSelCount();
+}
+
+function obSetProgress(pct, text) {
+  const wrap = document.getElementById('ob-progress');
+  const fill = document.getElementById('ob-progress-fill');
+  const t = document.getElementById('ob-progress-text');
+  if (!wrap) return;
+  wrap.classList.add('show');
+  if (fill) fill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  if (text && t) t.textContent = text;
+}
+
+function obHideProgress() {
+  const wrap = document.getElementById('ob-progress');
+  if (wrap) wrap.classList.remove('show');
+  const fill = document.getElementById('ob-progress-fill');
+  if (fill) fill.style.width = '0%';
+}
+
+function obPreviewCardHTML(title, src, kind) {
+  const label = escHtml(title || kind || 'صفحة');
+  return `
+    <div class="qb-prev-page" title="${label} — اضغط للتكبير">
+      <span class="qb-prev-label">${label}</span>
+      <img src="${src}" alt="${label}" loading="lazy">
+      <button type="button" class="qb-prev-zoom" title="تكبير">⛶ تكبير</button>
+    </div>`;
+}
+
+function obBindPreviews() {
+  const wrap = document.getElementById('ob-previews');
+  if (!wrap) return;
+  wrap.querySelectorAll('.qb-prev-page').forEach(card => {
+    const img = card.querySelector('img');
+    if (!img) return;
+    const open = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openLightbox(img.src);
+    };
+    card.onclick = open;
+    const btn = card.querySelector('.qb-prev-zoom');
+    if (btn) btn.onclick = open;
+  });
+}
+
+function obRenderPreviews(items) {
+  const wrap = document.getElementById('ob-previews');
+  const head = document.getElementById('ob-previews-head');
+  if (!wrap) return;
+  if (!items || !items.length) {
+    wrap.innerHTML = '';
+    if (head) head.style.display = 'none';
+    return;
+  }
+  wrap.innerHTML = items.map(it => {
+    let src = it.src || '';
+    if (!src && it.image_b64) src = `data:image/jpeg;base64,${it.image_b64}`;
+    if (!src && it.scene_id && _obSessionId) {
+      src = `/admin/api/quick-book/preview/${_obSessionId}/${it.scene_id}?t=${Date.now()}`;
+    }
+    return obPreviewCardHTML(it.title, src, it.kind);
+  }).join('');
+  if (head) head.style.display = 'flex';
+  obBindPreviews();
+}
+
+async function startOrderColoringBook(orderId) {
+  const o = _obOrder && _obOrder.id === orderId
+    ? _obOrder
+    : _soAll.find(x => x.id === orderId);
+  if (!o) {
+    showToast('الطلب مش موجود', 'err');
+    return;
+  }
+  if (!o.photos || !o.photos.length) {
+    showToast('ارفع صورة للطفل على الطلب الأول', 'err');
+    return;
+  }
+  _obView = 'coloring';
+  _obPhoto = o.photos[0];
+  _obSessionId = null;
+  renderOrderColoringBook(o);
+  await obEnsureSession({ forceNew: false });
+}
+
+function renderOrderColoringBook(o) {
+  _obView = 'coloring';
+  _obOrder = o;
+  const root = document.getElementById('so-detail-root');
+  if (!root || !o) return;
+
+  const titleEl = document.getElementById('page-title');
+  const subEl = document.getElementById('page-sub');
+  if (titleEl) titleEl.textContent = 'كتاب تلوين · طلب #' + o.id;
+  if (subEl) subEl.textContent = 'الاسم والصورة من الطلب — النتائج تتحفظ على نفس الطلب';
+  if (location.hash !== '#order/' + o.id + '/book') {
+    history.pushState(null, '', '#order/' + o.id + '/book');
+  }
+
+  const photos = o.photos || [];
+  if (!_obPhoto && photos.length) _obPhoto = photos[0];
+
+  const photoPick = photos.length
+    ? photos.map((fn, i) => `
+        <button type="button" class="ob-photo-thumb ${_obPhoto === fn ? 'selected' : ''}"
+                data-photo="${escHtml(fn)}" onclick="obPickPhoto('${escHtml(fn)}')">
+          <img src="${photoURL(o.id, fn)}" alt="صورة ${i + 1}">
+          ${i === 0 ? '<span class="tag">أساسية</span>' : ''}
+        </button>`).join('')
+    : '<p class="muted">مفيش صور — ارجع وارفعي صورة على الطلب.</p>';
+
+  const jobsHTML = ALL_SCENES.map(s => `
+    <div class="qb-job" data-id="${escHtml(s.id)}" data-title="${escHtml(s.title)}" onclick="obToggleJob(this)">
+      <span class="emoji">${s.emoji || ''}</span>
+      <span class="title">${escHtml(s.title)}</span>
+    </div>`).join('');
+
+  const savedPdf = o.pdf_filename
+    ? `<a class="btn btn-sm btn-success" href="/admin/special-orders/${o.id}/pdf/${escHtml(o.pdf_filename)}" target="_blank">تحميل PDF المحفوظ</a>`
+    : '';
+
+  root.innerHTML = `
+    <button type="button" class="so-detail-back" onclick="renderBookProductPicker(_obOrder)">← رجوع لأنواع الكتب</button>
+
+    <div class="qb-wrap" style="margin-top:8px">
+      <div class="qb-card">
+        <h3>1. صورة الطفل (من الطلب)</h3>
+        <p class="hint">اتاخدت تلقائي من صور الطلب — تقدر تغيّر الصورة المختارة</p>
+        <div class="ob-photo-pick" id="ob-photo-pick">${photoPick}</div>
+      </div>
+
+      <div class="qb-card">
+        <h3>2. اسم الطفل</h3>
+        <p class="hint">من بيانات الطلب — تقدر تعدّله قبل التوليد</p>
+        <div class="qb-field">
+          <label for="ob-name">الاسم</label>
+          <input type="text" id="ob-name" maxlength="40" value="${escHtml(o.child_name || '')}" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="qb-card">
+        <h3>3. عدد الصفحات</h3>
+        <div class="qb-page-opts" id="ob-page-opts">
+          <button type="button" class="qb-page-opt" data-pages="1" onclick="obSetPageCount(1, this)">
+            1 صفحة <small>للتجربة</small>
+          </button>
+          <button type="button" class="qb-page-opt active" data-pages="8" onclick="obSetPageCount(8, this)">
+            8 صفحات <small>كتاب قياسي</small>
+          </button>
+          <button type="button" class="qb-page-opt" data-pages="12" onclick="obSetPageCount(12, this)">
+            12 صفحة <small>كل الوظائف</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="qb-card">
+        <h3>4. اختيار الوظائف</h3>
+        <p class="hint">اختار عدد الوظائف = عدد الصفحات بالظبط</p>
+        <div class="qb-job-toolbar">
+          <span class="qb-sel-count" id="ob-sel-count">مختار 0 / 8</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" class="btn btn-sm btn-ghost" onclick="obSelectAuto()">اختيار تلقائي</button>
+            <button type="button" class="btn btn-sm btn-ghost" onclick="obClearJobs()">مسح الاختيار</button>
+          </div>
+        </div>
+        <div class="qb-jobs ob-jobs" id="ob-jobs">${jobsHTML}</div>
+      </div>
+
+      <div class="qb-card">
+        <h3>5. إنشاء وحفظ الكتاب</h3>
+        <p class="hint">التوليد عبر <strong>Kie.ai → GPT Image 2</strong>. النتائج + PDF بيتسجلوا على الطلب #${o.id}.</p>
+        <div class="qb-actions">
+          <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obCreateBook()">إنشاء وحفظ الكتاب</button>
+          <div class="qb-result" id="ob-result">
+            <a class="btn btn-success" id="ob-download" href="#" target="_blank">تحميل PDF</a>
+            <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id})">رجوع للطلب</button>
+          </div>
+          ${savedPdf}
+        </div>
+        <div class="qb-progress" id="ob-progress">
+          <div class="qb-progress-text" id="ob-progress-text">جاري التوليد...</div>
+          <div class="qb-progress-bar"><div class="qb-progress-fill" id="ob-progress-fill"></div></div>
+        </div>
+        <div class="qb-msg" id="ob-msg"></div>
+        <div class="qb-previews-head" id="ob-previews-head" style="display:none">
+          <p class="title">معاينة الصفحات</p>
+          <p class="hint">اضغط الصورة أو «تكبير» لعرضها بالحجم الكامل</p>
+        </div>
+        <div class="qb-previews" id="ob-previews"></div>
+      </div>
+    </div>
+  `;
+
+  _obPageCount = o.book_page_count && [1, 8, 12].includes(o.book_page_count) ? o.book_page_count : 8;
+  obSetPageCount(_obPageCount, null);
+  const savedScenes = o.book_scenes_list || [];
+  if (savedScenes.length) {
+    if ([1, 8, 12].includes(savedScenes.length)) {
+      _obPageCount = savedScenes.length;
+      obSetPageCount(_obPageCount, null);
+    }
+    obSelectScenes(savedScenes);
+  } else {
+    obSelectAuto();
+  }
+}
+
+async function obPickPhoto(fn) {
+  if (_obBusy) return;
+  _obPhoto = fn;
+  document.querySelectorAll('#ob-photo-pick .ob-photo-thumb').forEach(el => {
+    el.classList.toggle('selected', el.dataset.photo === fn);
+  });
+  // New photo → new session
+  await obEnsureSession({ forceNew: true, photo: fn });
+}
+
+async function obEnsureSession({ forceNew = false, photo = null } = {}) {
+  const orderId = _obOrder && _obOrder.id;
+  if (!orderId) return null;
+  const msg = document.getElementById('ob-msg');
+  try {
+    const res = await fetch(`/admin/api/special-orders/${orderId}/book/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        force_new: !!forceNew,
+        photo: photo || _obPhoto || undefined,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'فشل بدء الجلسة');
+    _obSessionId = data.session_id;
+    if (data.photo) _obPhoto = data.photo;
+    if (data.order) {
+      _obOrder = data.order;
+      const idx = _soAll.findIndex(x => x.id === orderId);
+      if (idx >= 0) _soAll[idx] = data.order;
+    }
+
+    // Resume previews
+    const previews = [];
+    if (data.has_cover) {
+      previews.push({ title: 'الغلاف', scene_id: 'cover', kind: 'cover' });
+    }
+    (data.generated_scenes || []).forEach(sid => {
+      previews.push({ title: sceneTitle(sid), scene_id: sid, kind: 'page' });
+    });
+    if (data.has_ending) {
+      previews.push({ title: 'صفحة النهاية', scene_id: 'ending', kind: 'ending' });
+    }
+    if (previews.length) obRenderPreviews(previews);
+
+    // Preselect generated scenes if any
+    const gens = data.generated_scenes || [];
+    if (gens.length && document.getElementById('ob-jobs')) {
+      if ([1, 8, 12].includes(gens.length)) {
+        _obPageCount = gens.length;
+        obSetPageCount(_obPageCount, null);
+      }
+      obSelectScenes(gens);
+    }
+
+    if (msg && data.resumed) {
+      msg.textContent = 'تم استكمال الجلسة السابقة — تقدر تكمل أو تعيد التوليد.';
+      msg.className = 'qb-msg ok';
+    }
+    return data;
+  } catch (e) {
+    if (msg) {
+      msg.textContent = e.message || 'خطأ';
+      msg.className = 'qb-msg err';
+    }
+    showToast(e.message || 'فشل بدء الجلسة', 'err');
+    return null;
+  }
+}
+
+async function obCreateBook() {
+  if (_obBusy) return;
+  const msg = document.getElementById('ob-msg');
+  const nameEl = document.getElementById('ob-name');
+  const name = (nameEl && nameEl.value || '').trim();
+  const scenes = obSelectedIds();
+  if (msg) { msg.className = 'qb-msg'; msg.textContent = ''; }
+
+  if (!_obOrder) {
+    showToast('مفيش طلب', 'err');
+    return;
+  }
+  if (!_obPhoto && !(_obOrder.photos || []).length) {
+    if (msg) { msg.textContent = 'ارفع صورة على الطلب الأول.'; msg.className = 'qb-msg err'; }
+    return;
+  }
+  if (!name) {
+    if (msg) { msg.textContent = 'اكتب اسم الطفل.'; msg.className = 'qb-msg err'; }
+    if (nameEl) nameEl.focus();
+    return;
+  }
+  if (scenes.length !== _obPageCount) {
+    if (msg) {
+      msg.textContent = `اختار ${_obPageCount} وظيفة بالظبط (مختار حالياً ${scenes.length}).`;
+      msg.className = 'qb-msg err';
+    }
+    return;
+  }
+
+  _obBusy = true;
+  const btn = document.getElementById('ob-run-btn');
+  if (btn) btn.disabled = true;
+  const resultEl = document.getElementById('ob-result');
+  if (resultEl) resultEl.classList.remove('show');
+
+  try {
+    obSetProgress(6, 'تجهيز جلسة الطلب...');
+    if (!_obSessionId) {
+      const started = await obEnsureSession({ forceNew: false });
+      if (!started) throw new Error('فشل تجهيز الجلسة');
+    }
+
+    const chunks = qbChunk(scenes, 2);
+    const allPages = [];
+    const livePreview = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const base = 12 + Math.round((i / chunks.length) * 55);
+      obSetProgress(base, `GPT Image 2 — توليد دفعة ${i + 1} من ${chunks.length}...`);
+      const gRes = await fetch('/admin/api/quick-book/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: _obSessionId, scenes: chunks[i], force: false }),
+      });
+      const gData = await gRes.json();
+      if (!gRes.ok) throw new Error(gData.error || 'فشل التوليد');
+      const batch = gData.pages || [];
+      allPages.push(...batch);
+      batch.filter(p => !p.error && p.image_b64).forEach(p => {
+        livePreview.push({ title: p.title || sceneTitle(p.scene_id), image_b64: p.image_b64, kind: 'page' });
+      });
+      obRenderPreviews(livePreview);
+    }
+
+    const failed = allPages.filter(p => p.error);
+    const okPages = allPages.filter(p => !p.error);
+    if (!okPages.length) throw new Error(failed[0]?.error || 'فشل توليد كل الصفحات');
+    if (failed.length) showToast(`تم ${okPages.length} صفحة — فشل ${failed.length}`, 'err');
+
+    const okSet = new Set(okPages.map(p => p.scene_id));
+    const order = scenes.filter(id => okSet.has(id));
+
+    obSetProgress(72, 'توليد غلاف البداية...');
+    let coverPage = null;
+    try {
+      const cRes = await fetch('/admin/api/quick-book/cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: _obSessionId,
+          child_name: name,
+          page_count: order.length || _obPageCount,
+          force: false,
+        }),
+      });
+      const cData = await cRes.json();
+      if (!cRes.ok) throw new Error(cData.error || 'فشل الغلاف');
+      coverPage = cData.page || null;
+      if (coverPage && coverPage.image_b64) {
+        livePreview.unshift({ title: 'الغلاف', image_b64: coverPage.image_b64, kind: 'cover' });
+        obRenderPreviews(livePreview);
+      }
+    } catch (coverErr) {
+      showToast('الغلاف الملوّن فشل — هيستخدم غلاف بسيط', 'err');
+    }
+
+    obSetProgress(84, 'توليد صفحة النهاية...');
+    let endingPage = null;
+    try {
+      const eRes = await fetch('/admin/api/quick-book/ending', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: _obSessionId,
+          child_name: name,
+          force: false,
+        }),
+      });
+      const eData = await eRes.json();
+      if (!eRes.ok) throw new Error(eData.error || 'فشل صفحة النهاية');
+      endingPage = eData.page || null;
+      if (endingPage && endingPage.image_b64) {
+        livePreview.push({ title: 'صفحة النهاية', image_b64: endingPage.image_b64, kind: 'ending' });
+        obRenderPreviews(livePreview);
+      }
+    } catch (endErr) {
+      showToast('صفحة النهاية فشلت — هيكمل PDF من غيرها', 'err');
+    }
+
+    obSetProgress(93, 'حفظ PDF على الطلب...');
+    const sRes = await fetch(`/admin/api/special-orders/${_obOrder.id}/book/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: _obSessionId,
+        scenes: order,
+        child_name: name,
+      }),
+    });
+    const sData = await sRes.json();
+    if (!sRes.ok) throw new Error(sData.error || 'فشل حفظ الكتاب');
+
+    if (sData.order) {
+      _obOrder = sData.order;
+      const idx = _soAll.findIndex(x => x.id === _obOrder.id);
+      if (idx >= 0) _soAll[idx] = sData.order;
+    }
+
+    const a = document.getElementById('ob-download');
+    if (a) {
+      a.href = sData.download_url || `/admin/special-orders/${_obOrder.id}/pdf/${sData.pdf_filename}`;
+      a.setAttribute('download', `${name || 'coloring_book'}.pdf`);
+    }
+    if (resultEl) resultEl.classList.add('show');
+
+    obSetProgress(100, 'تم الحفظ ✓ — الكتاب مربوط بالطلب');
+    if (msg) {
+      msg.textContent = `تم إنشاء وحفظ كتاب ${order.length} صفحة لـ «${name}» على الطلب #${_obOrder.id}`;
+      msg.className = 'qb-msg ok';
+    }
+    showToast('الكتاب جاهز ومحفوظ على الطلب ✓', 'ok');
+  } catch (e) {
+    if (msg) {
+      msg.textContent = e.message || 'حصل خطأ';
+      msg.className = 'qb-msg err';
+    }
+    showToast(e.message || 'فشل الإنشاء', 'err');
+    obHideProgress();
+  } finally {
+    _obBusy = false;
+    if (btn) btn.disabled = false;
+  }
 }
 
 async function deleteDetailPhoto(orderId, filename) {
@@ -3111,8 +3760,9 @@ document.addEventListener('click', (e) => {
 function applyHashRoute() {
   const route = parseRoute(location.hash || '#overview');
   if (route.section === 'order-detail' && route.orderId) {
-    openOrderDetailPage(route.orderId);
+    openOrderDetailPage(route.orderId, { openBook: !!route.book });
   } else {
+    _obView = 'detail';
     showSection(route.section);
   }
 }

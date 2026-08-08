@@ -320,6 +320,14 @@ def init_db():
             conn.execute("ALTER TABLE special_orders ADD COLUMN share_token TEXT")
         if "share_expires_at" not in so_cols:
             conn.execute("ALTER TABLE special_orders ADD COLUMN share_expires_at TEXT")
+        if "book_session_id" not in so_cols:
+            conn.execute("ALTER TABLE special_orders ADD COLUMN book_session_id TEXT")
+        if "book_scenes" not in so_cols:
+            conn.execute("ALTER TABLE special_orders ADD COLUMN book_scenes TEXT")
+        if "book_page_count" not in so_cols:
+            conn.execute("ALTER TABLE special_orders ADD COLUMN book_page_count INTEGER")
+        if "book_updated_at" not in so_cols:
+            conn.execute("ALTER TABLE special_orders ADD COLUMN book_updated_at TEXT")
         conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_special_orders_share_token "
             "ON special_orders(share_token) WHERE share_token IS NOT NULL"
@@ -2680,6 +2688,21 @@ def admin_quick_book_pdf(session_id: str):
     return send_file(pdf_path, as_attachment=True, download_name=download_name)
 
 
+@app.route("/admin/api/quick-book/preview/<session_id>/<scene_id>")
+@admin_required
+def admin_quick_book_preview(session_id: str, scene_id: str):
+    """Serve a generated session page (cover / ending / scene) for admin preview."""
+    if not session_id.isalnum() or len(session_id) > 40:
+        abort(400, "Bad session")
+    if not SCENE_ID_RE.match(scene_id):
+        abort(400, "Bad scene")
+    d = SESSIONS_DIR / session_id
+    p = page_path(d, scene_id)
+    if not p.exists():
+        abort(404, "Page not found")
+    return send_file(p, mimetype="image/jpeg", max_age=60)
+
+
 @app.route("/admin/api/stats")
 @admin_required
 def admin_api_stats():
@@ -2981,14 +3004,233 @@ def _order_share_active(token: Optional[str], expires_raw: Optional[str]) -> boo
 def _order_to_dict(row: sqlite3.Row, photos: list) -> dict:
     d = dict(row)
     d["photos"] = photos
-    # pdf_filename / assigned_to / share fields may not exist in older rows
-    for key in ("pdf_filename", "assigned_to", "share_token", "share_expires_at"):
+    # pdf_filename / assigned_to / share / book fields may not exist in older rows
+    for key in (
+        "pdf_filename", "assigned_to", "share_token", "share_expires_at",
+        "book_session_id", "book_scenes", "book_page_count", "book_updated_at",
+    ):
         if key not in d:
             d[key] = None
     token = d.get("share_token")
     d["share_active"] = _order_share_active(token, d.get("share_expires_at"))
     d["share_url"] = f"{app_base_url()}/so/{token}" if token else None
+    # Parse stored scenes
+    scenes_raw = d.get("book_scenes")
+    if scenes_raw:
+        try:
+            d["book_scenes_list"] = json.loads(scenes_raw) if isinstance(scenes_raw, str) else scenes_raw
+        except (json.JSONDecodeError, TypeError):
+            d["book_scenes_list"] = []
+    else:
+        d["book_scenes_list"] = []
+    sid = d.get("book_session_id")
+    d["book_session_active"] = bool(
+        sid and (SESSIONS_DIR / str(sid)).exists() and (SESSIONS_DIR / str(sid) / "input_0.png").exists()
+    ) if sid else False
     return d
+
+
+@app.route("/admin/api/special-orders/<int:order_id>/book/start", methods=["POST"])
+@admin_required
+def admin_order_book_start(order_id: int):
+    """Start (or resume) a coloring-book generation session from a special order."""
+    data = request.get_json(silent=True) or {}
+    force_new = bool(data.get("force_new") or data.get("force"))
+    photo_name = (data.get("photo") or "").strip() or None
+
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "الطلب مش موجود."}), 404
+        photo_rows = conn.execute(
+            "SELECT filename FROM special_order_photos WHERE order_id = ? ORDER BY id ASC",
+            (order_id,),
+        ).fetchall()
+        photos = [r["filename"] for r in photo_rows]
+        if not photos:
+            conn.close()
+            return jsonify({"error": "ارفع صورة للطفل على الطلب الأول."}), 400
+
+        # Choose photo
+        if photo_name and photo_name in photos:
+            chosen = photo_name
+        else:
+            chosen = photos[0]
+
+        existing_sid = row["book_session_id"] if "book_session_id" in row.keys() else None
+        if existing_sid and not force_new:
+            d_exist = SESSIONS_DIR / str(existing_sid)
+            if d_exist.exists() and (d_exist / "input_0.png").exists():
+                order_dict = _order_to_dict(row, photos)
+                conn.close()
+                # List generated page ids
+                page_ids = []
+                for p in sorted(d_exist.glob("page_*.jpg")):
+                    sid = p.stem[len("page_"):]
+                    if sid not in (COVER_SCENE_ID, ENDING_SCENE_ID):
+                        page_ids.append(sid)
+                return jsonify({
+                    "ok": True,
+                    "resumed": True,
+                    "session_id": existing_sid,
+                    "child_name": row["child_name"],
+                    "photo": chosen,
+                    "order": order_dict,
+                    "generated_scenes": page_ids,
+                    "has_cover": (d_exist / f"page_{COVER_SCENE_ID}.jpg").exists(),
+                    "has_ending": (d_exist / f"page_{ENDING_SCENE_ID}.jpg").exists(),
+                })
+
+        # Create new session from photo on disk
+        session_id = secrets.token_hex(12)
+        src = _order_photo_dir(order_id) / chosen
+        if not src.exists():
+            conn.close()
+            return jsonify({"error": "ملف الصورة مش موجود على السيرفر."}), 404
+        d = SESSIONS_DIR / session_id
+        d.mkdir()
+        try:
+            img = Image.open(src).convert("RGB")
+            err = validate_portrait_image(img)
+            if err:
+                shutil.rmtree(d, ignore_errors=True)
+                conn.close()
+                return jsonify({"error": err}), 400
+            max_side = 1600
+            if max(img.size) > max_side:
+                img.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+            img.save(d / "input_0.png", "PNG")
+            (d / "input.png").write_bytes((d / "input_0.png").read_bytes())
+            ensure_multi_refs(d)
+        except Exception:
+            shutil.rmtree(d, ignore_errors=True)
+            conn.close()
+            return jsonify({"error": "فشل تجهيز صورة الطفل."}), 500
+
+        now = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            """
+            UPDATE special_orders
+            SET book_session_id = ?, book_updated_at = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (session_id, now, now, order_id),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        order_dict = _order_to_dict(row, photos)
+        conn.close()
+
+    return jsonify({
+        "ok": True,
+        "resumed": False,
+        "session_id": session_id,
+        "child_name": order_dict.get("child_name"),
+        "photo": chosen,
+        "order": order_dict,
+        "generated_scenes": [],
+        "has_cover": False,
+        "has_ending": False,
+    })
+
+
+@app.route("/admin/api/special-orders/<int:order_id>/book/save", methods=["POST"])
+@admin_required
+def admin_order_book_save(order_id: int):
+    """Build PDF from session, attach to order, and persist scene list for resume."""
+    data = request.get_json(silent=True) or {}
+    session_id = (data.get("session_id") or "").strip()
+    scenes = data.get("scenes") or []
+    child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
+
+    if not session_id.isalnum() or len(session_id) > 40:
+        return jsonify({"error": "session غير صالح."}), 400
+    if not isinstance(scenes, list) or not scenes:
+        return jsonify({"error": "مفيش صفحات محفوظة للكتاب."}), 400
+
+    d = SESSIONS_DIR / session_id
+    if not d.exists():
+        return jsonify({"error": "جلسة الكتاب مش موجودة. ابدأ الإنشاء من الأول."}), 404
+
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "الطلب مش موجود."}), 404
+        if not child_name:
+            child_name = (row["child_name"] or "").strip()[:40]
+
+    # Clean scene list
+    clean_scenes = []
+    for sid in scenes:
+        if isinstance(sid, str) and SCENE_ID_RE.match(sid) and sid not in (COVER_SCENE_ID, ENDING_SCENE_ID):
+            if page_path(d, sid).exists():
+                clean_scenes.append(sid)
+    if not clean_scenes:
+        return jsonify({"error": "مفيش صفحات تلوين جاهزة."}), 400
+
+    all_pages = assemble_book_images(d, clean_scenes, child_name, include_ending=True, include_cover=True)
+    if len(all_pages) < 2:
+        return jsonify({"error": "مفيش صفحات كافية لعمل PDF."}), 400
+
+    # Write session PDF then copy into order folder
+    session_pdf = d / "coloring_book.pdf"
+    write_pdf_with_margins(all_pages, session_pdf)
+
+    odir = _order_photo_dir(order_id)
+    # Remove old PDF if any
+    old_name = None
+    with _db_lock:
+        conn = db_connect()
+        old_row = conn.execute(
+            "SELECT pdf_filename FROM special_orders WHERE id = ?", (order_id,)
+        ).fetchone()
+        if old_row:
+            old_name = old_row["pdf_filename"] if "pdf_filename" in old_row.keys() else None
+        if old_name:
+            old_path = odir / old_name
+            try:
+                if old_path.exists():
+                    old_path.unlink()
+            except OSError:
+                pass
+
+        new_name = f"book_{order_id}_{secrets.token_hex(4)}.pdf"
+        dest = odir / new_name
+        shutil.copy2(session_pdf, dest)
+
+        now = datetime.now(timezone.utc).isoformat()
+        scenes_json = json.dumps(clean_scenes, ensure_ascii=False)
+        conn.execute(
+            """
+            UPDATE special_orders
+            SET pdf_filename = ?, book_session_id = ?, book_scenes = ?,
+                book_page_count = ?, book_updated_at = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (new_name, session_id, scenes_json, len(clean_scenes), now, now, order_id),
+        )
+        conn.commit()
+        photos = [
+            r["filename"]
+            for r in conn.execute(
+                "SELECT filename FROM special_order_photos WHERE order_id = ?", (order_id,)
+            ).fetchall()
+        ]
+        row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        order_dict = _order_to_dict(row, photos)
+        conn.close()
+
+    return jsonify({
+        "ok": True,
+        "order": order_dict,
+        "pdf_filename": new_name,
+        "download_url": f"/admin/special-orders/{order_id}/pdf/{new_name}",
+        "page_count": len(clean_scenes),
+    })
 
 
 @app.route("/admin/api/special-orders", methods=["GET"])
