@@ -3533,25 +3533,85 @@ def admin_order_book_start(order_id: int):
             return jsonify({"error": "فشل تجهيز صورة الطفل."}), 500
 
         now = datetime.now(timezone.utc).isoformat()
-        # Reset progress on brand-new session
-        progress = {
-            "step": "setup",
-            "photo": chosen,
-            "child_name": (row["child_name"] or "")[:40],
-            "scenes": [],
-            "page_count": None,
-            "has_cover": False,
-            "has_ending": False,
-            "done_pages": [],
-            "updated_at": now,
-        }
+        # Parse any existing plan — keep scenes when only reconnecting a lost session folder
+        existing: dict = {}
+        raw = row["book_progress"] if "book_progress" in row.keys() else None
+        if raw and not force_new:
+            try:
+                parsed = json.loads(raw) if isinstance(raw, str) else (raw or {})
+                if isinstance(parsed, dict):
+                    existing = parsed
+            except (json.JSONDecodeError, TypeError):
+                existing = {}
+        scenes_from_col = []
+        col_raw = row["book_scenes"] if "book_scenes" in row.keys() else None
+        if col_raw:
+            try:
+                loaded = json.loads(col_raw) if isinstance(col_raw, str) else col_raw
+                if isinstance(loaded, list):
+                    scenes_from_col = [s for s in loaded if isinstance(s, str)]
+            except (json.JSONDecodeError, TypeError):
+                scenes_from_col = []
+
+        planned_scenes = existing.get("scenes") if isinstance(existing.get("scenes"), list) else []
+        planned_scenes = [s for s in planned_scenes if isinstance(s, str)] or scenes_from_col
+        page_count_keep = existing.get("page_count")
+        if page_count_keep is None and "book_page_count" in row.keys() and row["book_page_count"] is not None:
+            page_count_keep = row["book_page_count"]
+        if page_count_keep is None and planned_scenes:
+            page_count_keep = len(planned_scenes)
+        child_keep = (existing.get("child_name") or row["child_name"] or "")[:40]
+
+        if force_new:
+            # Brand-new book run — reset wizard progress
+            progress = {
+                "step": "setup",
+                "photo": chosen,
+                "child_name": (row["child_name"] or "")[:40],
+                "scenes": [],
+                "page_count": None,
+                "has_cover": False,
+                "has_ending": False,
+                "done_pages": [],
+                "updated_at": now,
+            }
+            scenes_json = None
+            pc = None
+            reconnecting = False
+        else:
+            # Session folder was lost (restart / move path) but keep setup plan
+            progress = {
+                "step": existing.get("step") or ("setup" if not planned_scenes else "cover"),
+                "photo": chosen or existing.get("photo"),
+                "child_name": child_keep,
+                "scenes": planned_scenes,
+                "page_count": page_count_keep,
+                "has_cover": False,
+                "has_ending": False,
+                "done_pages": [],
+                "missing_pages": list(planned_scenes),
+                "updated_at": now,
+            }
+            scenes_json = json.dumps(planned_scenes, ensure_ascii=False) if planned_scenes else col_raw
+            pc = page_count_keep
+            reconnecting = bool(existing_sid or planned_scenes)
+
         conn.execute(
             """
             UPDATE special_orders
-            SET book_session_id = ?, book_progress = ?, book_updated_at = ?, updated_at = ?
+            SET book_session_id = ?, book_scenes = ?, book_page_count = ?,
+                book_progress = ?, book_updated_at = ?, updated_at = ?
             WHERE id = ?
             """,
-            (session_id, json.dumps(progress, ensure_ascii=False), now, now, order_id),
+            (
+                session_id,
+                scenes_json if scenes_json is not None else (None if force_new else col_raw),
+                pc,
+                json.dumps(progress, ensure_ascii=False),
+                now,
+                now,
+                order_id,
+            ),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
@@ -3560,20 +3620,21 @@ def admin_order_book_start(order_id: int):
 
     return jsonify({
         "ok": True,
-        "resumed": False,
+        "resumed": bool(reconnecting),
+        "reconnected": bool(reconnecting),
         "session_id": session_id,
-        "child_name": status["progress"].get("child_name"),
+        "child_name": status["progress"].get("child_name") or child_keep,
         "photo": chosen,
         "order": status["order"],
-        "generated_scenes": [],
-        "has_cover": False,
-        "has_ending": False,
+        "generated_scenes": status["generated_scenes"],
+        "has_cover": status["has_cover"],
+        "has_ending": status["has_ending"],
         "progress": status["progress"],
         "current_step": status["current_step"],
         "current_step_label": status["current_step_label"],
-        "done_pages": [],
-        "missing_pages": [],
-        "pdf_ready": False,
+        "done_pages": status["done_pages"],
+        "missing_pages": status["missing_pages"],
+        "pdf_ready": status["pdf_ready"],
     })
 
 
