@@ -2980,6 +2980,71 @@ def _order_photo_dir(order_id: int) -> Path:
     return d
 
 
+def _order_book_dir(order_id: int) -> Path:
+    """Permanent storage for generated book page images tied to a special order."""
+    d = _order_photo_dir(order_id) / "book"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _sync_session_pages_to_order(order_id: int, session_id: Optional[str]) -> list:
+    """Copy all generated page_*.jpg from session into permanent order/book folder.
+
+    Returns list of scene_ids that exist under the order after sync.
+    """
+    saved: list = []
+    odir = _order_book_dir(order_id)
+    if session_id:
+        d = SESSIONS_DIR / str(session_id)
+        if d.exists():
+            for p in d.glob("page_*.jpg"):
+                try:
+                    dest = odir / p.name
+                    shutil.copy2(p, dest)
+                except OSError:
+                    continue
+    for p in sorted(odir.glob("page_*.jpg")):
+        sid = p.stem[len("page_"):]
+        if SCENE_ID_RE.match(sid):
+            saved.append(sid)
+    return saved
+
+
+def _order_book_page_path(order_id: int, scene_id: str) -> Path:
+    return _order_book_dir(order_id) / f"page_{scene_id}.jpg"
+
+
+def _order_book_snapshot(order_id: int, planned_scenes: Optional[list] = None) -> dict:
+    """Inspect permanent order/book folder for assets (survives session cleanup)."""
+    snap = {
+        "has_cover": False,
+        "has_ending": False,
+        "generated_scenes": [],
+        "done_planned": [],
+        "missing_pages": list(planned_scenes or []),
+        "session_active": False,
+        "from_order_store": True,
+    }
+    odir = _order_book_dir(order_id)
+    snap["has_cover"] = (_order_book_page_path(order_id, COVER_SCENE_ID)).exists()
+    snap["has_ending"] = (_order_book_page_path(order_id, ENDING_SCENE_ID)).exists()
+    page_ids = []
+    for p in sorted(odir.glob("page_*.jpg")):
+        sid = p.stem[len("page_"):]
+        if sid not in (COVER_SCENE_ID, ENDING_SCENE_ID) and SCENE_ID_RE.match(sid):
+            page_ids.append(sid)
+    snap["generated_scenes"] = page_ids
+    planned = [s for s in (planned_scenes or []) if isinstance(s, str) and SCENE_ID_RE.match(s)]
+    if planned:
+        done = [s for s in planned if _order_book_page_path(order_id, s).exists()]
+        snap["done_planned"] = done
+        snap["missing_pages"] = [s for s in planned if s not in done]
+    else:
+        snap["done_planned"] = page_ids
+        snap["missing_pages"] = []
+    return snap
+
+
 def _safe_photo_name(filename: str) -> Optional[str]:
     """Return a safe filename or None if extension not allowed."""
     name = Path(filename).name
@@ -3042,8 +3107,12 @@ def _order_to_dict(row: sqlite3.Row, photos: list) -> dict:
     return d
 
 
-def _session_book_snapshot(session_id: Optional[str], planned_scenes: Optional[list] = None) -> dict:
-    """Inspect session directory for completed book assets."""
+def _session_book_snapshot(
+    session_id: Optional[str],
+    planned_scenes: Optional[list] = None,
+    order_id: Optional[int] = None,
+) -> dict:
+    """Inspect session (+ permanent order store) for completed book assets."""
     snap = {
         "has_cover": False,
         "has_ending": False,
@@ -3051,24 +3120,46 @@ def _session_book_snapshot(session_id: Optional[str], planned_scenes: Optional[l
         "done_planned": [],
         "missing_pages": list(planned_scenes or []),
         "session_active": False,
+        "from_order_store": False,
     }
-    if not session_id:
-        return snap
-    d = SESSIONS_DIR / str(session_id)
-    if not d.exists() or not (d / "input_0.png").exists():
-        return snap
-    snap["session_active"] = True
-    snap["has_cover"] = cover_page_path(d).exists()
-    snap["has_ending"] = ending_page_path(d).exists()
-    page_ids = []
-    for p in sorted(d.glob("page_*.jpg")):
-        sid = p.stem[len("page_"):]
-        if sid not in (COVER_SCENE_ID, ENDING_SCENE_ID) and SCENE_ID_RE.match(sid):
-            page_ids.append(sid)
+    page_ids: list = []
+    if session_id:
+        d = SESSIONS_DIR / str(session_id)
+        if d.exists() and (d / "input_0.png").exists():
+            snap["session_active"] = True
+            snap["has_cover"] = cover_page_path(d).exists()
+            snap["has_ending"] = ending_page_path(d).exists()
+            for p in sorted(d.glob("page_*.jpg")):
+                sid = p.stem[len("page_"):]
+                if sid not in (COVER_SCENE_ID, ENDING_SCENE_ID) and SCENE_ID_RE.match(sid):
+                    page_ids.append(sid)
+
+    # Merge permanent order store (prefer any available)
+    if order_id is not None:
+        o_snap = _order_book_snapshot(order_id, planned_scenes)
+        snap["has_cover"] = snap["has_cover"] or o_snap["has_cover"]
+        snap["has_ending"] = snap["has_ending"] or o_snap["has_ending"]
+        for sid in o_snap["generated_scenes"]:
+            if sid not in page_ids:
+                page_ids.append(sid)
+        if o_snap["generated_scenes"] or o_snap["has_cover"] or o_snap["has_ending"]:
+            snap["from_order_store"] = True
+
     snap["generated_scenes"] = page_ids
     planned = [s for s in (planned_scenes or []) if isinstance(s, str) and SCENE_ID_RE.match(s)]
     if planned:
-        done = [s for s in planned if (d / f"page_{s}.jpg").exists()]
+        # done if exists in session or order store
+        done = []
+        for s in planned:
+            ok = False
+            if session_id:
+                d = SESSIONS_DIR / str(session_id)
+                if d.exists() and page_path(d, s).exists():
+                    ok = True
+            if not ok and order_id is not None and _order_book_page_path(order_id, s).exists():
+                ok = True
+            if ok:
+                done.append(s)
         snap["done_planned"] = done
         snap["missing_pages"] = [s for s in planned if s not in done]
     else:
@@ -3085,7 +3176,7 @@ def _infer_book_step(progress: dict, snap: dict, has_pdf: bool) -> str:
     planned = [s for s in planned if isinstance(s, str)]
     if not planned and not snap.get("generated_scenes"):
         return "setup"
-    if not snap.get("session_active"):
+    if not snap.get("session_active") and not snap.get("from_order_store"):
         return "setup"
     # Prefer real disk state over stale progress flags
     if not snap.get("has_cover"):
@@ -3110,7 +3201,14 @@ def _build_book_status(row: sqlite3.Row, photos: list) -> dict:
     planned = progress.get("scenes") or order.get("book_scenes_list") or []
     if not isinstance(planned, list):
         planned = []
-    snap = _session_book_snapshot(order.get("book_session_id"), planned)
+    order_id = order.get("id")
+    # Sync latest session pages into permanent store
+    if order.get("book_session_id") and order_id:
+        try:
+            _sync_session_pages_to_order(int(order_id), order.get("book_session_id"))
+        except Exception:
+            pass
+    snap = _session_book_snapshot(order.get("book_session_id"), planned, order_id=order_id)
     # Merge progress flags with disk (disk wins)
     progress["has_cover"] = snap["has_cover"]
     progress["has_ending"] = snap["has_ending"]
@@ -3132,6 +3230,13 @@ def _build_book_status(row: sqlite3.Row, photos: list) -> dict:
         "pdf": "حفظ PDF",
         "done": "مكتمل",
     }
+    # URLs for each saved page (permanent order store first)
+    page_urls = {}
+    if order_id:
+        for sid in ([COVER_SCENE_ID] if snap["has_cover"] else []) + list(progress["done_pages"]) + (
+            [ENDING_SCENE_ID] if snap["has_ending"] else []
+        ):
+            page_urls[sid] = f"/admin/special-orders/{order_id}/book-page/{sid}"
     return {
         "order": order,
         "progress": progress,
@@ -3145,6 +3250,7 @@ def _build_book_status(row: sqlite3.Row, photos: list) -> dict:
         "done_pages": progress["done_pages"],
         "missing_pages": snap["missing_pages"],
         "pdf_ready": bool(order.get("pdf_filename")),
+        "page_urls": page_urls,
     }
 
 
@@ -3350,7 +3456,12 @@ def admin_order_book_progress(order_id: int):
                 if isinstance(s, str) and SCENE_ID_RE.match(s) and s not in (COVER_SCENE_ID, ENDING_SCENE_ID):
                     clean_planned.append(s)
 
-        snap = _session_book_snapshot(sid, clean_planned)
+        # Always mirror session pages into permanent order storage
+        try:
+            _sync_session_pages_to_order(order_id, sid)
+        except Exception:
+            pass
+        snap = _session_book_snapshot(sid, clean_planned, order_id=order_id)
         now = datetime.now(timezone.utc).isoformat()
         progress = {
             **existing,
@@ -3473,7 +3584,11 @@ def admin_order_book_save(order_id: int):
 
         now = datetime.now(timezone.utc).isoformat()
         scenes_json = json.dumps(clean_scenes, ensure_ascii=False)
-        snap = _session_book_snapshot(session_id, clean_scenes)
+        try:
+            _sync_session_pages_to_order(order_id, session_id)
+        except Exception:
+            pass
+        snap = _session_book_snapshot(session_id, clean_scenes, order_id=order_id)
         progress = {
             "step": "done",
             "child_name": child_name,
@@ -3765,6 +3880,35 @@ def admin_serve_order_photo(order_id: int, filename: str):
     if not photo_path.exists():
         abort(404)
     return send_file(photo_path)
+
+
+@app.route("/admin/special-orders/<int:order_id>/book-page/<scene_id>")
+@admin_required
+def admin_serve_order_book_page(order_id: int, scene_id: str):
+    """Serve a permanently saved book page (cover / ending / scene) for an order."""
+    if not SCENE_ID_RE.match(scene_id):
+        abort(400, "Bad scene")
+    # Prefer permanent order store, fall back to live session
+    p = _order_book_page_path(order_id, scene_id)
+    if not p.exists():
+        with _db_lock:
+            conn = db_connect()
+            row = conn.execute(
+                "SELECT book_session_id FROM special_orders WHERE id = ?",
+                (order_id,),
+            ).fetchone()
+            conn.close()
+        sid = row["book_session_id"] if row and "book_session_id" in row.keys() else None
+        if sid:
+            sess_p = page_path(SESSIONS_DIR / str(sid), scene_id)
+            if sess_p.exists():
+                try:
+                    shutil.copy2(sess_p, p)
+                except OSError:
+                    p = sess_p
+    if not p.exists():
+        abort(404, "Page not found")
+    return send_file(p, mimetype="image/jpeg", max_age=30)
 
 
 @app.route("/admin/api/special-orders/<int:order_id>/photo/<filename>", methods=["DELETE"])

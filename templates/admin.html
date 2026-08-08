@@ -799,6 +799,25 @@
   .ob-check-row .mark { font-weight: 800; }
   .ob-check-row.done .mark { color: var(--ok); }
   .ob-check-row.todo .mark { color: var(--muted); }
+  .ob-check-row img.thumb {
+    width: 44px; height: 56px; object-fit: cover; border-radius: 6px;
+    border: 1px solid var(--border-2); background: #fff; flex-shrink: 0;
+  }
+  .ob-last-gen {
+    display: none; margin-top: 12px; padding: 12px; border-radius: 12px;
+    border: 1px solid rgba(56,189,248,0.35);
+    background: linear-gradient(160deg, rgba(56,189,248,0.1), rgba(15,25,45,0.25));
+  }
+  .ob-last-gen.show { display: block; }
+  .ob-last-gen .lg-title {
+    margin: 0 0 8px; font-size: 13px; font-weight: 800; color: var(--text);
+  }
+  .ob-last-gen img {
+    width: 100%; max-width: 280px; border-radius: 10px;
+    border: 1px solid var(--border-2); display: block; cursor: zoom-in;
+    background: #fff; aspect-ratio: 210/297; object-fit: cover;
+  }
+  .ob-last-gen .lg-note { margin: 8px 0 0; font-size: 12px; color: var(--ok); font-weight: 700; }
   /* Order form page (add / edit) */
   .of-page { max-width: 760px; }
   .of-card {
@@ -1842,6 +1861,9 @@ let _obState = {
   missingPages: [],
   pdfReady: false,
 };
+let _obImgCache = {}; // scene_id -> immediate preview src (data URL or permanent URL)
+let _obLastGenerated = null; // {scene_id, title, src} for highlight panel
+
 
 const OB_STEPS = [
   { id: 'setup',  n: 1, label: 'الإعداد' },
@@ -3183,9 +3205,7 @@ function obRenderPreviews(items) {
     let src = it.src || '';
     if (!src && it.image_b64) src = `data:image/jpeg;base64,${it.image_b64}`;
     const sceneId = it.scene_id || (it.kind === 'cover' ? 'cover' : it.kind === 'ending' ? 'ending' : '');
-    if (!src && sceneId && _obSessionId) {
-      src = `/admin/api/quick-book/preview/${_obSessionId}/${sceneId}?t=${Date.now()}`;
-    }
+    if (!src && sceneId) src = obPageSrc(sceneId, Date.now());
     return obPreviewCardHTML(it.title, src, it.kind || 'page', sceneId);
   }).join('');
   if (head) head.style.display = 'flex';
@@ -3241,6 +3261,8 @@ async function startOrderColoringBook(orderId) {
   _obLastScenes = [];
   _obStep = 'setup';
   _obState = { hasCover: false, hasEnding: false, donePages: [], missingPages: [], pdfReady: false };
+  _obImgCache = {};
+  _obLastGenerated = null;
   renderOrderColoringBook(o);
   await obEnsureSession({ forceNew: false });
 }
@@ -3336,7 +3358,11 @@ function renderOrderColoringBook(o) {
           <div class="ob-steps" id="ob-steps"></div>
           <div class="ob-step-status" id="ob-step-status">جاري تجهيز الحالة...</div>
           <div class="ob-step-checklist" id="ob-step-checklist"></div>
-
+          <div class="ob-last-gen" id="ob-last-gen">
+            <p class="lg-title" id="ob-last-gen-title">آخر صورة تم توليدها</p>
+            <img id="ob-last-gen-img" alt="آخر توليد" onclick="openLightbox(this.src)">
+            <p class="lg-note" id="ob-last-gen-note">تم الحفظ على الطلب ✓</p>
+          </div>
           <div class="qb-actions" id="ob-step-actions"></div>
         </div>
 
@@ -3379,6 +3405,48 @@ function renderOrderColoringBook(o) {
   obRenderWizardUI();
 }
 
+function obPageSrc(sceneId, bust) {
+  if (!sceneId) return '';
+  if (_obImgCache[sceneId]) return _obImgCache[sceneId];
+  if (_obOrder && _obOrder.id) {
+    return `/admin/special-orders/${_obOrder.id}/book-page/${sceneId}?t=${bust || Date.now()}`;
+  }
+  if (_obSessionId) {
+    return `/admin/api/quick-book/preview/${_obSessionId}/${sceneId}?t=${bust || Date.now()}`;
+  }
+  return '';
+}
+
+function obCachePage(pageOrId, b64) {
+  if (!pageOrId) return;
+  if (typeof pageOrId === 'string') {
+    if (b64) _obImgCache[pageOrId] = `data:image/jpeg;base64,${b64}`;
+    return;
+  }
+  const p = pageOrId;
+  if (p.scene_id && p.image_b64) {
+    _obImgCache[p.scene_id] = `data:image/jpeg;base64,${p.image_b64}`;
+  }
+}
+
+function obShowLastGenerated(sceneId, title, src) {
+  _obLastGenerated = { scene_id: sceneId, title, src };
+  const box = document.getElementById('ob-last-gen');
+  const img = document.getElementById('ob-last-gen-img');
+  const t = document.getElementById('ob-last-gen-title');
+  const note = document.getElementById('ob-last-gen-note');
+  if (!box || !img) return;
+  if (!src) {
+    box.classList.remove('show');
+    return;
+  }
+  img.src = src;
+  if (t) t.textContent = `تم التوليد: ${title || sceneId || 'صفحة'}`;
+  if (note) note.textContent = 'الصورة محفوظة على الطلب ✓ — تقدر تكمل الخطوة الجاية';
+  box.classList.add('show');
+  try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) {}
+}
+
 function obApplyStatusPayload(data) {
   if (!data) return;
   if (data.session_id) _obSessionId = data.session_id;
@@ -3417,26 +3485,51 @@ function obApplyStatusPayload(data) {
     missingPages: [...(data.missing_pages || progress.missing_pages || [])],
     pdfReady: !!(data.pdf_ready || (_obOrder && _obOrder.pdf_filename)),
   };
-  _obStep = data.current_step || progress.step || _obStep || 'setup';
-  if (_obStep === 'done') {
-    // keep as done for status; UI treats done like pdf complete
+  // Seed permanent URLs into cache (don't overwrite fresh data URLs)
+  const urls = data.page_urls || {};
+  Object.keys(urls).forEach(sid => {
+    if (!_obImgCache[sid] || !_obImgCache[sid].startsWith('data:')) {
+      _obImgCache[sid] = urls[sid] + (urls[sid].includes('?') ? '&' : '?') + 't=' + Date.now();
+    }
+  });
+  if (_obState.hasCover && !_obImgCache.cover && _obOrder) {
+    _obImgCache.cover = `/admin/special-orders/${_obOrder.id}/book-page/cover?t=${Date.now()}`;
   }
+  if (_obState.hasEnding && !_obImgCache.ending && _obOrder) {
+    _obImgCache.ending = `/admin/special-orders/${_obOrder.id}/book-page/ending?t=${Date.now()}`;
+  }
+  _obState.donePages.forEach(sid => {
+    if (!_obImgCache[sid] && _obOrder) {
+      _obImgCache[sid] = `/admin/special-orders/${_obOrder.id}/book-page/${sid}?t=${Date.now()}`;
+    }
+  });
+  _obStep = data.current_step || progress.step || _obStep || 'setup';
   return data;
 }
 
 function obRefreshPreviewsFromState() {
+  const bust = Date.now();
   const doneOnly = (_obState.donePages || []).map(sid => ({
     scene_id: sid,
     title: sceneTitle(sid),
     kind: 'page',
+    src: obPageSrc(sid, bust),
   }));
-  const cover = _obState.hasCover ? { scene_id: 'cover', kind: 'cover' } : null;
-  const ending = _obState.hasEnding ? { scene_id: 'ending', kind: 'ending' } : null;
+  const cover = _obState.hasCover
+    ? { scene_id: 'cover', kind: 'cover', title: 'غلاف البداية', src: obPageSrc('cover', bust) }
+    : null;
+  const ending = _obState.hasEnding
+    ? { scene_id: 'ending', kind: 'ending', title: 'غلاف النهاية', src: obPageSrc('ending', bust) }
+    : null;
   if (!doneOnly.length && !cover && !ending) {
     obRenderPreviews([]);
     return;
   }
-  obRenderPreviews(obBuildOrderedPreview(cover, doneOnly, ending));
+  const items = [];
+  if (cover) items.push(cover);
+  doneOnly.forEach(p => items.push(p));
+  if (ending) items.push(ending);
+  obRenderPreviews(items);
 }
 
 function obRenderWizardUI() {
@@ -3480,14 +3573,33 @@ function obRenderWizardUI() {
   if (statusEl) statusEl.innerHTML = lines.join('<br>');
 
   if (listEl) {
-    const rows = planned.map(sid => {
+    const rows = [];
+    if (_obState.hasCover) {
+      const csrc = obPageSrc('cover');
+      rows.push(`<div class="ob-check-row done">
+        ${csrc ? `<img class="thumb" src="${csrc}" alt="غلاف" onclick="openLightbox('${csrc}')">` : ''}
+        <span style="flex:1">✓ غلاف البداية</span>
+        <span class="mark">محفوظ</span>
+      </div>`);
+    }
+    planned.forEach(sid => {
       const done = _obState.donePages.includes(sid);
-      return `<div class="ob-check-row ${done ? 'done' : 'todo'}">
-        <span>${done ? '✓' : '○'} ${escHtml(sceneTitle(sid))}</span>
+      const src = done ? obPageSrc(sid) : '';
+      rows.push(`<div class="ob-check-row ${done ? 'done' : 'todo'}">
+        ${src ? `<img class="thumb" src="${src}" alt="" onclick="openLightbox('${src}')">` : '<span style="width:44px"></span>'}
+        <span style="flex:1">${done ? '✓' : '○'} ${escHtml(sceneTitle(sid))}</span>
         <span class="mark">${done ? 'محفوظ' : 'بانتظار التوليد'}</span>
-      </div>`;
-    }).join('');
-    listEl.innerHTML = rows || '<div class="muted" style="font-size:12.5px">اختار الوظائف في الخطوة 4 واحفظ الإعداد.</div>';
+      </div>`);
+    });
+    if (_obState.hasEnding) {
+      const esrc = obPageSrc('ending');
+      rows.push(`<div class="ob-check-row done">
+        ${esrc ? `<img class="thumb" src="${esrc}" alt="نهاية" onclick="openLightbox('${esrc}')">` : ''}
+        <span style="flex:1">✓ غلاف النهاية</span>
+        <span class="mark">محفوظ</span>
+      </div>`);
+    }
+    listEl.innerHTML = rows.join('') || '<div class="muted" style="font-size:12.5px">اختار الوظائف في الخطوة 4 واحفظ الإعداد.</div>';
   }
 
   // Actions for current step
@@ -3730,7 +3842,18 @@ async function obGeneratePages(scenes, force) {
     });
     const gData = await parseJsonResponse(gRes);
     if (!gRes.ok) throw new Error(gData.error || 'فشل التوليد');
-    allPages.push(...(gData.pages || []));
+    const batch = gData.pages || [];
+    allPages.push(...batch);
+    batch.filter(p => !p.error).forEach(p => {
+      obCachePage(p);
+      if (p.image_b64) {
+        obShowLastGenerated(
+          p.scene_id,
+          p.title || sceneTitle(p.scene_id),
+          `data:image/jpeg;base64,${p.image_b64}`,
+        );
+      }
+    });
     // Persist after each batch so progress never lost
     const okIds = allPages.filter(p => !p.error).map(p => p.scene_id);
     const planned = _obLastScenes.length ? _obLastScenes : scenes;
@@ -3741,7 +3864,12 @@ async function obGeneratePages(scenes, force) {
       await obPersistProgress({ step: 'pages', scenes: planned });
     } catch (_) { /* keep going */ }
     obRefreshPreviewsFromState();
-    obRenderWizardUI();
+    // rebuild checklist thumbs without full wizard button reset mid-batch if possible
+    const listEl = document.getElementById('ob-step-checklist');
+    if (listEl) {
+      // light refresh of previews is enough; full wizard re-renders buttons
+      obRenderWizardUI();
+    }
   }
   return allPages;
 }
@@ -3789,19 +3917,26 @@ async function obRunStep(step, opts = {}) {
       const cover = await obGenerateCover(name, _obLastScenes.length || _obPageCount, force);
       _obState.hasCover = true;
       if (cover) {
+        obCachePage(cover);
+        const src = _obImgCache.cover || (cover.image_b64 ? `data:image/jpeg;base64,${cover.image_b64}` : '');
+        obShowLastGenerated('cover', 'غلاف البداية', src);
         obRenderPreviews(obBuildOrderedPreview(cover,
-          _obState.donePages.map(sid => ({ scene_id: sid, kind: 'page' })),
-          _obState.hasEnding ? { scene_id: 'ending', kind: 'ending' } : null));
+          _obState.donePages.map(sid => ({ scene_id: sid, kind: 'page', src: obPageSrc(sid) })),
+          _obState.hasEnding ? { scene_id: 'ending', kind: 'ending', src: obPageSrc('ending') } : null));
       }
-      obSetProgress(70, 'حفظ خطوة الغلاف...');
+      obSetProgress(70, 'حفظ صورة الغلاف على الطلب...');
       await obPersistProgress({ step: 'cover', scenes: _obLastScenes });
+      // Prefer permanent order URL after save while keeping data URL for instant display
+      if (_obOrder && _obImgCache.cover && _obImgCache.cover.startsWith('data:')) {
+        // keep data URL; also available permanently as book-page/cover
+      }
       _obStep = 'pages';
-      obSetProgress(100, 'غلاف البداية محفوظ ✓');
+      obSetProgress(100, 'غلاف البداية محفوظ على الطلب ✓');
       if (msg) {
-        msg.textContent = 'تم حفظ غلاف البداية. كمل صفحات التلوين في أي وقت.';
+        msg.textContent = 'تم توليد غلاف البداية وحفظ الصورة على الطلب. كمل صفحات التلوين.';
         msg.className = 'qb-msg ok';
       }
-      showToast('غلاف البداية جاهز ومحفوظ ✓', 'ok');
+      showToast('غلاف البداية جاهز — الصورة ظاهرة ومحفوظة ✓', 'ok');
     }
 
     if (step === 'pages') {
@@ -3816,6 +3951,7 @@ async function obRunStep(step, opts = {}) {
       if (!todo.length) {
         showToast('كل الصفحات جاهزة بالفعل', 'ok');
         _obStep = 'ending';
+        obRefreshPreviewsFromState();
       } else {
         obSetProgress(10, `توليد ${todo.length} صفحة ناقصة...`);
         const allPages = await obGeneratePages(todo, force);
@@ -3823,6 +3959,12 @@ async function obRunStep(step, opts = {}) {
         const okPages = allPages.filter(p => !p.error);
         if (!okPages.length) throw new Error(failed[0]?.error || 'فشل توليد الصفحات');
         if (failed.length) showToast(`تم ${okPages.length} — فشل ${failed.length}`, 'err');
+        okPages.forEach(p => obCachePage(p));
+        const last = okPages[okPages.length - 1];
+        if (last) {
+          obShowLastGenerated(last.scene_id, last.title || sceneTitle(last.scene_id),
+            last.image_b64 ? `data:image/jpeg;base64,${last.image_b64}` : obPageSrc(last.scene_id));
+        }
         const done = new Set([..._obState.donePages, ...okPages.map(p => p.scene_id)]);
         _obState.donePages = planned.filter(s => done.has(s));
         _obState.missingPages = planned.filter(s => !done.has(s));
@@ -3830,15 +3972,16 @@ async function obRunStep(step, opts = {}) {
         if (!_obState.missingPages.length) {
           _obStep = 'ending';
           if (msg) {
-            msg.textContent = `تم حفظ ${planned.length} صفحة تلوين. الخطوة التالية: غلاف النهاية.`;
+            msg.textContent = `تم توليد وحفظ ${planned.length} صفحة على الطلب. الخطوة التالية: غلاف النهاية.`;
             msg.className = 'qb-msg ok';
           }
         } else if (msg) {
-          msg.textContent = `محفوظ: ${_obState.donePages.length}/${planned.length}. لسه ناقص ${_obState.missingPages.length} — اضغط تاني للنواقص.`;
+          msg.textContent = `محفوظ ظاهر: ${_obState.donePages.length}/${planned.length}. لسه ناقص ${_obState.missingPages.length}.`;
           msg.className = 'qb-msg ok';
         }
-        showToast('تم حفظ صفحات التلوين على الطلب ✓', 'ok');
+        showToast('تم حفظ الصور على الطلب وتظهر في المعاينة ✓', 'ok');
         obSetProgress(100, 'تم حفظ الصفحات ✓');
+        obRefreshPreviewsFromState();
       }
     }
 
@@ -3848,20 +3991,25 @@ async function obRunStep(step, opts = {}) {
       const ending = await obGenerateEnding(name, force);
       _obState.hasEnding = true;
       if (ending) {
+        obCachePage(ending);
+        const src = ending.image_b64
+          ? `data:image/jpeg;base64,${ending.image_b64}`
+          : obPageSrc('ending');
+        obShowLastGenerated('ending', 'غلاف النهاية', src);
         obRenderPreviews(obBuildOrderedPreview(
-          _obState.hasCover ? { scene_id: 'cover', kind: 'cover' } : null,
-          _obState.donePages.map(sid => ({ scene_id: sid, kind: 'page' })),
+          _obState.hasCover ? { scene_id: 'cover', kind: 'cover', src: obPageSrc('cover') } : null,
+          _obState.donePages.map(sid => ({ scene_id: sid, kind: 'page', src: obPageSrc(sid) })),
           ending,
         ));
       }
       await obPersistProgress({ step: 'ending', scenes: _obLastScenes });
       _obStep = 'pdf';
-      obSetProgress(100, 'غلاف النهاية محفوظ ✓');
+      obSetProgress(100, 'غلاف النهاية محفوظ على الطلب ✓');
       if (msg) {
-        msg.textContent = 'تم حفظ غلاف النهاية. الخطوة الأخيرة: حفظ PDF على الطلب.';
+        msg.textContent = 'تم توليد غلاف النهاية وحفظه. الخطوة الأخيرة: حفظ PDF.';
         msg.className = 'qb-msg ok';
       }
-      showToast('غلاف النهاية جاهز ومحفوظ ✓', 'ok');
+      showToast('غلاف النهاية جاهز — الصورة ظاهرة ومحفوظة ✓', 'ok');
     }
 
     if (step === 'pdf') {
