@@ -1033,6 +1033,38 @@ def make_cover_page(child_name: str) -> Image.Image:
 
 
 ENDING_SCENE_ID = "ending"
+COVER_SCENE_ID = "cover"
+
+
+def build_cover_prompt(child_name: str = "", page_count: int = 0) -> str:
+    """Premium full-color personalized front cover (not line-art)."""
+    name = (child_name or "").strip()[:40] or "طفلي"
+    pages = int(page_count) if page_count and int(page_count) > 0 else 0
+    pages_label = f"{pages} صفحة تلوين" if pages else "صفحات تلوين"
+    return (
+        "Create a premium children's personalized coloring book cover in a cute modern storybook style. "
+        "Vertical A4 portrait full-bleed composition (2480×3508 style), print-ready, 300 DPI. "
+        f"The child in the illustration must be the exact same child from the reference photo — "
+        f'same face, hairstyle, age, skin tone and identity. The child is named "{name}". '
+        "Design style: Warm cream paper texture background. Soft golden gradient from top to bottom. "
+        "Colorful torn paper borders around the edges (purple top-left, pink top-right, cyan bottom-left, pink bottom-right). "
+        "Hand-drawn doodles: hearts, stars, sparkles, circles, playful brush strokes. "
+        "Cute premium children's brand identity. Spacious clean layout. High-end children's book design. "
+        "Soft lighting. Vibrant but elegant colors. "
+        "Typography layout with clear readable playful Arabic text: "
+        'Top: "كتاب التلوين". '
+        f'Below: "خاص بـ {name}". '
+        'Below: "كتاب تلوين للأطفال". '
+        f'Below: "{pages_label}". '
+        'Right side: Round badge/logo area for "لوني". '
+        "Center: Large brush-paint frame containing the personalized child illustration. "
+        "The child is smiling, facing forward, holding colorful crayons and a rainbow paintbrush "
+        "inside a magical art studio full of paintings, brushes, sunlight, colorful canvases and warm atmosphere. "
+        'Bottom: Pink brush stroke banner with Arabic text "لون معايا كل المهن!". '
+        "Playful Arabic typography. Highly detailed. Premium children's book cover. "
+        "Disney/Pixar quality. Ultra clean. Full-page edge-to-edge, no white borders, no letterboxing. "
+        "No watermark. No extra text. Full color illustration (not black-and-white line art)."
+    )
 
 
 def build_ending_prompt(child_name: str = "") -> str:
@@ -1072,6 +1104,52 @@ def build_ending_prompt(child_name: str = "") -> str:
 
 def ending_page_path(d: Path) -> Path:
     return d / f"page_{ENDING_SCENE_ID}.jpg"
+
+
+def cover_page_path(d: Path) -> Path:
+    return d / f"page_{COVER_SCENE_ID}.jpg"
+
+
+async def generate_cover_page_async(
+    d: Path,
+    client: httpx.AsyncClient,
+    *,
+    child_name: str = "",
+    page_count: int = 0,
+    force: bool = False,
+    use_kie: bool = False,
+    ref_url: Optional[str] = None,
+) -> dict:
+    """Generate the premium full-color front cover."""
+    out = cover_page_path(d)
+    created = False
+    if force and out.exists():
+        out.unlink()
+    if not out.exists():
+        refs = ensure_multi_refs(d)
+        if not refs:
+            raise RuntimeError("مفيش صورة مرجع لغلاف البداية.")
+        prompt = build_cover_prompt(child_name, page_count=page_count)
+        if use_kie:
+            if not kie_configured():
+                raise RuntimeError("KIE_API_KEY مش مضبوط لغلاف البداية.")
+            img_bytes, _ = await generate_image_to_image(
+                prompt, refs[0], client, input_url=ref_url
+            )
+        else:
+            img_bytes = await call_model_async(prompt, refs, client)
+        Image.open(io.BytesIO(img_bytes)).convert("RGB").save(out, "JPEG", quality=93)
+        created = True
+    b64 = base64.b64encode(out.read_bytes()).decode()
+    return {
+        "scene_id": COVER_SCENE_ID,
+        "title": "الغلاف",
+        "title_en": "Cover",
+        "emoji": "📗",
+        "image_b64": b64,
+        "created": created,
+        "provider": "kie" if use_kie else "cloudflare",
+    }
 
 
 async def generate_ending_page_async(
@@ -1122,26 +1200,40 @@ def load_ending_image(d: Path) -> Optional[Image.Image]:
     return None
 
 
+def load_cover_image(d: Path) -> Optional[Image.Image]:
+    p = cover_page_path(d)
+    if p.exists():
+        return Image.open(p).convert("RGB")
+    return None
+
+
 def assemble_book_images(
     d: Path,
     order: List[str],
     child_name: str,
     *,
     include_ending: bool = True,
+    include_cover: bool = True,
 ) -> List[Image.Image]:
     """Cover + coloring pages (+ optional ending) for PDF."""
     pages: List[Image.Image] = []
+    skip = {ENDING_SCENE_ID, COVER_SCENE_ID}
     for sid in order:
         sid = (sid or "").strip()
-        if not sid or sid == ENDING_SCENE_ID or not SCENE_ID_RE.match(sid):
+        if not sid or sid in skip or not SCENE_ID_RE.match(sid):
             continue
         p = page_path(d, sid)
         if p.exists():
             pages.append(Image.open(p).convert("RGB"))
     if not pages:
         return []
-    cover = make_cover_page(child_name)
-    all_imgs = [cover] + pages
+    all_imgs: List[Image.Image] = []
+    if include_cover:
+        cover = load_cover_image(d)
+        if cover is None:
+            cover = make_cover_page(child_name)
+        all_imgs.append(cover)
+    all_imgs.extend(pages)
     if include_ending:
         ending = load_ending_image(d)
         if ending is not None:
@@ -1842,18 +1934,39 @@ def build_pdf(session_id: str):
     order = request.args.get("order", "").split(",")
     child_name = (request.args.get("name") or "").strip()[:40]
 
-    # Ensure ending page exists (Cloudflare / Flux)
-    if ACCOUNT_ID and API_TOKEN and not ending_page_path(d).exists():
+    # Ensure premium cover + ending exist when possible (Cloudflare / Flux)
+    if ACCOUNT_ID and API_TOKEN:
+        timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
+
+        async def _extras():
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                if not cover_page_path(d).exists():
+                    page_n = len([
+                        s for s in order
+                        if (s or "").strip() and SCENE_ID_RE.match((s or "").strip())
+                        and page_path(d, (s or "").strip()).exists()
+                    ])
+                    try:
+                        await generate_cover_page_async(
+                            d, client,
+                            child_name=child_name,
+                            page_count=page_n or 0,
+                            force=False,
+                            use_kie=False,
+                        )
+                    except Exception:
+                        pass
+                if not ending_page_path(d).exists():
+                    try:
+                        await generate_ending_page_async(
+                            d, client, child_name=child_name, force=False, use_kie=False
+                        )
+                    except Exception:
+                        pass
+
         try:
-            async def _ending():
-                timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
-                async with httpx.AsyncClient(timeout=timeout) as client:
-                    return await generate_ending_page_async(
-                        d, client, child_name=child_name, force=False, use_kie=False
-                    )
-            run_async(_ending())
+            run_async(_extras())
         except Exception:
-            # PDF still works without ending if generation fails
             pass
 
     all_pages = assemble_book_images(d, order, child_name, include_ending=True)
@@ -2418,6 +2531,70 @@ def admin_quick_book_generate():
         "ok_count": len(ok_ids),
         "failed": [p for p in pages if p.get("error")],
     })
+
+
+@app.route("/admin/api/quick-book/cover", methods=["POST"])
+@admin_required
+def admin_quick_book_cover():
+    """Generate premium full-color front cover via Kie GPT Image 2."""
+    if not kie_configured():
+        return jsonify({
+            "error": "مفتاح Kie.ai مش مضبوط. أضف KIE_API_KEY في ملف .env وأعد تشغيل السيرفر.",
+        }), 500
+
+    data = request.get_json(silent=True) or {}
+    session_id = (data.get("session_id") or "").strip()
+    child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
+    force = bool(data.get("force"))
+    try:
+        page_count = int(data.get("page_count") or data.get("pages") or 0)
+    except (TypeError, ValueError):
+        page_count = 0
+    if not session_id.isalnum() or len(session_id) > 40:
+        return jsonify({"error": "session غير صالح."}), 400
+    d = SESSIONS_DIR / session_id
+    if not d.exists():
+        return jsonify({"error": "الجلسة مش موجودة. ارفع الصورة تاني."}), 404
+
+    refs = ensure_multi_refs(d)
+    if not refs:
+        return jsonify({"error": "مفيش صورة مرجع. ارفع صورة الطفل تاني."}), 400
+
+    async def _run():
+        timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            ref_url = None
+            cached = d / "kie_ref_url.txt"
+            if cached.exists():
+                try:
+                    ref_url = cached.read_text(encoding="utf-8").strip() or None
+                except OSError:
+                    ref_url = None
+            if not ref_url:
+                ref_url = await kie_upload_image(
+                    refs[0], client,
+                    upload_path="coloring-book",
+                    file_name=f"{session_id}.png",
+                )
+                try:
+                    cached.write_text(ref_url, encoding="utf-8")
+                except OSError:
+                    pass
+            return await generate_cover_page_async(
+                d, client,
+                child_name=child_name,
+                page_count=page_count,
+                force=force,
+                use_kie=True,
+                ref_url=ref_url,
+            )
+
+    try:
+        page = run_async(_run())
+    except Exception as e:
+        return jsonify({"error": friendly_error(e)}), 500
+
+    return jsonify({"ok": True, "page": page, "provider": "kie"})
 
 
 @app.route("/admin/api/quick-book/ending", methods=["POST"])

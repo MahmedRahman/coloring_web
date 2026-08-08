@@ -1416,7 +1416,7 @@
 
         <div class="qb-card">
           <h3>5. إنشاء الكتاب</h3>
-          <p class="hint">التوليد عبر <strong>Kie.ai → GPT Image 2</strong>. بعد صفحات التلوين بتتولّد <strong>صفحة النهاية</strong> الملونة (تهانينا / رحلة التلوين) تلقائيًا.</p>
+          <p class="hint">التوليد عبر <strong>Kie.ai → GPT Image 2</strong>. بيتولّد <strong>غلاف البداية</strong> + صفحات التلوين + <strong>صفحة النهاية</strong> تلقائيًا.</p>
           <div class="qb-actions">
             <button type="button" class="btn btn-primary" id="qb-run-btn" onclick="qbCreateBook()">إنشاء PDF بـ GPT Image 2</button>
             <div class="qb-result" id="qb-result">
@@ -1873,8 +1873,33 @@ async function qbCreateBook() {
       showToast(`تم ${okPages.length} صفحة — فشل ${failed.length}`, 'err');
     }
 
+    // Keep order as selected
+    const okSet = new Set(okPages.map(p => p.scene_id));
+    const order = scenes.filter(id => okSet.has(id));
+
+    // Premium front cover
+    qbSetProgress(82, 'توليد غلاف البداية...');
+    let coverPage = null;
+    try {
+      const cRes = await fetch('/admin/api/quick-book/cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: _qbSessionId,
+          child_name: name,
+          page_count: order.length || _qbPageCount,
+          force: false,
+        }),
+      });
+      const cData = await cRes.json();
+      if (!cRes.ok) throw new Error(cData.error || 'فشل الغلاف');
+      coverPage = cData.page || null;
+    } catch (coverErr) {
+      showToast('الغلاف الملوّن فشل — هيستخدم غلاف بسيط', 'err');
+    }
+
     // Premium ending page (full color)
-    qbSetProgress(88, 'توليد صفحة النهاية (تهانينا!)...');
+    qbSetProgress(90, 'توليد صفحة النهاية (تهانينا!)...');
     let endingPage = null;
     try {
       const eRes = await fetch('/admin/api/quick-book/ending', {
@@ -1893,16 +1918,21 @@ async function qbCreateBook() {
       showToast('صفحة النهاية فشلت — هيكمل PDF من غيرها', 'err');
     }
 
-    // Keep order as selected
-    const okSet = new Set(okPages.map(p => p.scene_id));
-    const order = scenes.filter(id => okSet.has(id));
-
     // previews
     const previews = document.getElementById('qb-previews');
-    const previewParts = okPages.map(p => `
+    const previewParts = [];
+    if (coverPage && coverPage.image_b64) {
+      previewParts.push(`
+        <div class="qb-prev-page" title="الغلاف">
+          <img src="data:image/jpeg;base64,${coverPage.image_b64}" alt="غلاف">
+        </div>`);
+    }
+    okPages.forEach(p => {
+      previewParts.push(`
       <div class="qb-prev-page" title="${escHtml(p.title || p.scene_id)}">
         <img src="data:image/jpeg;base64,${p.image_b64}" alt="${escHtml(p.title || '')}">
       </div>`);
+    });
     if (endingPage && endingPage.image_b64) {
       previewParts.push(`
         <div class="qb-prev-page" title="صفحة النهاية">
@@ -1911,7 +1941,7 @@ async function qbCreateBook() {
     }
     previews.innerHTML = previewParts.join('');
 
-    qbSetProgress(96, 'جاري تجهيز PDF (غلاف + صفحات + نهاية)...');
+    qbSetProgress(97, 'جاري تجهيز PDF (غلاف + صفحات + نهاية)...');
     const pdfUrl = `/admin/api/quick-book/pdf/${_qbSessionId}?order=${encodeURIComponent(order.join(','))}&name=${encodeURIComponent(name)}`;
     const a = document.getElementById('qb-download');
     a.href = pdfUrl;
@@ -1919,8 +1949,10 @@ async function qbCreateBook() {
     document.getElementById('qb-result').classList.add('show');
 
     qbSetProgress(100, 'الكتاب جاهز ✓');
-    const endNote = endingPage ? ' + صفحة النهاية' : '';
-    msg.textContent = `تم إنشاء كتاب ${order.length} صفحة${endNote} لـ «${name}»`;
+    const extras = [coverPage ? 'غلاف' : null, endingPage ? 'نهاية' : null].filter(Boolean).join(' + ');
+    msg.textContent = extras
+      ? `تم إنشاء كتاب ${order.length} صفحة + ${extras} لـ «${name}»`
+      : `تم إنشاء كتاب ${order.length} صفحة لـ «${name}»`;
     msg.className = 'qb-msg ok';
     showToast('الكتاب جاهز — تقدر تحمل PDF', 'ok');
   } catch (e) {
