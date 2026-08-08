@@ -20,7 +20,8 @@ KIE_UPLOAD_URL = (
 # gpt-image-2 image-to-image — uses the child's photo as reference
 KIE_I2I_MODEL = os.environ.get("KIE_I2I_MODEL") or "gpt-image-2-image-to-image"
 # A4-ish portrait pages
-KIE_ASPECT_RATIO = os.environ.get("KIE_ASPECT_RATIO") or "3:4"  # closest to A4 among enumKIE_RESOLUTION = os.environ.get("KIE_RESOLUTION") or "1K"
+KIE_ASPECT_RATIO = os.environ.get("KIE_ASPECT_RATIO") or "3:4"  # closest to A4 among enum
+KIE_RESOLUTION = os.environ.get("KIE_RESOLUTION") or "1K"
 KIE_POLL_INTERVAL = float(os.environ.get("KIE_POLL_INTERVAL") or "3")
 KIE_POLL_TIMEOUT = float(os.environ.get("KIE_POLL_TIMEOUT") or "300")
 
