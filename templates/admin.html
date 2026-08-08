@@ -818,6 +818,40 @@
     background: #fff; aspect-ratio: 210/297; object-fit: cover;
   }
   .ob-last-gen .lg-note { margin: 8px 0 0; font-size: 12px; color: var(--ok); font-weight: 700; }
+  .ob-timer-live {
+    display: none; margin-top: 10px; padding: 12px 14px; border-radius: 12px;
+    background: rgba(6,11,20,0.55); border: 1px solid rgba(56,189,248,0.35);
+    font-variant-numeric: tabular-nums;
+  }
+  .ob-timer-live.show { display: block; }
+  .ob-timer-live .tl-label { font-size: 12.5px; color: var(--muted); margin: 0 0 4px; }
+  .ob-timer-live .tl-clock {
+    font-size: 28px; font-weight: 800; color: var(--primary);
+    font-family: var(--mono); letter-spacing: 0.04em;
+  }
+  .ob-timer-live .tl-sub { margin: 4px 0 0; font-size: 12px; color: var(--text-2); }
+  .ob-time-log {
+    margin-top: 10px; display: flex; flex-direction: column; gap: 5px;
+  }
+  .ob-time-log-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 8px;
+    background: rgba(6,11,20,0.35); border: 1px solid var(--border);
+    font-size: 12.5px;
+  }
+  .ob-time-log-row .secs {
+    font-family: var(--mono); font-weight: 800; color: var(--primary); white-space: nowrap;
+  }
+  .qb-prev-time {
+    position: absolute; left: 6px; top: 6px;
+    padding: 2px 6px; border-radius: 6px;
+    background: rgba(6,11,20,0.8); color: #7dd3fc;
+    font-size: 10.5px; font-weight: 800; font-family: var(--mono);
+  }
+  .ob-last-gen .lg-time {
+    margin: 6px 0 0; font-size: 14px; font-weight: 800;
+    color: var(--primary); font-family: var(--mono);
+  }
   /* Order form page (add / edit) */
   .of-page { max-width: 760px; }
   .of-card {
@@ -1862,7 +1896,12 @@ let _obState = {
   pdfReady: false,
 };
 let _obImgCache = {}; // scene_id -> immediate preview src (data URL or permanent URL)
-let _obLastGenerated = null; // {scene_id, title, src} for highlight panel
+let _obLastGenerated = null; // {scene_id, title, src}
+let _obTimings = {}; // scene_id -> seconds (number)
+let _obTimerIv = null;
+let _obTimerStart = 0;
+let _obTimerLabel = '';
+let _obTimerRunningFor = '';
 
 
 const OB_STEPS = [
@@ -1889,17 +1928,68 @@ async function parseJsonResponse(res) {
     if (res.status === 401 || /دخول|login/i.test(trimmed)) {
       throw new Error('انتهت جلسة الأدمن — سجّل دخول تاني.');
     }
+    if (res.status === 522 || res.status === 524 || /Error code 524|Error 524/i.test(trimmed)) {
+      throw new Error('التوليد أخد وقت طويل وCloudflare قطع الاتصال — بس الصورة ممكن تكون تولّدت. حدّث الصفحة.');
+    }
     if (res.status === 502 || res.status === 503 || res.status === 504) {
       throw new Error('السيرفر مش جاهز دلوقتي. استنى ثانية وحدّث الصفحة.');
     }
-    if (res.status >= 500) {
-      throw new Error('خطأ في السيرفر. حدّث الصفحة وجرّب تاني.');
+    if (res.status >= 500 || /Internal Server|cloudflare|<!DOCTYPE/i.test(trimmed)) {
+      throw new Error('خطأ في السيرفر أو انقطع الاتصال. لو الصورة تولّدت، حدّث الصفحة وهتلاقيها.');
     }
     if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
       throw new Error('السيرفر رجّع صفحة بدل JSON (ممكن لسه بيفتح). حدّث الصفحة وجرّب.');
     }
     throw new Error('فشل قراءة رد السيرفر. حدّث الصفحة.');
   }
+}
+
+/** Poll background generation job (short requests, avoids Cloudflare 100s timeout). */
+async function awaitQuickBookJob(jobId, { onTick } = {}) {
+  const maxMs = 12 * 60 * 1000;
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    const res = await fetch(`/admin/api/quick-book/job/${jobId}`);
+    const data = await parseJsonResponse(res);
+    if (data.status === 'running') {
+      if (onTick) onTick(data);
+      await new Promise(r => setTimeout(r, 1500));
+      continue;
+    }
+    if (data.status === 'error' || (!res.ok && data.status !== 'done')) {
+      throw new Error(data.error || 'فشل التوليد');
+    }
+    if (data.status === 'done' || res.ok) {
+      return data;
+    }
+    throw new Error(data.error || 'فشل التوليد');
+  }
+  throw new Error('التوليد أخد وقت طويل. حدّث الصفحة — لو الصورة خلصت هتكون ظاهرة.');
+}
+
+/** Start async generation and wait via polling. */
+async function qbPostAsync(url, body, { onTick } = {}) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, async: true }),
+  });
+  const data = await parseJsonResponse(res);
+  if (!res.ok) throw new Error(data.error || 'فشل الطلب');
+  if (data.job_id) {
+    return await awaitQuickBookJob(data.job_id, { onTick });
+  }
+  return data;
+}
+
+function pagePreviewSrc(page, sessionId) {
+  if (!page) return '';
+  if (page.image_b64) return `data:image/jpeg;base64,${page.image_b64}`;
+  if (page.preview_url) return `${page.preview_url}${page.preview_url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+  if (page.scene_id && sessionId) {
+    return `/admin/api/quick-book/preview/${sessionId}/${page.scene_id}?t=${Date.now()}`;
+  }
+  return '';
 }
 
 const ALL_SCENES = [
@@ -2126,10 +2216,13 @@ function qbHideProgress() {
   document.getElementById('qb-progress-fill').style.width = '0%';
 }
 
-function qbPreviewCardHTML(title, b64, kind) {
-  const src = `data:image/jpeg;base64,${b64}`;
+function qbPreviewCardHTML(title, srcOrB64, kind) {
+  // Accept full URL/src or raw base64
+  let src = srcOrB64 || '';
+  if (src && !src.startsWith('data:') && !src.startsWith('/') && !src.startsWith('http')) {
+    src = `data:image/jpeg;base64,${src}`;
+  }
   const label = escHtml(title || kind || 'صفحة');
-  // Use encoded src for onclick via data attribute (safer than injecting full base64 in onclick)
   return `
     <div class="qb-prev-page" data-qb-src="1" title="${label} — اضغط للتكبير">
       <span class="qb-prev-label">${label}</span>
@@ -2156,7 +2249,7 @@ function qbBindPreviews() {
 }
 
 function qbRenderPreviews(items) {
-  // items: [{title, image_b64, kind?}]
+  // items: [{title, image_b64?, src?, kind?}]
   const wrap = document.getElementById('qb-previews');
   const head = document.getElementById('qb-previews-head');
   if (!wrap) return;
@@ -2166,8 +2259,15 @@ function qbRenderPreviews(items) {
     return;
   }
   wrap.innerHTML = items
-    .filter(it => it && it.image_b64)
-    .map(it => qbPreviewCardHTML(it.title, it.image_b64, it.kind))
+    .map(it => {
+      if (!it) return '';
+      const src = it.src || (it.image_b64
+        ? (String(it.image_b64).startsWith('data:') ? it.image_b64 : `data:image/jpeg;base64,${it.image_b64}`)
+        : '');
+      if (!src) return '';
+      return qbPreviewCardHTML(it.title, src, it.kind);
+    })
+    .filter(Boolean)
     .join('');
   if (head) head.style.display = 'flex';
   qbBindPreviews();
@@ -2222,24 +2322,25 @@ async function qbCreateBook() {
       _qbSessionId = upData.session_id;
     }
 
-    // 2) Generate in chunks of 2 via Kie GPT Image 2 (each page ~60s)
+    // 2) Generate in chunks of 2 via Kie GPT Image 2 (async jobs — Cloudflare-safe)
     const chunks = qbChunk(scenes, 2);
     const allPages = [];
     const livePreview = [];
     for (let i = 0; i < chunks.length; i++) {
       const base = 15 + Math.round((i / chunks.length) * 60);
       qbSetProgress(base, `GPT Image 2 — توليد دفعة ${i + 1} من ${chunks.length}...`);
-      const gRes = await fetch('/admin/api/quick-book/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: _qbSessionId, scenes: chunks[i], force: false }),
+      const gData = await qbPostAsync('/admin/api/quick-book/generate', {
+        session_id: _qbSessionId,
+        scenes: chunks[i],
+        force: false,
+      }, {
+        onTick: (d) => qbSetProgress(base, `دفعة ${i + 1}/${chunks.length} · ${Math.round(d.elapsed_sec || 0)} ث`),
       });
-      const gData = await gRes.json();
-      if (!gRes.ok) throw new Error(gData.error || 'فشل التوليد');
       const batch = gData.pages || [];
       allPages.push(...batch);
-      batch.filter(p => !p.error && p.image_b64).forEach(p => {
-        livePreview.push({ title: p.title || p.scene_id, image_b64: p.image_b64, kind: 'page' });
+      batch.filter(p => !p.error).forEach(p => {
+        const src = pagePreviewSrc(p, _qbSessionId);
+        if (src) livePreview.push({ title: p.title || p.scene_id, src, image_b64: p.image_b64, kind: 'page' });
       });
       qbRenderPreviews(livePreview);
     }
@@ -2261,21 +2362,18 @@ async function qbCreateBook() {
     qbSetProgress(78, 'توليد غلاف البداية...');
     let coverPage = null;
     try {
-      const cRes = await fetch('/admin/api/quick-book/cover', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: _qbSessionId,
-          child_name: name,
-          page_count: order.length || _qbPageCount,
-          force: false,
-        }),
+      const cData = await qbPostAsync('/admin/api/quick-book/cover', {
+        session_id: _qbSessionId,
+        child_name: name,
+        page_count: order.length || _qbPageCount,
+        force: false,
+      }, {
+        onTick: (d) => qbSetProgress(78, `غلاف البداية · ${Math.round(d.elapsed_sec || 0)} ث`),
       });
-      const cData = await cRes.json();
-      if (!cRes.ok) throw new Error(cData.error || 'فشل الغلاف');
       coverPage = cData.page || null;
-      if (coverPage && coverPage.image_b64) {
-        livePreview.unshift({ title: 'الغلاف', image_b64: coverPage.image_b64, kind: 'cover' });
+      const cSrc = pagePreviewSrc(coverPage, _qbSessionId);
+      if (cSrc) {
+        livePreview.unshift({ title: 'الغلاف', src: cSrc, kind: 'cover' });
         qbRenderPreviews(livePreview);
       }
     } catch (coverErr) {
@@ -2286,20 +2384,17 @@ async function qbCreateBook() {
     qbSetProgress(88, 'توليد صفحة النهاية (تهانينا!)...');
     let endingPage = null;
     try {
-      const eRes = await fetch('/admin/api/quick-book/ending', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: _qbSessionId,
-          child_name: name,
-          force: false,
-        }),
+      const eData = await qbPostAsync('/admin/api/quick-book/ending', {
+        session_id: _qbSessionId,
+        child_name: name,
+        force: false,
+      }, {
+        onTick: (d) => qbSetProgress(88, `صفحة النهاية · ${Math.round(d.elapsed_sec || 0)} ث`),
       });
-      const eData = await eRes.json();
-      if (!eRes.ok) throw new Error(eData.error || 'فشل صفحة النهاية');
       endingPage = eData.page || null;
-      if (endingPage && endingPage.image_b64) {
-        livePreview.push({ title: 'صفحة النهاية', image_b64: endingPage.image_b64, kind: 'ending' });
+      const eSrc = pagePreviewSrc(endingPage, _qbSessionId);
+      if (eSrc) {
+        livePreview.push({ title: 'صفحة النهاية', src: eSrc, kind: 'ending' });
         qbRenderPreviews(livePreview);
       }
     } catch (endErr) {
@@ -2308,15 +2403,14 @@ async function qbCreateBook() {
 
     // Final ordered preview: cover → pages → ending
     const finalItems = [];
-    if (coverPage && coverPage.image_b64) {
-      finalItems.push({ title: 'الغلاف', image_b64: coverPage.image_b64 });
-    }
+    const cSrcF = pagePreviewSrc(coverPage, _qbSessionId);
+    if (cSrcF) finalItems.push({ title: 'الغلاف', src: cSrcF });
     okPages.forEach(p => {
-      if (p.image_b64) finalItems.push({ title: p.title || p.scene_id, image_b64: p.image_b64 });
+      const s = pagePreviewSrc(p, _qbSessionId);
+      if (s) finalItems.push({ title: p.title || p.scene_id, src: s });
     });
-    if (endingPage && endingPage.image_b64) {
-      finalItems.push({ title: 'صفحة النهاية', image_b64: endingPage.image_b64 });
-    }
+    const eSrcF = pagePreviewSrc(endingPage, _qbSessionId);
+    if (eSrcF) finalItems.push({ title: 'صفحة النهاية', src: eSrcF });
     qbRenderPreviews(finalItems);
 
     qbSetProgress(97, 'جاري تجهيز PDF (غلاف + صفحات + نهاية)...');
@@ -3143,19 +3237,111 @@ function obSetProgress(pct, text) {
 }
 
 function obHideProgress() {
+  obStopLiveTimer(false);
   const wrap = document.getElementById('ob-progress');
   if (wrap) wrap.classList.remove('show');
   const fill = document.getElementById('ob-progress-fill');
   if (fill) fill.style.width = '0%';
 }
 
+function obFormatDuration(sec) {
+  const s = Math.max(0, Math.round(Number(sec) || 0));
+  if (s < 60) return `${s} ث`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${String(r).padStart(2, '0')} د`;
+}
+
+function obStartLiveTimer(label, sceneHint) {
+  obStopLiveTimer(false);
+  _obTimerStart = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  _obTimerLabel = label || 'جاري التوليد';
+  _obTimerRunningFor = sceneHint || '';
+  const box = document.getElementById('ob-timer-live');
+  const clock = document.getElementById('ob-timer-clock');
+  const lab = document.getElementById('ob-timer-label');
+  const sub = document.getElementById('ob-timer-sub');
+  if (lab) lab.textContent = _obTimerLabel;
+  if (clock) clock.textContent = '0:00';
+  if (sub) sub.textContent = 'الوقت المستمر أثناء التوليد...';
+  if (box) box.classList.add('show');
+  _obTimerIv = setInterval(() => {
+    const elapsed = ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - _obTimerStart) / 1000;
+    if (clock) {
+      const s = Math.floor(elapsed);
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      clock.textContent = `${m}:${String(r).padStart(2, '0')}`;
+    }
+    const t = document.getElementById('ob-progress-text');
+    if (t && _obTimerLabel) {
+      t.textContent = `${_obTimerLabel} · ${obFormatDuration(elapsed)}`;
+    }
+  }, 200);
+}
+
+function obStopLiveTimer(record) {
+  const elapsed = _obTimerStart
+    ? ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - _obTimerStart) / 1000
+    : 0;
+  if (_obTimerIv) {
+    clearInterval(_obTimerIv);
+    _obTimerIv = null;
+  }
+  const box = document.getElementById('ob-timer-live');
+  if (record === false && box) {
+    // keep visible until next start / hide only on full hide
+  }
+  if (record !== false && box) {
+    const sub = document.getElementById('ob-timer-sub');
+    if (sub) sub.textContent = `انتهى · ${obFormatDuration(elapsed)}`;
+  }
+  _obTimerStart = 0;
+  return elapsed;
+}
+
+function obRecordTiming(sceneId, seconds) {
+  if (!sceneId) return;
+  _obTimings[sceneId] = Math.round(Number(seconds) * 10) / 10;
+  obRenderTimeLog();
+}
+
+function obRenderTimeLog() {
+  const log = document.getElementById('ob-time-log');
+  if (!log) return;
+  const keys = Object.keys(_obTimings);
+  if (!keys.length) {
+    log.innerHTML = '';
+    return;
+  }
+  const order = [];
+  if (_obTimings.cover != null) order.push('cover');
+  (_obLastScenes || []).forEach(s => { if (_obTimings[s] != null) order.push(s); });
+  if (_obTimings.ending != null) order.push('ending');
+  // any extras
+  keys.forEach(k => { if (!order.includes(k)) order.push(k); });
+  log.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">زمن التوليد لكل صورة</div>' +
+    order.map(sid => {
+      const title = sid === 'cover' ? 'غلاف البداية' : sid === 'ending' ? 'غلاف النهاية' : sceneTitle(sid);
+      return `<div class="ob-time-log-row">
+        <span>${escHtml(title)}</span>
+        <span class="secs">${obFormatDuration(_obTimings[sid])}</span>
+      </div>`;
+    }).join('');
+}
+
 function obPreviewCardHTML(title, src, kind, sceneId) {
   const label = escHtml(title || kind || 'صفحة');
   const sid = escHtml(sceneId || kind || '');
   const kindSafe = escHtml(kind || 'page');
+  const secs = _obTimings[sceneId || kind];
+  const timeBadge = secs != null
+    ? `<span class="qb-prev-time" title="وقت التوليد">${obFormatDuration(secs)}</span>`
+    : '';
   return `
     <div class="qb-prev-page" data-kind="${kindSafe}" data-scene="${sid}" title="${label} — اضغط للتكبير">
       <span class="qb-prev-label">${label}</span>
+      ${timeBadge}
       <img src="${src}" alt="${label}" loading="lazy">
       <div class="ob-prev-actions">
         <button type="button" class="qb-prev-zoom" title="تكبير">⛶ تكبير</button>
@@ -3361,15 +3547,24 @@ function renderOrderColoringBook(o) {
           <div class="ob-last-gen" id="ob-last-gen">
             <p class="lg-title" id="ob-last-gen-title">آخر صورة تم توليدها</p>
             <img id="ob-last-gen-img" alt="آخر توليد" onclick="openLightbox(this.src)">
+            <p class="lg-time" id="ob-last-gen-time" style="display:none"></p>
             <p class="lg-note" id="ob-last-gen-note">تم الحفظ على الطلب ✓</p>
           </div>
+
+          <div class="qb-progress" id="ob-progress">
+            <div class="qb-progress-text" id="ob-progress-text">جاري التوليد...</div>
+            <div class="qb-progress-bar"><div class="qb-progress-fill" id="ob-progress-fill"></div></div>
+          </div>
+          <div class="ob-timer-live" id="ob-timer-live">
+            <p class="tl-label" id="ob-timer-label">جاري التوليد</p>
+            <div class="tl-clock" id="ob-timer-clock">0:00</div>
+            <p class="tl-sub" id="ob-timer-sub">الوقت المستمر أثناء التوليد...</p>
+          </div>
+          <div class="ob-time-log" id="ob-time-log"></div>
+
           <div class="qb-actions" id="ob-step-actions"></div>
         </div>
 
-        <div class="qb-progress" id="ob-progress">
-          <div class="qb-progress-text" id="ob-progress-text">جاري التوليد...</div>
-          <div class="qb-progress-bar"><div class="qb-progress-fill" id="ob-progress-fill"></div></div>
-        </div>
         <div class="qb-msg" id="ob-msg"></div>
         <div class="qb-result" id="ob-result" style="margin-top:10px">
           <a class="btn btn-success" id="ob-download" href="#" target="_blank">تحميل PDF</a>
@@ -3424,17 +3619,18 @@ function obCachePage(pageOrId, b64) {
     return;
   }
   const p = pageOrId;
-  if (p.scene_id && p.image_b64) {
-    _obImgCache[p.scene_id] = `data:image/jpeg;base64,${p.image_b64}`;
-  }
+  if (!p.scene_id) return;
+  const src = pagePreviewSrc(p, _obSessionId);
+  if (src) _obImgCache[p.scene_id] = src;
 }
 
-function obShowLastGenerated(sceneId, title, src) {
-  _obLastGenerated = { scene_id: sceneId, title, src };
+function obShowLastGenerated(sceneId, title, src, durationSec) {
+  _obLastGenerated = { scene_id: sceneId, title, src, duration: durationSec };
   const box = document.getElementById('ob-last-gen');
   const img = document.getElementById('ob-last-gen-img');
   const t = document.getElementById('ob-last-gen-title');
   const note = document.getElementById('ob-last-gen-note');
+  const timeEl = document.getElementById('ob-last-gen-time');
   if (!box || !img) return;
   if (!src) {
     box.classList.remove('show');
@@ -3442,6 +3638,14 @@ function obShowLastGenerated(sceneId, title, src) {
   }
   img.src = src;
   if (t) t.textContent = `تم التوليد: ${title || sceneId || 'صفحة'}`;
+  if (timeEl) {
+    if (durationSec != null) {
+      timeEl.textContent = `⏱ الوقت: ${obFormatDuration(durationSec)}`;
+      timeEl.style.display = '';
+    } else {
+      timeEl.style.display = 'none';
+    }
+  }
   if (note) note.textContent = 'الصورة محفوظة على الطلب ✓ — تقدر تكمل الخطوة الجاية';
   box.classList.add('show');
   try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) {}
@@ -3574,12 +3778,17 @@ function obRenderWizardUI() {
 
   if (listEl) {
     const rows = [];
+    const timeMark = (id, fallback) => {
+      const s = _obTimings[id];
+      if (s == null) return fallback;
+      return `${fallback} · ${obFormatDuration(s)}`;
+    };
     if (_obState.hasCover) {
       const csrc = obPageSrc('cover');
       rows.push(`<div class="ob-check-row done">
         ${csrc ? `<img class="thumb" src="${csrc}" alt="غلاف" onclick="openLightbox('${csrc}')">` : ''}
         <span style="flex:1">✓ غلاف البداية</span>
-        <span class="mark">محفوظ</span>
+        <span class="mark">${timeMark('cover', 'محفوظ')}</span>
       </div>`);
     }
     planned.forEach(sid => {
@@ -3588,7 +3797,7 @@ function obRenderWizardUI() {
       rows.push(`<div class="ob-check-row ${done ? 'done' : 'todo'}">
         ${src ? `<img class="thumb" src="${src}" alt="" onclick="openLightbox('${src}')">` : '<span style="width:44px"></span>'}
         <span style="flex:1">${done ? '✓' : '○'} ${escHtml(sceneTitle(sid))}</span>
-        <span class="mark">${done ? 'محفوظ' : 'بانتظار التوليد'}</span>
+        <span class="mark">${timeMark(sid, done ? 'محفوظ' : 'بانتظار التوليد')}</span>
       </div>`);
     });
     if (_obState.hasEnding) {
@@ -3596,7 +3805,7 @@ function obRenderWizardUI() {
       rows.push(`<div class="ob-check-row done">
         ${esrc ? `<img class="thumb" src="${esrc}" alt="نهاية" onclick="openLightbox('${esrc}')">` : ''}
         <span style="flex:1">✓ غلاف النهاية</span>
-        <span class="mark">محفوظ</span>
+        <span class="mark">${timeMark('ending', 'محفوظ')}</span>
       </div>`);
     }
     listEl.innerHTML = rows.join('') || '<div class="muted" style="font-size:12.5px">اختار الوظائف في الخطوة 4 واحفظ الإعداد.</div>';
@@ -3637,6 +3846,9 @@ function obRenderWizardUI() {
     <button type="button" class="btn btn-ghost" onclick="obContinueWizard()" title="يكمل أول خطوة ناقصة">▶ كمل من حيث وصلت</button>
   `;
   if (actionsEl) actionsEl.innerHTML = actions;
+  if (_obBusy && actionsEl) {
+    actionsEl.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  }
 
   // PDF download visibility
   const resultEl = document.getElementById('ob-result');
@@ -3799,62 +4011,112 @@ async function obSaveToOrder(scenes, name) {
 }
 
 async function obGenerateCover(name, pageCount, force) {
-  const cRes = await fetch('/admin/api/quick-book/cover', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  obStartLiveTimer('توليد غلاف البداية...', 'cover');
+  obSetProgress(15, 'توليد غلاف البداية...');
+  try {
+    const cData = await qbPostAsync('/admin/api/quick-book/cover', {
       session_id: _obSessionId,
       child_name: name,
       page_count: pageCount,
       force: !!force,
-    }),
-  });
-  const cData = await parseJsonResponse(cRes);
-  if (!cRes.ok) throw new Error(cData.error || 'فشل غلاف البداية');
-  return cData.page || null;
+    }, {
+      onTick: (d) => {
+        const el = Math.round(d.elapsed_sec || 0);
+        obSetProgress(20, `توليد غلاف البداية... (${el} ث)`);
+      },
+    });
+    const secs = obStopLiveTimer(true);
+    obRecordTiming('cover', secs);
+    const page = cData.page || null;
+    if (page) {
+      page.duration_sec = secs;
+      if (!page.preview_url && _obSessionId) {
+        page.preview_url = `/admin/api/quick-book/preview/${_obSessionId}/cover`;
+      }
+    }
+    return page;
+  } catch (e) {
+    obStopLiveTimer(true);
+    throw e;
+  }
 }
 
 async function obGenerateEnding(name, force) {
-  const eRes = await fetch('/admin/api/quick-book/ending', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  obStartLiveTimer('توليد غلاف النهاية...', 'ending');
+  obSetProgress(15, 'توليد غلاف النهاية...');
+  try {
+    const eData = await qbPostAsync('/admin/api/quick-book/ending', {
       session_id: _obSessionId,
       child_name: name,
       force: !!force,
-    }),
-  });
-  const eData = await parseJsonResponse(eRes);
-  if (!eRes.ok) throw new Error(eData.error || 'فشل غلاف النهاية');
-  return eData.page || null;
+    }, {
+      onTick: (d) => {
+        const el = Math.round(d.elapsed_sec || 0);
+        obSetProgress(20, `توليد غلاف النهاية... (${el} ث)`);
+      },
+    });
+    const secs = obStopLiveTimer(true);
+    obRecordTiming('ending', secs);
+    const page = eData.page || null;
+    if (page) {
+      page.duration_sec = secs;
+      if (!page.preview_url && _obSessionId) {
+        page.preview_url = `/admin/api/quick-book/preview/${_obSessionId}/ending`;
+      }
+    }
+    return page;
+  } catch (e) {
+    obStopLiveTimer(true);
+    throw e;
+  }
 }
 
 async function obGeneratePages(scenes, force) {
-  const chunks = qbChunk(scenes, 2);
+  // One page at a time so each image gets an accurate live timer
   const allPages = [];
-  for (let i = 0; i < chunks.length; i++) {
-    const base = 20 + Math.round((i / Math.max(chunks.length, 1)) * 60);
-    obSetProgress(base, `صفحات التلوين — دفعة ${i + 1}/${chunks.length}...`);
-    const gRes = await fetch('/admin/api/quick-book/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: _obSessionId, scenes: chunks[i], force: !!force }),
-    });
-    const gData = await parseJsonResponse(gRes);
-    if (!gRes.ok) throw new Error(gData.error || 'فشل التوليد');
-    const batch = gData.pages || [];
-    allPages.push(...batch);
-    batch.filter(p => !p.error).forEach(p => {
-      obCachePage(p);
-      if (p.image_b64) {
-        obShowLastGenerated(
-          p.scene_id,
-          p.title || sceneTitle(p.scene_id),
-          `data:image/jpeg;base64,${p.image_b64}`,
-        );
-      }
-    });
-    // Persist after each batch so progress never lost
+  for (let i = 0; i < scenes.length; i++) {
+    const sid = scenes[i];
+    const title = sceneTitle(sid);
+    const pct = 10 + Math.round((i / Math.max(scenes.length, 1)) * 80);
+    obSetProgress(pct, `توليد «${title}» (${i + 1}/${scenes.length})...`);
+    obStartLiveTimer(`توليد «${title}» (${i + 1}/${scenes.length})`, sid);
+    try {
+      const gData = await qbPostAsync('/admin/api/quick-book/generate', {
+        session_id: _obSessionId,
+        scenes: [sid],
+        force: !!force,
+      }, {
+        onTick: (d) => {
+          const el = Math.round(d.elapsed_sec || 0);
+          obSetProgress(pct, `توليد «${title}» (${i + 1}/${scenes.length}) · ${el} ث`);
+        },
+      });
+      const secs = obStopLiveTimer(true);
+      const batch = gData.pages || [];
+      batch.forEach(p => {
+        if (!p.error) {
+          p.duration_sec = secs;
+          obRecordTiming(p.scene_id || sid, secs);
+          obCachePage(p);
+          const src = pagePreviewSrc(p, _obSessionId) || obPageSrc(p.scene_id || sid);
+          if (src) {
+            obShowLastGenerated(
+              p.scene_id,
+              p.title || title,
+              src,
+              secs,
+            );
+          }
+        }
+      });
+      allPages.push(...batch);
+    } catch (e) {
+      obStopLiveTimer(true);
+      allPages.push({ scene_id: sid, error: e.message || 'فشل' });
+      continue;
+    }
+
+    // Persist after each image so progress never lost
     const okIds = allPages.filter(p => !p.error).map(p => p.scene_id);
     const planned = _obLastScenes.length ? _obLastScenes : scenes;
     const doneUnion = [...new Set([...(_obState.donePages || []), ...okIds])];
@@ -3862,14 +4124,10 @@ async function obGeneratePages(scenes, force) {
     _obState.missingPages = planned.filter(s => !doneUnion.includes(s));
     try {
       await obPersistProgress({ step: 'pages', scenes: planned });
-    } catch (_) { /* keep going */ }
+    } catch (_) { /* keep going — image already generated */ }
     obRefreshPreviewsFromState();
-    // rebuild checklist thumbs without full wizard button reset mid-batch if possible
-    const listEl = document.getElementById('ob-step-checklist');
-    if (listEl) {
-      // light refresh of previews is enough; full wizard re-renders buttons
-      obRenderWizardUI();
-    }
+    obRenderTimeLog();
+    if (document.getElementById('ob-step-checklist')) obRenderWizardUI();
   }
   return allPages;
 }
@@ -3918,25 +4176,28 @@ async function obRunStep(step, opts = {}) {
       _obState.hasCover = true;
       if (cover) {
         obCachePage(cover);
-        const src = _obImgCache.cover || (cover.image_b64 ? `data:image/jpeg;base64,${cover.image_b64}` : '');
-        obShowLastGenerated('cover', 'غلاف البداية', src);
+        const src = pagePreviewSrc(cover, _obSessionId)
+          || _obImgCache.cover
+          || obPageSrc('cover');
+        obShowLastGenerated('cover', 'غلاف البداية', src, cover.duration_sec);
         obRenderPreviews(obBuildOrderedPreview(cover,
           _obState.donePages.map(sid => ({ scene_id: sid, kind: 'page', src: obPageSrc(sid) })),
           _obState.hasEnding ? { scene_id: 'ending', kind: 'ending', src: obPageSrc('ending') } : null));
       }
       obSetProgress(70, 'حفظ صورة الغلاف على الطلب...');
-      await obPersistProgress({ step: 'cover', scenes: _obLastScenes });
-      // Prefer permanent order URL after save while keeping data URL for instant display
-      if (_obOrder && _obImgCache.cover && _obImgCache.cover.startsWith('data:')) {
-        // keep data URL; also available permanently as book-page/cover
+      try {
+        await obPersistProgress({ step: 'cover', scenes: _obLastScenes });
+      } catch (persistErr) {
+        // Image already generated — don't scare user with hard failure
+        showToast('الصورة تولّدت — فيه مشكلة في حفظ الحالة: ' + (persistErr.message || ''), 'err');
       }
       _obStep = 'pages';
       obSetProgress(100, 'غلاف البداية محفوظ على الطلب ✓');
       if (msg) {
-        msg.textContent = 'تم توليد غلاف البداية وحفظ الصورة على الطلب. كمل صفحات التلوين.';
+        msg.textContent = 'تم توليد غلاف البداية. كمل صفحات التلوين.';
         msg.className = 'qb-msg ok';
       }
-      showToast('غلاف البداية جاهز — الصورة ظاهرة ومحفوظة ✓', 'ok');
+      showToast('غلاف البداية جاهز ✓', 'ok');
     }
 
     if (step === 'pages') {
@@ -3963,12 +4224,15 @@ async function obRunStep(step, opts = {}) {
         const last = okPages[okPages.length - 1];
         if (last) {
           obShowLastGenerated(last.scene_id, last.title || sceneTitle(last.scene_id),
-            last.image_b64 ? `data:image/jpeg;base64,${last.image_b64}` : obPageSrc(last.scene_id));
+            pagePreviewSrc(last, _obSessionId) || obPageSrc(last.scene_id),
+            last.duration_sec != null ? last.duration_sec : _obTimings[last.scene_id]);
         }
         const done = new Set([..._obState.donePages, ...okPages.map(p => p.scene_id)]);
         _obState.donePages = planned.filter(s => done.has(s));
         _obState.missingPages = planned.filter(s => !done.has(s));
-        await obPersistProgress({ step: 'pages', scenes: planned });
+        try {
+          await obPersistProgress({ step: 'pages', scenes: planned });
+        } catch (_) { /* images already on disk */ }
         if (!_obState.missingPages.length) {
           _obStep = 'ending';
           if (msg) {
@@ -3992,17 +4256,17 @@ async function obRunStep(step, opts = {}) {
       _obState.hasEnding = true;
       if (ending) {
         obCachePage(ending);
-        const src = ending.image_b64
-          ? `data:image/jpeg;base64,${ending.image_b64}`
-          : obPageSrc('ending');
-        obShowLastGenerated('ending', 'غلاف النهاية', src);
+        const src = pagePreviewSrc(ending, _obSessionId) || obPageSrc('ending');
+        obShowLastGenerated('ending', 'غلاف النهاية', src, ending.duration_sec);
         obRenderPreviews(obBuildOrderedPreview(
           _obState.hasCover ? { scene_id: 'cover', kind: 'cover', src: obPageSrc('cover') } : null,
           _obState.donePages.map(sid => ({ scene_id: sid, kind: 'page', src: obPageSrc(sid) })),
           ending,
         ));
       }
-      await obPersistProgress({ step: 'ending', scenes: _obLastScenes });
+      try {
+        await obPersistProgress({ step: 'ending', scenes: _obLastScenes });
+      } catch (_) { /* ending image already generated */ }
       _obStep = 'pdf';
       obSetProgress(100, 'غلاف النهاية محفوظ على الطلب ✓');
       if (msg) {
@@ -4106,6 +4370,7 @@ async function obCreateBook(opts = {}) {
       const st = await obEnsureSession({ forceNew: false });
       if (!st) throw new Error('فشل الجلسة');
     }
+    if (force) _obTimings = {};
     _obLastScenes = [...scenes];
     await obPersistProgress({ step: 'setup', scenes, child_name: name });
 

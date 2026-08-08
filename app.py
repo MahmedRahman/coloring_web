@@ -181,14 +181,15 @@ CUSTOM_ID_RE = re.compile(r"^custom_[a-f0-9]{8,24}$")
 SCENE_ID_RE = re.compile(r"^[a-z0-9_]{1,40}$")
 SHARE_ID_RE = re.compile(r"^[a-f0-9]{16,64}$")
 
-SESSIONS_DIR = Path(tempfile.gettempdir()) / "coloring_sessions"
-SHARES_DIR = Path(tempfile.gettempdir()) / "coloring_shares"
 DATA_DIR = Path(os.environ.get("COLORING_DATA_DIR", Path(__file__).resolve().parent / "data"))
+# Persist sessions under data (not /tmp) so restarts / multi-worker don't lose work mid-book
+SESSIONS_DIR = DATA_DIR / "sessions"
+SHARES_DIR = DATA_DIR / "shares"
 DB_PATH = DATA_DIR / "analytics.db"
 SPECIAL_ORDERS_DIR = DATA_DIR / "special_orders"
+DATA_DIR.mkdir(exist_ok=True)
 SESSIONS_DIR.mkdir(exist_ok=True)
 SHARES_DIR.mkdir(exist_ok=True)
-DATA_DIR.mkdir(exist_ok=True)
 SPECIAL_ORDERS_DIR.mkdir(exist_ok=True)
 
 app = Flask(__name__)
@@ -221,6 +222,96 @@ limiter = Limiter(
 _db_lock = threading.Lock()
 _scheduler: Optional[BackgroundScheduler] = None
 
+# Background jobs for long Kie generations (Cloudflare kills HTTP > ~100s)
+# Stored on disk so any gunicorn worker can poll the same job.
+_JOBS_DIR = DATA_DIR / "jobs"
+_JOBS_DIR.mkdir(exist_ok=True)
+_jobs_lock = threading.Lock()
+
+
+def _job_path(job_id: str) -> Path:
+    return _JOBS_DIR / f"{job_id}.json"
+
+
+def _prune_old_jobs(max_age_sec: int = 3600) -> None:
+    now = time.time()
+    try:
+        for p in _JOBS_DIR.glob("*.json"):
+            try:
+                if now - p.stat().st_mtime > max_age_sec:
+                    p.unlink(missing_ok=True)
+            except OSError:
+                pass
+    except OSError:
+        pass
+
+
+def _job_write(job_id: str, payload: dict) -> None:
+    path = _job_path(job_id)
+    tmp = path.with_suffix(".tmp")
+    data = dict(payload)
+    data["job_id"] = job_id
+    raw = json.dumps(data, ensure_ascii=False)
+    with _jobs_lock:
+        tmp.write_text(raw, encoding="utf-8")
+        tmp.replace(path)
+
+
+def _job_read(job_id: str) -> Optional[dict]:
+    path = _job_path(job_id)
+    if not path.exists():
+        return None
+    try:
+        with _jobs_lock:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else None
+    except (OSError, json.JSONDecodeError, TypeError):
+        return None
+
+
+def _page_for_client(page: dict, session_id: str, *, include_b64: bool = False) -> dict:
+    """Return page payload; omit huge base64 by default (client uses preview URL)."""
+    if not isinstance(page, dict):
+        return page
+    out = dict(page)
+    sid = out.get("scene_id") or ""
+    if sid and session_id:
+        out["preview_url"] = f"/admin/api/quick-book/preview/{session_id}/{sid}"
+    if not include_b64:
+        out.pop("image_b64", None)
+    return out
+
+
+def _enqueue_job(kind: str, worker_fn) -> str:
+    """Run heavy work off the request thread so Cloudflare won't 524."""
+    _prune_old_jobs()
+    job_id = secrets.token_hex(12)
+    _job_write(job_id, {
+        "status": "running",
+        "kind": kind,
+        "error": None,
+        "result": None,
+        "created_at": time.time(),
+    })
+
+    def _run():
+        try:
+            result = worker_fn()
+            cur = _job_read(job_id) or {}
+            cur["status"] = "done"
+            cur["result"] = result
+            cur["error"] = None
+            _job_write(job_id, cur)
+        except Exception as e:
+            cur = _job_read(job_id) or {}
+            cur["status"] = "error"
+            cur["error"] = friendly_error(e)
+            cur["result"] = None
+            _job_write(job_id, cur)
+
+    threading.Thread(target=_run, name=f"qb-job-{kind}-{job_id[:6]}", daemon=True).start()
+    return job_id
+
 
 @app.errorhandler(429)
 def ratelimit_handler(e):
@@ -228,6 +319,21 @@ def ratelimit_handler(e):
         "error": "وصلت للحد الأقصى: 5 كتب في الساعة. جرّب تاني بعد شوية.",
         "error_en": "Rate limit reached: 5 books per hour. Please try again later.",
     }), 429
+
+
+@app.errorhandler(500)
+def api_internal_error(e):
+    """Always return JSON for admin APIs — never HTML error pages for fetch()."""
+    wants_json = (
+        request.path.startswith("/admin/api")
+        or request.path.startswith("/api")
+        or "application/json" in (request.headers.get("Accept") or "")
+    )
+    if wants_json:
+        return jsonify({
+            "error": "حصل خطأ داخلي في السيرفر. لو الصورة تولّدت، حدّث الصفحة وهتلاقيها.",
+        }), 500
+    return ("Internal Server Error", 500)
 
 
 def db_connect():
@@ -2455,6 +2561,12 @@ def admin_quick_book_generate():
         return jsonify({"error": f"أقصى عدد للصفحات هو {ADMIN_MAX_PAGES}."}), 400
 
     force = bool(data.get("force"))
+    use_async = bool(data.get("async") or data.get("background"))
+    # Sync responses keep base64 for older clients; async defaults to preview URL only
+    if "include_image" in data or "include_b64" in data:
+        include_b64 = bool(data.get("include_image") or data.get("include_b64"))
+    else:
+        include_b64 = not use_async
     style = {
         "variant": data.get("variant") or DEFAULT_VARIANT,
         "line_weight": data.get("line_weight") or "normal",
@@ -2475,70 +2587,78 @@ def admin_quick_book_generate():
     if not refs:
         return jsonify({"error": "مفيش صورة مرجع. ارفع صورة الطفل تاني."}), 400
 
-    async def _run_all():
-        # Longer timeout: each GPT Image task can take ~60s
-        timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            ref_url = await kie_upload_image(
-                refs[0],
-                client,
-                upload_path="coloring-book",
-                file_name=f"{session_id}.png",
-            )
-            # Cache ref URL on disk for retries in same session
-            try:
-                (d / "kie_ref_url.txt").write_text(ref_url, encoding="utf-8")
-            except OSError:
-                pass
-
-            sem = asyncio.Semaphore(3)  # limit parallel Kie tasks
-            tasks = [
-                generate_one_kie_async(
-                    d, sc, force, style, client, ref_url=ref_url, sem=sem
+    def _do_generate() -> dict:
+        async def _run_all():
+            timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                ref_url = await kie_upload_image(
+                    refs[0],
+                    client,
+                    upload_path="coloring-book",
+                    file_name=f"{session_id}.png",
                 )
-                for sc in scenes
-            ]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            out = []
-            for sc, res in zip(scenes, results):
-                if isinstance(res, Exception):
-                    out.append({"scene_id": sc["id"], "error": friendly_error(res)})
-                else:
-                    out.append(res)
-            return out
+                try:
+                    (d / "kie_ref_url.txt").write_text(ref_url, encoding="utf-8")
+                except OSError:
+                    pass
+
+                sem = asyncio.Semaphore(3)
+                tasks = [
+                    generate_one_kie_async(
+                        d, sc, force, style, client, ref_url=ref_url, sem=sem
+                    )
+                    for sc in scenes
+                ]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                out = []
+                for sc, res in zip(scenes, results):
+                    if isinstance(res, Exception):
+                        out.append({"scene_id": sc["id"], "error": friendly_error(res)})
+                    else:
+                        out.append(_page_for_client(res, session_id, include_b64=include_b64))
+                return out
+
+        pages = run_async(_run_all())
+        ok_ids = [p["scene_id"] for p in pages if not p.get("error")]
+        created_ids = [
+            p["scene_id"] for p in pages
+            if not p.get("error") and p.get("created")
+        ]
+        if created_ids:
+            ip = get_remote_address()
+            now = datetime.now(timezone.utc).isoformat()
+            with _db_lock:
+                conn = db_connect()
+                conn.execute(
+                    "INSERT INTO books (created_at, ip, session_id, pages, user_id) VALUES (?, ?, ?, ?, ?)",
+                    (now, ip, session_id, len(created_ids), None),
+                )
+                for sid in created_ids:
+                    conn.execute(
+                        "INSERT INTO scene_picks (created_at, scene_id) VALUES (?, ?)",
+                        (now, sid),
+                    )
+                conn.commit()
+                conn.close()
+        return {
+            "ok": True,
+            "provider": "kie",
+            "model": "gpt-image-2-image-to-image",
+            "pages": pages,
+            "ok_count": len(ok_ids),
+            "failed": [p for p in pages if p.get("error")],
+            "session_id": session_id,
+        }
+
+    if use_async:
+        job_id = _enqueue_job("generate", _do_generate)
+        return jsonify({"ok": True, "job_id": job_id, "status": "running"})
 
     try:
-        pages = run_async(_run_all())
+        payload = _do_generate()
     except Exception as e:
         return jsonify({"error": friendly_error(e)}), 500
-
-    ok_ids = [p["scene_id"] for p in pages if not p.get("error")]
-    created_ids = [p["scene_id"] for p in pages if not p.get("error") and p.get("created")]
-    if created_ids:
-        ip = get_remote_address()
-        now = datetime.now(timezone.utc).isoformat()
-        with _db_lock:
-            conn = db_connect()
-            conn.execute(
-                "INSERT INTO books (created_at, ip, session_id, pages, user_id) VALUES (?, ?, ?, ?, ?)",
-                (now, ip, session_id, len(created_ids), None),
-            )
-            for sid in created_ids:
-                conn.execute(
-                    "INSERT INTO scene_picks (created_at, scene_id) VALUES (?, ?)",
-                    (now, sid),
-                )
-            conn.commit()
-            conn.close()
-
-    return jsonify({
-        "ok": True,
-        "provider": "kie",
-        "model": "gpt-image-2-image-to-image",
-        "pages": pages,
-        "ok_count": len(ok_ids),
-        "failed": [p for p in pages if p.get("error")],
-    })
+    return jsonify(payload)
 
 
 @app.route("/admin/api/quick-book/cover", methods=["POST"])
@@ -2554,6 +2674,11 @@ def admin_quick_book_cover():
     session_id = (data.get("session_id") or "").strip()
     child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
     force = bool(data.get("force"))
+    use_async = bool(data.get("async") or data.get("background"))
+    if "include_image" in data or "include_b64" in data:
+        include_b64 = bool(data.get("include_image") or data.get("include_b64"))
+    else:
+        include_b64 = not use_async
     try:
         page_count = int(data.get("page_count") or data.get("pages") or 0)
     except (TypeError, ValueError):
@@ -2568,41 +2693,53 @@ def admin_quick_book_cover():
     if not refs:
         return jsonify({"error": "مفيش صورة مرجع. ارفع صورة الطفل تاني."}), 400
 
-    async def _run():
-        timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            ref_url = None
-            cached = d / "kie_ref_url.txt"
-            if cached.exists():
-                try:
-                    ref_url = cached.read_text(encoding="utf-8").strip() or None
-                except OSError:
-                    ref_url = None
-            if not ref_url:
-                ref_url = await kie_upload_image(
-                    refs[0], client,
-                    upload_path="coloring-book",
-                    file_name=f"{session_id}.png",
+    def _do_cover() -> dict:
+        async def _run():
+            timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                ref_url = None
+                cached = d / "kie_ref_url.txt"
+                if cached.exists():
+                    try:
+                        ref_url = cached.read_text(encoding="utf-8").strip() or None
+                    except OSError:
+                        ref_url = None
+                if not ref_url:
+                    ref_url = await kie_upload_image(
+                        refs[0], client,
+                        upload_path="coloring-book",
+                        file_name=f"{session_id}.png",
+                    )
+                    try:
+                        cached.write_text(ref_url, encoding="utf-8")
+                    except OSError:
+                        pass
+                return await generate_cover_page_async(
+                    d, client,
+                    child_name=child_name,
+                    page_count=page_count,
+                    force=force,
+                    use_kie=True,
+                    ref_url=ref_url,
                 )
-                try:
-                    cached.write_text(ref_url, encoding="utf-8")
-                except OSError:
-                    pass
-            return await generate_cover_page_async(
-                d, client,
-                child_name=child_name,
-                page_count=page_count,
-                force=force,
-                use_kie=True,
-                ref_url=ref_url,
-            )
+
+        page = run_async(_run())
+        return {
+            "ok": True,
+            "page": _page_for_client(page, session_id, include_b64=include_b64),
+            "provider": "kie",
+            "session_id": session_id,
+        }
+
+    if use_async:
+        job_id = _enqueue_job("cover", _do_cover)
+        return jsonify({"ok": True, "job_id": job_id, "status": "running"})
 
     try:
-        page = run_async(_run())
+        payload = _do_cover()
     except Exception as e:
         return jsonify({"error": friendly_error(e)}), 500
-
-    return jsonify({"ok": True, "page": page, "provider": "kie"})
+    return jsonify(payload)
 
 
 @app.route("/admin/api/quick-book/ending", methods=["POST"])
@@ -2618,6 +2755,11 @@ def admin_quick_book_ending():
     session_id = (data.get("session_id") or "").strip()
     child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
     force = bool(data.get("force"))
+    use_async = bool(data.get("async") or data.get("background"))
+    if "include_image" in data or "include_b64" in data:
+        include_b64 = bool(data.get("include_image") or data.get("include_b64"))
+    else:
+        include_b64 = not use_async
     if not session_id.isalnum() or len(session_id) > 40:
         return jsonify({"error": "session غير صالح."}), 400
     d = SESSIONS_DIR / session_id
@@ -2628,40 +2770,97 @@ def admin_quick_book_ending():
     if not refs:
         return jsonify({"error": "مفيش صورة مرجع. ارفع صورة الطفل تاني."}), 400
 
-    async def _run():
-        timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            ref_url = None
-            cached = d / "kie_ref_url.txt"
-            if cached.exists():
-                try:
-                    ref_url = cached.read_text(encoding="utf-8").strip() or None
-                except OSError:
-                    ref_url = None
-            if not ref_url:
-                ref_url = await kie_upload_image(
-                    refs[0], client,
-                    upload_path="coloring-book",
-                    file_name=f"{session_id}.png",
+    def _do_ending() -> dict:
+        async def _run():
+            timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                ref_url = None
+                cached = d / "kie_ref_url.txt"
+                if cached.exists():
+                    try:
+                        ref_url = cached.read_text(encoding="utf-8").strip() or None
+                    except OSError:
+                        ref_url = None
+                if not ref_url:
+                    ref_url = await kie_upload_image(
+                        refs[0], client,
+                        upload_path="coloring-book",
+                        file_name=f"{session_id}.png",
+                    )
+                    try:
+                        cached.write_text(ref_url, encoding="utf-8")
+                    except OSError:
+                        pass
+                return await generate_ending_page_async(
+                    d, client,
+                    child_name=child_name,
+                    force=force,
+                    use_kie=True,
+                    ref_url=ref_url,
                 )
-                try:
-                    cached.write_text(ref_url, encoding="utf-8")
-                except OSError:
-                    pass
-            return await generate_ending_page_async(
-                d, client,
-                child_name=child_name,
-                force=force,
-                use_kie=True,
-                ref_url=ref_url,
-            )
+
+        page = run_async(_run())
+        return {
+            "ok": True,
+            "page": _page_for_client(page, session_id, include_b64=include_b64),
+            "provider": "kie",
+            "session_id": session_id,
+        }
+
+    if use_async:
+        job_id = _enqueue_job("ending", _do_ending)
+        return jsonify({"ok": True, "job_id": job_id, "status": "running"})
 
     try:
-        page = run_async(_run())
+        payload = _do_ending()
     except Exception as e:
         return jsonify({"error": friendly_error(e)}), 500
+    return jsonify(payload)
 
-    return jsonify({"ok": True, "page": page, "provider": "kie"})
+
+@app.route("/admin/api/quick-book/job/<job_id>", methods=["GET"])
+@admin_required
+def admin_quick_book_job(job_id: str):
+    """Poll background generation status (avoids Cloudflare ~100s cutoff)."""
+    if not job_id or len(job_id) > 40 or not re.match(r"^[a-f0-9]+$", job_id):
+        return jsonify({"error": "job غير صالح."}), 400
+    job = _job_read(job_id)
+    if not job:
+        return jsonify({
+            "error": "المهمة مش موجودة أو انتهت. لو الصورة تولّدت هتلاقيها بعد التحديث.",
+            "status": "missing",
+        }), 404
+    status = job.get("status") or "running"
+    err = job.get("error")
+    result = job.get("result")
+    kind = job.get("kind")
+    created_at = job.get("created_at") or time.time()
+    elapsed = round(time.time() - float(created_at), 1)
+    if status == "running":
+        return jsonify({
+            "ok": True,
+            "status": "running",
+            "kind": kind,
+            "elapsed_sec": elapsed,
+        })
+    if status == "error":
+        return jsonify({
+            "ok": False,
+            "status": "error",
+            "kind": kind,
+            "error": err or "فشل التوليد",
+            "elapsed_sec": elapsed,
+        }), 500
+    # done
+    payload = dict(result or {}) if isinstance(result, dict) else {"result": result}
+    payload.update({
+        "ok": True,
+        "status": "done",
+        "kind": kind,
+        "elapsed_sec": elapsed,
+        "job_id": job_id,
+    })
+    return jsonify(payload)
 
 
 @app.route("/admin/api/quick-book/pdf/<session_id>")
