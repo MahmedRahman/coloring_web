@@ -328,6 +328,8 @@ def init_db():
             conn.execute("ALTER TABLE special_orders ADD COLUMN book_page_count INTEGER")
         if "book_updated_at" not in so_cols:
             conn.execute("ALTER TABLE special_orders ADD COLUMN book_updated_at TEXT")
+        if "book_progress" not in so_cols:
+            conn.execute("ALTER TABLE special_orders ADD COLUMN book_progress TEXT")
         conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_special_orders_share_token "
             "ON special_orders(share_token) WHERE share_token IS NOT NULL"
@@ -3008,6 +3010,7 @@ def _order_to_dict(row: sqlite3.Row, photos: list) -> dict:
     for key in (
         "pdf_filename", "assigned_to", "share_token", "share_expires_at",
         "book_session_id", "book_scenes", "book_page_count", "book_updated_at",
+        "book_progress",
     ):
         if key not in d:
             d[key] = None
@@ -3023,11 +3026,128 @@ def _order_to_dict(row: sqlite3.Row, photos: list) -> dict:
             d["book_scenes_list"] = []
     else:
         d["book_scenes_list"] = []
+    # Parse progress JSON
+    prog_raw = d.get("book_progress")
+    progress: dict = {}
+    if prog_raw:
+        try:
+            progress = json.loads(prog_raw) if isinstance(prog_raw, str) else (prog_raw or {})
+            if not isinstance(progress, dict):
+                progress = {}
+        except (json.JSONDecodeError, TypeError):
+            progress = {}
+    d["book_progress_data"] = progress
     sid = d.get("book_session_id")
     d["book_session_active"] = bool(
         sid and (SESSIONS_DIR / str(sid)).exists() and (SESSIONS_DIR / str(sid) / "input_0.png").exists()
     ) if sid else False
     return d
+
+
+def _session_book_snapshot(session_id: Optional[str], planned_scenes: Optional[list] = None) -> dict:
+    """Inspect session directory for completed book assets."""
+    snap = {
+        "has_cover": False,
+        "has_ending": False,
+        "generated_scenes": [],
+        "done_planned": [],
+        "missing_pages": list(planned_scenes or []),
+        "session_active": False,
+    }
+    if not session_id:
+        return snap
+    d = SESSIONS_DIR / str(session_id)
+    if not d.exists() or not (d / "input_0.png").exists():
+        return snap
+    snap["session_active"] = True
+    snap["has_cover"] = cover_page_path(d).exists()
+    snap["has_ending"] = ending_page_path(d).exists()
+    page_ids = []
+    for p in sorted(d.glob("page_*.jpg")):
+        sid = p.stem[len("page_"):]
+        if sid not in (COVER_SCENE_ID, ENDING_SCENE_ID) and SCENE_ID_RE.match(sid):
+            page_ids.append(sid)
+    snap["generated_scenes"] = page_ids
+    planned = [s for s in (planned_scenes or []) if isinstance(s, str) and SCENE_ID_RE.match(s)]
+    if planned:
+        done = [s for s in planned if (d / f"page_{s}.jpg").exists()]
+        snap["done_planned"] = done
+        snap["missing_pages"] = [s for s in planned if s not in done]
+    else:
+        snap["done_planned"] = page_ids
+        snap["missing_pages"] = []
+    return snap
+
+
+def _infer_book_step(progress: dict, snap: dict, has_pdf: bool) -> str:
+    """Return setup|cover|pages|ending|pdf|done based on saved plan + disk state."""
+    planned = progress.get("scenes") or []
+    if not isinstance(planned, list):
+        planned = []
+    planned = [s for s in planned if isinstance(s, str)]
+    if not planned and not snap.get("generated_scenes"):
+        return "setup"
+    if not snap.get("session_active"):
+        return "setup"
+    # Prefer real disk state over stale progress flags
+    if not snap.get("has_cover"):
+        return "cover"
+    missing = snap.get("missing_pages")
+    if planned and missing:
+        return "pages"
+    if planned and not snap.get("done_planned"):
+        return "pages"
+    if not planned and not snap.get("generated_scenes"):
+        return "pages"
+    if not snap.get("has_ending"):
+        return "ending"
+    if not has_pdf:
+        return "pdf"
+    return "done"
+
+
+def _build_book_status(row: sqlite3.Row, photos: list) -> dict:
+    order = _order_to_dict(row, photos)
+    progress = dict(order.get("book_progress_data") or {})
+    planned = progress.get("scenes") or order.get("book_scenes_list") or []
+    if not isinstance(planned, list):
+        planned = []
+    snap = _session_book_snapshot(order.get("book_session_id"), planned)
+    # Merge progress flags with disk (disk wins)
+    progress["has_cover"] = snap["has_cover"]
+    progress["has_ending"] = snap["has_ending"]
+    progress["done_pages"] = snap["done_planned"] if planned else snap["generated_scenes"]
+    progress["missing_pages"] = snap["missing_pages"]
+    if planned and not progress.get("scenes"):
+        progress["scenes"] = planned
+    if order.get("book_page_count") and not progress.get("page_count"):
+        progress["page_count"] = order["book_page_count"]
+    if order.get("child_name") and not progress.get("child_name"):
+        progress["child_name"] = order["child_name"]
+    step = _infer_book_step(progress, snap, bool(order.get("pdf_filename")))
+    progress["step"] = step
+    labels = {
+        "setup": "الإعداد",
+        "cover": "غلاف البداية",
+        "pages": "صفحات التلوين",
+        "ending": "غلاف النهاية",
+        "pdf": "حفظ PDF",
+        "done": "مكتمل",
+    }
+    return {
+        "order": order,
+        "progress": progress,
+        "snapshot": snap,
+        "current_step": step,
+        "current_step_label": labels.get(step, step),
+        "session_id": order.get("book_session_id"),
+        "has_cover": snap["has_cover"],
+        "has_ending": snap["has_ending"],
+        "generated_scenes": snap["generated_scenes"],
+        "done_pages": progress["done_pages"],
+        "missing_pages": snap["missing_pages"],
+        "pdf_ready": bool(order.get("pdf_filename")),
+    }
 
 
 @app.route("/admin/api/special-orders/<int:order_id>/book/start", methods=["POST"])
@@ -3063,24 +3183,24 @@ def admin_order_book_start(order_id: int):
         if existing_sid and not force_new:
             d_exist = SESSIONS_DIR / str(existing_sid)
             if d_exist.exists() and (d_exist / "input_0.png").exists():
-                order_dict = _order_to_dict(row, photos)
+                status = _build_book_status(row, photos)
                 conn.close()
-                # List generated page ids
-                page_ids = []
-                for p in sorted(d_exist.glob("page_*.jpg")):
-                    sid = p.stem[len("page_"):]
-                    if sid not in (COVER_SCENE_ID, ENDING_SCENE_ID):
-                        page_ids.append(sid)
                 return jsonify({
                     "ok": True,
                     "resumed": True,
                     "session_id": existing_sid,
-                    "child_name": row["child_name"],
-                    "photo": chosen,
-                    "order": order_dict,
-                    "generated_scenes": page_ids,
-                    "has_cover": (d_exist / f"page_{COVER_SCENE_ID}.jpg").exists(),
-                    "has_ending": (d_exist / f"page_{ENDING_SCENE_ID}.jpg").exists(),
+                    "child_name": status["progress"].get("child_name") or row["child_name"],
+                    "photo": status["progress"].get("photo") or chosen,
+                    "order": status["order"],
+                    "generated_scenes": status["generated_scenes"],
+                    "has_cover": status["has_cover"],
+                    "has_ending": status["has_ending"],
+                    "progress": status["progress"],
+                    "current_step": status["current_step"],
+                    "current_step_label": status["current_step_label"],
+                    "done_pages": status["done_pages"],
+                    "missing_pages": status["missing_pages"],
+                    "pdf_ready": status["pdf_ready"],
                 })
 
         # Create new session from photo on disk
@@ -3110,30 +3230,181 @@ def admin_order_book_start(order_id: int):
             return jsonify({"error": "فشل تجهيز صورة الطفل."}), 500
 
         now = datetime.now(timezone.utc).isoformat()
+        # Reset progress on brand-new session
+        progress = {
+            "step": "setup",
+            "photo": chosen,
+            "child_name": (row["child_name"] or "")[:40],
+            "scenes": [],
+            "page_count": None,
+            "has_cover": False,
+            "has_ending": False,
+            "done_pages": [],
+            "updated_at": now,
+        }
         conn.execute(
             """
             UPDATE special_orders
-            SET book_session_id = ?, book_updated_at = ?, updated_at = ?
+            SET book_session_id = ?, book_progress = ?, book_updated_at = ?, updated_at = ?
             WHERE id = ?
             """,
-            (session_id, now, now, order_id),
+            (session_id, json.dumps(progress, ensure_ascii=False), now, now, order_id),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
-        order_dict = _order_to_dict(row, photos)
+        status = _build_book_status(row, photos)
         conn.close()
 
     return jsonify({
         "ok": True,
         "resumed": False,
         "session_id": session_id,
-        "child_name": order_dict.get("child_name"),
+        "child_name": status["progress"].get("child_name"),
         "photo": chosen,
-        "order": order_dict,
+        "order": status["order"],
         "generated_scenes": [],
         "has_cover": False,
         "has_ending": False,
+        "progress": status["progress"],
+        "current_step": status["current_step"],
+        "current_step_label": status["current_step_label"],
+        "done_pages": [],
+        "missing_pages": [],
+        "pdf_ready": False,
     })
+
+
+@app.route("/admin/api/special-orders/<int:order_id>/book/status", methods=["GET"])
+@admin_required
+def admin_order_book_status(order_id: int):
+    """Return book creation progress and disk snapshot for resume UI."""
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "الطلب مش موجود."}), 404
+        photos = [
+            r["filename"]
+            for r in conn.execute(
+                "SELECT filename FROM special_order_photos WHERE order_id = ? ORDER BY id ASC",
+                (order_id,),
+            ).fetchall()
+        ]
+        status = _build_book_status(row, photos)
+        conn.close()
+    return jsonify({"ok": True, **status})
+
+
+@app.route("/admin/api/special-orders/<int:order_id>/book/progress", methods=["POST"])
+@admin_required
+def admin_order_book_progress(order_id: int):
+    """Persist wizard progress after each step (no PDF required)."""
+    data = request.get_json(silent=True) or {}
+    session_id = (data.get("session_id") or "").strip()
+    step = (data.get("step") or "").strip() or None
+    child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
+    photo = (data.get("photo") or "").strip() or None
+    scenes = data.get("scenes") if isinstance(data.get("scenes"), list) else None
+    try:
+        page_count = int(data["page_count"]) if data.get("page_count") is not None else None
+    except (TypeError, ValueError):
+        page_count = None
+
+    if session_id and (not session_id.isalnum() or len(session_id) > 40):
+        return jsonify({"error": "session غير صالح."}), 400
+
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "الطلب مش موجود."}), 404
+
+        photos = [
+            r["filename"]
+            for r in conn.execute(
+                "SELECT filename FROM special_order_photos WHERE order_id = ? ORDER BY id ASC",
+                (order_id,),
+            ).fetchall()
+        ]
+
+        # Start from existing progress
+        existing = {}
+        raw = row["book_progress"] if "book_progress" in row.keys() else None
+        if raw:
+            try:
+                existing = json.loads(raw) if isinstance(raw, str) else (raw or {})
+                if not isinstance(existing, dict):
+                    existing = {}
+            except (json.JSONDecodeError, TypeError):
+                existing = {}
+
+        sid = session_id or (row["book_session_id"] if "book_session_id" in row.keys() else None)
+        if not sid:
+            conn.close()
+            return jsonify({"error": "مفيش جلسة كتاب. ابدأ التوليد الأول."}), 400
+
+        planned = scenes if scenes is not None else (existing.get("scenes") or [])
+        clean_planned = []
+        if isinstance(planned, list):
+            for s in planned:
+                if isinstance(s, str) and SCENE_ID_RE.match(s) and s not in (COVER_SCENE_ID, ENDING_SCENE_ID):
+                    clean_planned.append(s)
+
+        snap = _session_book_snapshot(sid, clean_planned)
+        now = datetime.now(timezone.utc).isoformat()
+        progress = {
+            **existing,
+            "step": step or existing.get("step") or "setup",
+            "child_name": child_name or existing.get("child_name") or (row["child_name"] or ""),
+            "photo": photo or existing.get("photo"),
+            "scenes": clean_planned,
+            "page_count": page_count if page_count is not None else existing.get("page_count"),
+            "has_cover": snap["has_cover"],
+            "has_ending": snap["has_ending"],
+            "done_pages": snap["done_planned"] if clean_planned else snap["generated_scenes"],
+            "missing_pages": snap["missing_pages"],
+            "updated_at": now,
+        }
+        # Recompute current step from disk unless client only wants to bookmark setup scenes
+        if step == "setup" and clean_planned and not snap["has_cover"]:
+            progress["step"] = "setup"
+        else:
+            progress["step"] = _infer_book_step(
+                progress, snap, bool(row["pdf_filename"] if "pdf_filename" in row.keys() else None)
+            )
+
+        scenes_json = json.dumps(clean_planned, ensure_ascii=False) if clean_planned else (
+            row["book_scenes"] if "book_scenes" in row.keys() else None
+        )
+        pc = progress.get("page_count")
+        if pc is None and clean_planned:
+            pc = len(clean_planned)
+
+        conn.execute(
+            """
+            UPDATE special_orders
+            SET book_session_id = ?, book_scenes = ?, book_page_count = ?,
+                book_progress = ?, book_updated_at = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                sid,
+                scenes_json,
+                pc,
+                json.dumps(progress, ensure_ascii=False),
+                now,
+                now,
+                order_id,
+            ),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        status = _build_book_status(row, photos)
+        conn.close()
+
+    return jsonify({"ok": True, "saved": True, **status})
 
 
 @app.route("/admin/api/special-orders/<int:order_id>/book/save", methods=["POST"])
@@ -3204,14 +3475,30 @@ def admin_order_book_save(order_id: int):
 
         now = datetime.now(timezone.utc).isoformat()
         scenes_json = json.dumps(clean_scenes, ensure_ascii=False)
+        snap = _session_book_snapshot(session_id, clean_scenes)
+        progress = {
+            "step": "done",
+            "child_name": child_name,
+            "scenes": clean_scenes,
+            "page_count": len(clean_scenes),
+            "has_cover": snap["has_cover"],
+            "has_ending": snap["has_ending"],
+            "done_pages": clean_scenes,
+            "missing_pages": [],
+            "pdf_ready": True,
+            "updated_at": now,
+        }
         conn.execute(
             """
             UPDATE special_orders
             SET pdf_filename = ?, book_session_id = ?, book_scenes = ?,
-                book_page_count = ?, book_updated_at = ?, updated_at = ?
+                book_page_count = ?, book_progress = ?, book_updated_at = ?, updated_at = ?
             WHERE id = ?
             """,
-            (new_name, session_id, scenes_json, len(clean_scenes), now, now, order_id),
+            (
+                new_name, session_id, scenes_json, len(clean_scenes),
+                json.dumps(progress, ensure_ascii=False), now, now, order_id,
+            ),
         )
         conn.commit()
         photos = [
@@ -3221,15 +3508,23 @@ def admin_order_book_save(order_id: int):
             ).fetchall()
         ]
         row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
-        order_dict = _order_to_dict(row, photos)
+        status = _build_book_status(row, photos)
         conn.close()
 
     return jsonify({
         "ok": True,
-        "order": order_dict,
+        "order": status["order"],
         "pdf_filename": new_name,
         "download_url": f"/admin/special-orders/{order_id}/pdf/{new_name}",
         "page_count": len(clean_scenes),
+        "progress": status["progress"],
+        "current_step": status["current_step"],
+        "current_step_label": status["current_step_label"],
+        "has_cover": status["has_cover"],
+        "has_ending": status["has_ending"],
+        "done_pages": status["done_pages"],
+        "missing_pages": status["missing_pages"],
+        "pdf_ready": True,
     })
 
 

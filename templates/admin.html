@@ -746,6 +746,59 @@
   .ob-prev-actions .qb-prev-regen:hover {
     background: rgba(56,189,248,0.9); color: #041018;
   }
+  /* Book wizard steps */
+  .ob-wizard {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .ob-steps {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .ob-step-pill {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 12px;
+    border: 1px solid var(--border-2);
+    background: var(--bg-2); color: var(--muted);
+    font-size: 12.5px; font-weight: 700; cursor: pointer;
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .ob-step-pill .n {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: rgba(255,255,255,0.06); font-size: 11px;
+  }
+  .ob-step-pill.active {
+    border-color: rgba(56,189,248,0.5);
+    background: rgba(56,189,248,0.12);
+    color: var(--text);
+  }
+  .ob-step-pill.done {
+    border-color: rgba(52,211,153,0.4);
+    background: rgba(52,211,153,0.1);
+    color: var(--ok);
+  }
+  .ob-step-pill.done .n { background: rgba(52,211,153,0.25); }
+  .ob-step-pill.active .n { background: rgba(56,189,248,0.3); color: var(--primary); }
+  .ob-step-status {
+    margin: 0; padding: 12px 14px; border-radius: 12px;
+    background: var(--bg-2); border: 1px solid var(--border);
+    font-size: 13px; color: var(--text-2); line-height: 1.55;
+  }
+  .ob-step-status strong { color: var(--text); }
+  .ob-step-status .ok { color: var(--ok); font-weight: 700; }
+  .ob-step-status .todo { color: var(--warn); font-weight: 700; }
+  .ob-step-checklist {
+    display: flex; flex-direction: column; gap: 6px; margin-top: 10px;
+  }
+  .ob-check-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 10px; border-radius: 10px;
+    background: rgba(6,11,20,0.35); border: 1px solid var(--border);
+    font-size: 12.5px;
+  }
+  .ob-check-row.done { border-color: rgba(52,211,153,0.35); }
+  .ob-check-row .mark { font-weight: 800; }
+  .ob-check-row.done .mark { color: var(--ok); }
+  .ob-check-row.todo .mark { color: var(--muted); }
   /* Order form page (add / edit) */
   .of-page { max-width: 760px; }
   .of-card {
@@ -1780,7 +1833,28 @@ let _obPhoto = null;
 let _obPageCount = 8;
 let _obBusy = false;
 let _obView = 'detail'; // detail | products | coloring
-let _obLastScenes = []; // last successfully generated interior scene ids
+let _obLastScenes = []; // planned / generated scene ids
+let _obStep = 'setup'; // setup|cover|pages|ending|pdf|done
+let _obState = {
+  hasCover: false,
+  hasEnding: false,
+  donePages: [],
+  missingPages: [],
+  pdfReady: false,
+};
+
+const OB_STEPS = [
+  { id: 'setup',  n: 1, label: 'الإعداد' },
+  { id: 'cover',  n: 2, label: 'غلاف البداية' },
+  { id: 'pages',  n: 3, label: 'صفحات التلوين' },
+  { id: 'ending', n: 4, label: 'غلاف النهاية' },
+  { id: 'pdf',    n: 5, label: 'حفظ PDF' },
+];
+
+function obStepIndex(id) {
+  const i = OB_STEPS.findIndex(s => s.id === id);
+  return i < 0 ? 0 : i;
+}
 
 const ALL_SCENES = [
   {% for s in scenes %}
@@ -3141,6 +3215,8 @@ async function startOrderColoringBook(orderId) {
   _obPhoto = o.photos[0];
   _obSessionId = null;
   _obLastScenes = [];
+  _obStep = 'setup';
+  _obState = { hasCover: false, hasEnding: false, donePages: [], missingPages: [], pdfReady: false };
   renderOrderColoringBook(o);
   await obEnsureSession({ forceNew: false });
 }
@@ -3154,7 +3230,7 @@ function renderOrderColoringBook(o) {
   const titleEl = document.getElementById('page-title');
   const subEl = document.getElementById('page-sub');
   if (titleEl) titleEl.textContent = 'كتاب تلوين · طلب #' + o.id;
-  if (subEl) subEl.textContent = 'الاسم والصورة من الطلب — النتائج تتحفظ على نفس الطلب';
+  if (subEl) subEl.textContent = 'خطوات واضحة — احفظ أي خطوة وكمّل لاحقًا';
   if (location.hash !== '#order/' + o.id + '/book') {
     history.pushState(null, '', '#order/' + o.id + '/book');
   }
@@ -3229,30 +3305,30 @@ function renderOrderColoringBook(o) {
       </div>
 
       <div class="qb-card">
-        <h3>5. إنشاء وحفظ الكتاب</h3>
-        <p class="hint">
-          الترتيب: <strong>1) غلاف البداية</strong> → <strong>2) صفحات التلوين</strong> → <strong>3) غلاف النهاية</strong> →
-          <strong>حفظ PDF على الطلب #${o.id}</strong>.
-          GPT Image 2 عبر Kie.ai.
-        </p>
-        <div class="qb-actions">
-          <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obCreateBook({force:false})">إنشاء وحفظ الكتاب</button>
-          <button type="button" class="btn btn-ghost" id="ob-regen-all-btn" onclick="obCreateBook({force:true})">↻ إعادة توليد الكل</button>
-          <button type="button" class="btn btn-ghost" id="ob-resave-btn" onclick="obSavePdfOnly()">حفظ PDF تاني</button>
-          <div class="qb-result" id="ob-result">
-            <a class="btn btn-success" id="ob-download" href="#" target="_blank">تحميل PDF</a>
-            <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id})">رجوع للطلب</button>
-          </div>
-          ${savedPdf}
+        <h3>5. خطوات العمل — إنشاء وحفظ الكتاب</h3>
+        <p class="hint">كل خطوة بتتحفظ على الطلب. تقدر تقفل وترجع تكمل من حيث وصلت.</p>
+
+        <div class="ob-wizard">
+          <div class="ob-steps" id="ob-steps"></div>
+          <div class="ob-step-status" id="ob-step-status">جاري تجهيز الحالة...</div>
+          <div class="ob-step-checklist" id="ob-step-checklist"></div>
+
+          <div class="qb-actions" id="ob-step-actions"></div>
         </div>
+
         <div class="qb-progress" id="ob-progress">
           <div class="qb-progress-text" id="ob-progress-text">جاري التوليد...</div>
           <div class="qb-progress-bar"><div class="qb-progress-fill" id="ob-progress-fill"></div></div>
         </div>
         <div class="qb-msg" id="ob-msg"></div>
+        <div class="qb-result" id="ob-result" style="margin-top:10px">
+          <a class="btn btn-success" id="ob-download" href="#" target="_blank">تحميل PDF</a>
+          <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id})">رجوع للطلب</button>
+          ${savedPdf}
+        </div>
         <div class="qb-previews-head" id="ob-previews-head" style="display:none">
-          <p class="title">معاينة الصفحات (غلاف → صفحات → نهاية)</p>
-          <p class="hint">اضغط الصورة للتكبير · «↻ إعادة» لإعادة توليد الصفحة دي بس ثم حفظ PDF</p>
+          <p class="title">معاينة النتائج (محفوظة على الطلب)</p>
+          <p class="hint">اضغط للتكبير · «↻ إعادة» لتوليد الصفحة دي بس + حفظ الخطوة</p>
         </div>
         <div class="qb-previews" id="ob-previews"></div>
       </div>
@@ -3261,7 +3337,7 @@ function renderOrderColoringBook(o) {
 
   _obPageCount = o.book_page_count && [1, 8, 12].includes(o.book_page_count) ? o.book_page_count : 8;
   obSetPageCount(_obPageCount, null);
-  const savedScenes = o.book_scenes_list || [];
+  const savedScenes = o.book_scenes_list || (o.book_progress_data && o.book_progress_data.scenes) || [];
   if (savedScenes.length) {
     if ([1, 8, 12].includes(savedScenes.length)) {
       _obPageCount = savedScenes.length;
@@ -3272,6 +3348,185 @@ function renderOrderColoringBook(o) {
   } else {
     obSelectAuto();
   }
+  if (o.book_progress_data && o.book_progress_data.child_name) {
+    const nameEl = document.getElementById('ob-name');
+    if (nameEl && !nameEl.value) nameEl.value = o.book_progress_data.child_name;
+  }
+  obRenderWizardUI();
+}
+
+function obApplyStatusPayload(data) {
+  if (!data) return;
+  if (data.session_id) _obSessionId = data.session_id;
+  if (data.order) {
+    _obOrder = data.order;
+    const idx = _soAll.findIndex(x => x.id === data.order.id);
+    if (idx >= 0) _soAll[idx] = data.order;
+  }
+  const progress = data.progress || {};
+  if (progress.scenes && progress.scenes.length) {
+    _obLastScenes = [...progress.scenes];
+    if (document.getElementById('ob-jobs')) {
+      if ([1, 8, 12].includes(progress.scenes.length)) {
+        _obPageCount = progress.scenes.length;
+        obSetPageCount(_obPageCount, null);
+      }
+      obSelectScenes(progress.scenes);
+    }
+  } else if (data.done_pages && data.done_pages.length) {
+    _obLastScenes = [...data.done_pages];
+  }
+  if (progress.page_count && [1, 8, 12].includes(progress.page_count)) {
+    _obPageCount = progress.page_count;
+    if (document.getElementById('ob-page-opts')) obSetPageCount(_obPageCount, null);
+  }
+  if (progress.child_name) {
+    const nameEl = document.getElementById('ob-name');
+    if (nameEl) nameEl.value = progress.child_name;
+  }
+  if (progress.photo) _obPhoto = progress.photo;
+
+  _obState = {
+    hasCover: !!(data.has_cover ?? progress.has_cover),
+    hasEnding: !!(data.has_ending ?? progress.has_ending),
+    donePages: [...(data.done_pages || progress.done_pages || [])],
+    missingPages: [...(data.missing_pages || progress.missing_pages || [])],
+    pdfReady: !!(data.pdf_ready || (_obOrder && _obOrder.pdf_filename)),
+  };
+  _obStep = data.current_step || progress.step || _obStep || 'setup';
+  if (_obStep === 'done') {
+    // keep as done for status; UI treats done like pdf complete
+  }
+  return data;
+}
+
+function obRefreshPreviewsFromState() {
+  const doneOnly = (_obState.donePages || []).map(sid => ({
+    scene_id: sid,
+    title: sceneTitle(sid),
+    kind: 'page',
+  }));
+  const cover = _obState.hasCover ? { scene_id: 'cover', kind: 'cover' } : null;
+  const ending = _obState.hasEnding ? { scene_id: 'ending', kind: 'ending' } : null;
+  if (!doneOnly.length && !cover && !ending) {
+    obRenderPreviews([]);
+    return;
+  }
+  obRenderPreviews(obBuildOrderedPreview(cover, doneOnly, ending));
+}
+
+function obRenderWizardUI() {
+  const stepsEl = document.getElementById('ob-steps');
+  const statusEl = document.getElementById('ob-step-status');
+  const listEl = document.getElementById('ob-step-checklist');
+  const actionsEl = document.getElementById('ob-step-actions');
+  if (!stepsEl) return;
+
+  const cur = _obStep === 'done' ? 'pdf' : _obStep;
+  const curIdx = obStepIndex(cur);
+
+  stepsEl.innerHTML = OB_STEPS.map((s, i) => {
+    let cls = 'ob-step-pill';
+    const isDone =
+      (s.id === 'setup' && (_obLastScenes.length || curIdx > 0)) ||
+      (s.id === 'cover' && _obState.hasCover) ||
+      (s.id === 'pages' && _obLastScenes.length && !_obState.missingPages.length && (_obState.donePages.length >= _obLastScenes.length || curIdx > 2)) ||
+      (s.id === 'ending' && _obState.hasEnding) ||
+      (s.id === 'pdf' && _obState.pdfReady);
+    if (s.id === cur || (_obStep === 'done' && s.id === 'pdf')) cls += ' active';
+    else if (isDone || i < curIdx) cls += ' done';
+    return `<button type="button" class="${cls}" onclick="obGoStep('${s.id}')">
+      <span class="n">${isDone || i < curIdx ? '✓' : s.n}</span>
+      <span>${s.label}</span>
+    </button>`;
+  }).join('');
+
+  const planned = _obLastScenes.length ? _obLastScenes : obSelectedIds();
+  const doneN = _obState.donePages.filter(id => planned.includes(id)).length;
+  const missN = planned.length ? planned.length - doneN : 0;
+
+  const lines = [];
+  lines.push(`الخطوة الحالية: <strong>${OB_STEPS.find(s => s.id === cur)?.label || cur}</strong>` +
+    (_obStep === 'done' ? ' <span class="ok">· الكتاب مكتمل</span>' : ''));
+  lines.push(`غلاف البداية: ${_obState.hasCover ? '<span class="ok">✓ جاهز ومحفوظ</span>' : '<span class="todo">○ لسه</span>'}`);
+  lines.push(`صفحات التلوين: <strong>${doneN}</strong> / ${planned.length || _obPageCount} جاهزة` +
+    (missN > 0 ? ` · <span class="todo">ناقص ${missN}</span>` : (planned.length ? ' <span class="ok">✓</span>' : '')));
+  lines.push(`غلاف النهاية: ${_obState.hasEnding ? '<span class="ok">✓ جاهز ومحفوظ</span>' : '<span class="todo">○ لسه</span>'}`);
+  lines.push(`PDF على الطلب: ${_obState.pdfReady ? '<span class="ok">✓ محفوظ</span>' : '<span class="todo">○ لسه</span>'}`);
+  if (statusEl) statusEl.innerHTML = lines.join('<br>');
+
+  if (listEl) {
+    const rows = planned.map(sid => {
+      const done = _obState.donePages.includes(sid);
+      return `<div class="ob-check-row ${done ? 'done' : 'todo'}">
+        <span>${done ? '✓' : '○'} ${escHtml(sceneTitle(sid))}</span>
+        <span class="mark">${done ? 'محفوظ' : 'بانتظار التوليد'}</span>
+      </div>`;
+    }).join('');
+    listEl.innerHTML = rows || '<div class="muted" style="font-size:12.5px">اختار الوظائف في الخطوة 4 واحفظ الإعداد.</div>';
+  }
+
+  // Actions for current step
+  let actions = '';
+  if (cur === 'setup') {
+    actions = `
+      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('setup')">احفظ الإعداد وانتقل للغلاف</button>
+      <button type="button" class="btn btn-ghost" onclick="obSaveProgressOnly()">حفظ الإعداد فقط</button>
+    `;
+  } else if (cur === 'cover') {
+    actions = `
+      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('cover')">توليد غلاف البداية + حفظ</button>
+      ${_obState.hasCover ? `<button type="button" class="btn btn-ghost" onclick="obRunStep('cover',{force:true})">↻ إعادة توليد الغلاف</button>` : ''}
+      <button type="button" class="btn btn-ghost" onclick="obGoStep('pages')">تخطي للصفحات${_obState.hasCover ? '' : ' (غلاف بسيط لاحقًا)'}</button>
+    `;
+  } else if (cur === 'pages') {
+    actions = `
+      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('pages')">توليد الصفحات الناقصة + حفظ</button>
+      <button type="button" class="btn btn-ghost" onclick="obRunStep('pages',{force:true})">↻ إعادة توليد كل الصفحات</button>
+      ${(!_obState.missingPages.length && doneN > 0) ? `<button type="button" class="btn btn-ghost" onclick="obGoStep('ending')">الخطوة التالية → غلاف النهاية</button>` : ''}
+    `;
+  } else if (cur === 'ending') {
+    actions = `
+      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('ending')">توليد غلاف النهاية + حفظ</button>
+      ${_obState.hasEnding ? `<button type="button" class="btn btn-ghost" onclick="obRunStep('ending',{force:true})">↻ إعادة التوليد</button>` : ''}
+      <button type="button" class="btn btn-ghost" onclick="obGoStep('pdf')">تخطي لـ PDF</button>
+    `;
+  } else {
+    actions = `
+      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('pdf')">حفظ PDF على الطلب</button>
+      <button type="button" class="btn btn-ghost" id="ob-regen-all-btn" onclick="obCreateBook({force:true})">↻ إعادة توليد الكتاب كامل</button>
+    `;
+  }
+  actions += `
+    <button type="button" class="btn btn-ghost" onclick="obContinueWizard()" title="يكمل أول خطوة ناقصة">▶ كمل من حيث وصلت</button>
+  `;
+  if (actionsEl) actionsEl.innerHTML = actions;
+
+  // PDF download visibility
+  const resultEl = document.getElementById('ob-result');
+  if (resultEl) {
+    if (_obState.pdfReady && _obOrder && _obOrder.pdf_filename) {
+      resultEl.classList.add('show');
+      resultEl.style.display = 'flex';
+      const a = document.getElementById('ob-download');
+      const saved = document.getElementById('ob-saved-pdf');
+      const url = `/admin/special-orders/${_obOrder.id}/pdf/${_obOrder.pdf_filename}`;
+      if (a) a.href = url;
+      if (saved) { saved.href = url; saved.style.display = ''; }
+    } else {
+      // keep download hidden until ready unless class show already for intermediate
+    }
+  }
+
+  obRefreshPreviewsFromState();
+}
+
+function obGoStep(stepId) {
+  if (!OB_STEPS.find(s => s.id === stepId) && stepId !== 'done') return;
+  _obStep = stepId === 'done' ? 'done' : stepId;
+  obRenderWizardUI();
+  const card = document.getElementById('ob-step-actions');
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 async function obPickPhoto(fn) {
@@ -3298,55 +3553,12 @@ async function obEnsureSession({ forceNew = false, photo = null } = {}) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'فشل بدء الجلسة');
-    _obSessionId = data.session_id;
-    if (data.photo) _obPhoto = data.photo;
-    if (data.order) {
-      _obOrder = data.order;
-      const idx = _soAll.findIndex(x => x.id === orderId);
-      if (idx >= 0) _soAll[idx] = data.order;
-    }
-
-    const previews = [];
-    if (data.has_cover) {
-      previews.push({ title: 'غلاف البداية', scene_id: 'cover', kind: 'cover' });
-    }
-    (data.generated_scenes || []).forEach(sid => {
-      previews.push({ title: sceneTitle(sid), scene_id: sid, kind: 'page' });
-    });
-    if (data.has_ending) {
-      previews.push({ title: 'غلاف النهاية', scene_id: 'ending', kind: 'ending' });
-    }
-    if (previews.length) obRenderPreviews(previews);
-
-    const gens = data.generated_scenes || [];
-    if (gens.length) {
-      _obLastScenes = [...gens];
-      if (document.getElementById('ob-jobs')) {
-        if ([1, 8, 12].includes(gens.length)) {
-          _obPageCount = gens.length;
-          obSetPageCount(_obPageCount, null);
-        }
-        obSelectScenes(gens);
-      }
-    }
-
+    obApplyStatusPayload(data);
     if (msg && data.resumed) {
-      msg.textContent = 'تم استكمال الجلسة السابقة — تقدر تكمل أو تعيد التوليد (صفحة أو الكل).';
+      msg.textContent = `تم استكمال الجلسة — أنت عند خطوة «${data.current_step_label || ''}». اضغط كمل من حيث وصلت.`;
       msg.className = 'qb-msg ok';
     }
-    if (data.order && data.order.pdf_filename) {
-      const a = document.getElementById('ob-download');
-      const saved = document.getElementById('ob-saved-pdf');
-      const url = `/admin/special-orders/${orderId}/pdf/${data.order.pdf_filename}`;
-      if (a) {
-        a.href = url;
-        document.getElementById('ob-result')?.classList.add('show');
-      }
-      if (saved) {
-        saved.href = url;
-        saved.style.display = '';
-      }
-    }
+    obRenderWizardUI();
     return data;
   } catch (e) {
     if (msg) {
@@ -3360,6 +3572,58 @@ async function obEnsureSession({ forceNew = false, photo = null } = {}) {
 
 function obChildName() {
   return (document.getElementById('ob-name')?.value || '').trim();
+}
+
+async function obPersistProgress(extra = {}) {
+  if (!_obOrder || !_obSessionId) throw new Error('مفيش جلسة كتاب');
+  const scenes = extra.scenes || (_obLastScenes.length ? _obLastScenes : obSelectedIds());
+  const res = await fetch(`/admin/api/special-orders/${_obOrder.id}/book/progress`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: _obSessionId,
+      step: extra.step || _obStep,
+      child_name: extra.child_name || obChildName(),
+      scenes,
+      page_count: extra.page_count != null ? extra.page_count : _obPageCount,
+      photo: _obPhoto,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'فشل حفظ التقدم');
+  obApplyStatusPayload(data);
+  return data;
+}
+
+async function obSaveProgressOnly() {
+  if (_obBusy) return;
+  const name = obChildName();
+  if (!name) { showToast('اكتب اسم الطفل', 'err'); return; }
+  const scenes = obSelectedIds();
+  if (scenes.length !== _obPageCount) {
+    showToast(`اختار ${_obPageCount} وظيفة بالظبط`, 'err');
+    return;
+  }
+  _obBusy = true;
+  try {
+    if (!_obSessionId) {
+      const st = await obEnsureSession({ forceNew: false });
+      if (!st) throw new Error('فشل الجلسة');
+    }
+    _obLastScenes = [...scenes];
+    await obPersistProgress({ step: 'setup', scenes });
+    showToast('تم حفظ الإعداد على الطلب ✓', 'ok');
+    const msg = document.getElementById('ob-msg');
+    if (msg) {
+      msg.textContent = 'تم حفظ الإعداد. تقدر تقفل وترجع تكمل في أي وقت.';
+      msg.className = 'qb-msg ok';
+    }
+    obRenderWizardUI();
+  } catch (e) {
+    showToast(e.message || 'فشل الحفظ', 'err');
+  } finally {
+    _obBusy = false;
+  }
 }
 
 async function obSaveToOrder(scenes, name) {
@@ -3377,11 +3641,7 @@ async function obSaveToOrder(scenes, name) {
   });
   const sData = await sRes.json();
   if (!sRes.ok) throw new Error(sData.error || 'فشل حفظ الكتاب على الطلب');
-  if (sData.order) {
-    _obOrder = sData.order;
-    const idx = _soAll.findIndex(x => x.id === _obOrder.id);
-    if (idx >= 0) _soAll[idx] = sData.order;
-  }
+  obApplyStatusPayload(sData);
   _obLastScenes = [...clean];
   const dl = document.getElementById('ob-download');
   const resultEl = document.getElementById('ob-result');
@@ -3391,47 +3651,15 @@ async function obSaveToOrder(scenes, name) {
     dl.href = url;
     dl.setAttribute('download', `${name || 'coloring_book'}.pdf`);
   }
-  if (resultEl) resultEl.classList.add('show');
+  if (resultEl) {
+    resultEl.classList.add('show');
+    resultEl.style.display = 'flex';
+  }
   if (saved) {
     saved.href = url;
     saved.style.display = '';
   }
   return sData;
-}
-
-async function obSavePdfOnly() {
-  if (_obBusy) return;
-  const name = obChildName();
-  const scenes = (obSelectedIds().length ? obSelectedIds() : _obLastScenes).filter(Boolean);
-  if (!scenes.length) {
-    showToast('مفيش صفحات جاهزة — أنشئ الكتاب الأول', 'err');
-    return;
-  }
-  if (!name) {
-    showToast('اكتب اسم الطفل', 'err');
-    return;
-  }
-  _obBusy = true;
-  try {
-    if (!_obSessionId) {
-      const started = await obEnsureSession({ forceNew: false });
-      if (!started) throw new Error('فشل تجهيز الجلسة');
-    }
-    obSetProgress(50, 'حفظ PDF على الطلب...');
-    await obSaveToOrder(scenes, name);
-    obSetProgress(100, 'تم الحفظ ✓');
-    const msg = document.getElementById('ob-msg');
-    if (msg) {
-      msg.textContent = `تم حفظ PDF (${scenes.length} صفحة + غلاف + نهاية) على الطلب #${_obOrder.id}`;
-      msg.className = 'qb-msg ok';
-    }
-    showToast('PDF اتحفظ على الطلب ✓', 'ok');
-  } catch (e) {
-    showToast(e.message || 'فشل الحفظ', 'err');
-    obHideProgress();
-  } finally {
-    _obBusy = false;
-  }
 }
 
 async function obGenerateCover(name, pageCount, force) {
@@ -3469,8 +3697,8 @@ async function obGeneratePages(scenes, force) {
   const chunks = qbChunk(scenes, 2);
   const allPages = [];
   for (let i = 0; i < chunks.length; i++) {
-    const base = 28 + Math.round((i / Math.max(chunks.length, 1)) * 45);
-    obSetProgress(base, `GPT Image 2 — صفحات التلوين ${i + 1}/${chunks.length}...`);
+    const base = 20 + Math.round((i / Math.max(chunks.length, 1)) * 60);
+    obSetProgress(base, `صفحات التلوين — دفعة ${i + 1}/${chunks.length}...`);
     const gRes = await fetch('/admin/api/quick-book/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3479,192 +3707,320 @@ async function obGeneratePages(scenes, force) {
     const gData = await gRes.json();
     if (!gRes.ok) throw new Error(gData.error || 'فشل التوليد');
     allPages.push(...(gData.pages || []));
+    // Persist after each batch so progress never lost
+    const okIds = allPages.filter(p => !p.error).map(p => p.scene_id);
+    const planned = _obLastScenes.length ? _obLastScenes : scenes;
+    const doneUnion = [...new Set([...(_obState.donePages || []), ...okIds])];
+    _obState.donePages = doneUnion;
+    _obState.missingPages = planned.filter(s => !doneUnion.includes(s));
+    try {
+      await obPersistProgress({ step: 'pages', scenes: planned });
+    } catch (_) { /* keep going */ }
+    obRefreshPreviewsFromState();
+    obRenderWizardUI();
   }
   return allPages;
 }
 
-async function obCreateBook(opts = {}) {
+async function obRunStep(step, opts = {}) {
   if (_obBusy) return;
   const force = !!opts.force;
   const msg = document.getElementById('ob-msg');
-  const name = obChildName();
-  const scenes = obSelectedIds();
   if (msg) { msg.className = 'qb-msg'; msg.textContent = ''; }
+  const name = obChildName();
 
-  if (!_obOrder) {
-    showToast('مفيش طلب', 'err');
-    return;
-  }
-  if (!_obPhoto && !(_obOrder.photos || []).length) {
-    if (msg) { msg.textContent = 'ارفع صورة على الطلب الأول.'; msg.className = 'qb-msg err'; }
-    return;
-  }
-  if (!name) {
-    if (msg) { msg.textContent = 'اكتب اسم الطفل.'; msg.className = 'qb-msg err'; }
-    document.getElementById('ob-name')?.focus();
-    return;
-  }
-  if (scenes.length !== _obPageCount) {
-    if (msg) {
-      msg.textContent = `اختار ${_obPageCount} وظيفة بالظبط (مختار حالياً ${scenes.length}).`;
-      msg.className = 'qb-msg err';
-    }
-    return;
-  }
-
-  if (force && !confirm('هتعيد توليد الغلاف وكل الصفحات وغلاف النهاية من جديد. متأكد؟')) {
-    return;
-  }
+  if (!_obOrder) { showToast('مفيش طلب', 'err'); return; }
+  if (!name && step !== 'setup') { showToast('اكتب اسم الطفل', 'err'); return; }
 
   _obBusy = true;
   const btn = document.getElementById('ob-run-btn');
-  const regenBtn = document.getElementById('ob-regen-all-btn');
   if (btn) btn.disabled = true;
-  if (regenBtn) regenBtn.disabled = true;
-  const resultEl = document.getElementById('ob-result');
-  if (resultEl) resultEl.classList.remove('show');
 
   try {
-    obSetProgress(4, 'تجهيز جلسة الطلب...');
     if (!_obSessionId) {
-      const started = await obEnsureSession({ forceNew: false });
-      if (!started) throw new Error('فشل تجهيز الجلسة');
+      const st = await obEnsureSession({ forceNew: false });
+      if (!st) throw new Error('فشل تجهيز الجلسة');
     }
 
-    // 1) غلاف البداية أولاً
-    obSetProgress(12, '1/4 — توليد غلاف البداية...');
-    let coverPage = null;
-    try {
-      coverPage = await obGenerateCover(name, scenes.length || _obPageCount, force);
-      if (coverPage) {
-        obRenderPreviews(obBuildOrderedPreview(coverPage, [], null));
+    if (step === 'setup') {
+      const scenes = obSelectedIds();
+      if (!name) throw new Error('اسم الطفل مطلوب');
+      if (scenes.length !== _obPageCount) throw new Error(`اختار ${_obPageCount} وظيفة بالظبط`);
+      if (!_obPhoto && !(_obOrder.photos || []).length) throw new Error('ارفع صورة على الطلب');
+      _obLastScenes = [...scenes];
+      obSetProgress(40, 'حفظ الإعداد على الطلب...');
+      await obPersistProgress({ step: 'setup', scenes, child_name: name, page_count: _obPageCount });
+      _obStep = 'cover';
+      obSetProgress(100, 'تم حفظ الإعداد ✓');
+      if (msg) {
+        msg.textContent = 'تم حفظ الإعداد. الخطوة التالية: غلاف البداية.';
+        msg.className = 'qb-msg ok';
       }
-    } catch (coverErr) {
-      showToast('غلاف البداية فشل — هنكمل وصفحات التلوين (غلاف بسيط في PDF)', 'err');
+      showToast('تم حفظ الإعداد ✓', 'ok');
     }
 
-    // 2) صفحات التلوين
-    obSetProgress(28, '2/4 — توليد صفحات التلوين...');
-    const allPages = await obGeneratePages(scenes, force);
-    const failed = allPages.filter(p => p.error);
-    const okPages = allPages.filter(p => !p.error);
-    if (!okPages.length) throw new Error(failed[0]?.error || 'فشل توليد كل الصفحات');
-    if (failed.length) showToast(`تم ${okPages.length} صفحة — فشل ${failed.length}`, 'err');
-
-    const okSet = new Set(okPages.map(p => p.scene_id));
-    const order = scenes.filter(id => okSet.has(id));
-    _obLastScenes = [...order];
-    obRenderPreviews(obBuildOrderedPreview(coverPage, okPages, null));
-
-    // 3) غلاف النهاية آخراً
-    obSetProgress(78, '3/4 — توليد غلاف النهاية...');
-    let endingPage = null;
-    try {
-      endingPage = await obGenerateEnding(name, force);
-    } catch (endErr) {
-      showToast('غلاف النهاية فشل — هيتجاب PDF من غيره لو مفيش نسخة قديمة', 'err');
+    if (step === 'cover') {
+      if (!_obLastScenes.length) _obLastScenes = obSelectedIds();
+      obSetProgress(20, 'توليد غلاف البداية...');
+      const cover = await obGenerateCover(name, _obLastScenes.length || _obPageCount, force);
+      _obState.hasCover = true;
+      if (cover) {
+        obRenderPreviews(obBuildOrderedPreview(cover,
+          _obState.donePages.map(sid => ({ scene_id: sid, kind: 'page' })),
+          _obState.hasEnding ? { scene_id: 'ending', kind: 'ending' } : null));
+      }
+      obSetProgress(70, 'حفظ خطوة الغلاف...');
+      await obPersistProgress({ step: 'cover', scenes: _obLastScenes });
+      _obStep = 'pages';
+      obSetProgress(100, 'غلاف البداية محفوظ ✓');
+      if (msg) {
+        msg.textContent = 'تم حفظ غلاف البداية. كمل صفحات التلوين في أي وقت.';
+        msg.className = 'qb-msg ok';
+      }
+      showToast('غلاف البداية جاهز ومحفوظ ✓', 'ok');
     }
 
-    // Preview final order: cover → pages → ending
-    obRenderPreviews(obBuildOrderedPreview(coverPage, okPages, endingPage));
-
-    // 4) حفظ PDF + تسجيل النتائج على الطلب
-    obSetProgress(92, '4/4 — حفظ PDF والنتائج على الطلب...');
-    await obSaveToOrder(order, name);
-
-    obSetProgress(100, 'تم الحفظ ✓ — غلاف + صفحات + نهاية مربوطين بالطلب');
-    if (msg) {
-      msg.textContent = `تم إنشاء وحفظ الكتاب لـ «${name}» على الطلب #${_obOrder.id}: غلاف بداية + ${order.length} صفحة تلوين + غلاف نهاية`;
-      msg.className = 'qb-msg ok';
+    if (step === 'pages') {
+      if (!_obLastScenes.length) {
+        const scenes = obSelectedIds();
+        if (scenes.length !== _obPageCount) throw new Error(`اختار ${_obPageCount} وظيفة`);
+        _obLastScenes = [...scenes];
+        await obPersistProgress({ step: 'pages', scenes });
+      }
+      const planned = _obLastScenes;
+      const todo = force ? planned : planned.filter(s => !_obState.donePages.includes(s));
+      if (!todo.length) {
+        showToast('كل الصفحات جاهزة بالفعل', 'ok');
+        _obStep = 'ending';
+      } else {
+        obSetProgress(10, `توليد ${todo.length} صفحة ناقصة...`);
+        const allPages = await obGeneratePages(todo, force);
+        const failed = allPages.filter(p => p.error);
+        const okPages = allPages.filter(p => !p.error);
+        if (!okPages.length) throw new Error(failed[0]?.error || 'فشل توليد الصفحات');
+        if (failed.length) showToast(`تم ${okPages.length} — فشل ${failed.length}`, 'err');
+        const done = new Set([..._obState.donePages, ...okPages.map(p => p.scene_id)]);
+        _obState.donePages = planned.filter(s => done.has(s));
+        _obState.missingPages = planned.filter(s => !done.has(s));
+        await obPersistProgress({ step: 'pages', scenes: planned });
+        if (!_obState.missingPages.length) {
+          _obStep = 'ending';
+          if (msg) {
+            msg.textContent = `تم حفظ ${planned.length} صفحة تلوين. الخطوة التالية: غلاف النهاية.`;
+            msg.className = 'qb-msg ok';
+          }
+        } else if (msg) {
+          msg.textContent = `محفوظ: ${_obState.donePages.length}/${planned.length}. لسه ناقص ${_obState.missingPages.length} — اضغط تاني للنواقص.`;
+          msg.className = 'qb-msg ok';
+        }
+        showToast('تم حفظ صفحات التلوين على الطلب ✓', 'ok');
+        obSetProgress(100, 'تم حفظ الصفحات ✓');
+      }
     }
-    showToast(force ? 'تمت إعادة التوليد والحفظ ✓' : 'الكتاب جاهز ومحفوظ على الطلب ✓', 'ok');
+
+    if (step === 'ending') {
+      if (!_obLastScenes.length) throw new Error('احفظ الإعداد واعمل الصفحات الأول');
+      obSetProgress(25, 'توليد غلاف النهاية...');
+      const ending = await obGenerateEnding(name, force);
+      _obState.hasEnding = true;
+      if (ending) {
+        obRenderPreviews(obBuildOrderedPreview(
+          _obState.hasCover ? { scene_id: 'cover', kind: 'cover' } : null,
+          _obState.donePages.map(sid => ({ scene_id: sid, kind: 'page' })),
+          ending,
+        ));
+      }
+      await obPersistProgress({ step: 'ending', scenes: _obLastScenes });
+      _obStep = 'pdf';
+      obSetProgress(100, 'غلاف النهاية محفوظ ✓');
+      if (msg) {
+        msg.textContent = 'تم حفظ غلاف النهاية. الخطوة الأخيرة: حفظ PDF على الطلب.';
+        msg.className = 'qb-msg ok';
+      }
+      showToast('غلاف النهاية جاهز ومحفوظ ✓', 'ok');
+    }
+
+    if (step === 'pdf') {
+      if (!_obLastScenes.length) throw new Error('مفيش صفحات — كمّل الخطوات الأول');
+      // Ensure we have done pages that exist
+      let scenes = _obState.donePages.length ? _obState.donePages : _obLastScenes;
+      if (!scenes.length) throw new Error('مفيش صفحات تلوين جاهزة');
+      // If cover missing still, try generate once
+      if (!_obState.hasCover) {
+        try {
+          obSetProgress(30, 'توليد غلاف البداية قبل PDF...');
+          await obGenerateCover(name, scenes.length, false);
+          _obState.hasCover = true;
+        } catch (_) {}
+      }
+      if (!_obState.hasEnding) {
+        try {
+          obSetProgress(55, 'توليد غلاف النهاية قبل PDF...');
+          await obGenerateEnding(name, false);
+          _obState.hasEnding = true;
+        } catch (_) {}
+      }
+      obSetProgress(80, 'حفظ PDF على الطلب...');
+      await obSaveToOrder(scenes, name);
+      _obStep = 'done';
+      obSetProgress(100, 'PDF محفوظ على الطلب ✓');
+      if (msg) {
+        msg.textContent = `تم حفظ الكتاب كاملًا على الطلب #${_obOrder.id} (غلاف + ${scenes.length} صفحة + نهاية).`;
+        msg.className = 'qb-msg ok';
+      }
+      showToast('PDF اتحفظ على الطلب ✓', 'ok');
+    }
+
+    obRenderWizardUI();
   } catch (e) {
     if (msg) {
       msg.textContent = e.message || 'حصل خطأ';
       msg.className = 'qb-msg err';
     }
-    showToast(e.message || 'فشل الإنشاء', 'err');
+    showToast(e.message || 'فشل', 'err');
     obHideProgress();
   } finally {
     _obBusy = false;
     if (btn) btn.disabled = false;
-    if (regenBtn) regenBtn.disabled = false;
+  }
+}
+
+async function obContinueWizard() {
+  if (_obBusy) return;
+  // Refresh status then run next incomplete step
+  try {
+    if (!_obSessionId) {
+      await obEnsureSession({ forceNew: false });
+    } else if (_obOrder) {
+      const res = await fetch(`/admin/api/special-orders/${_obOrder.id}/book/status`);
+      const data = await res.json();
+      if (res.ok) {
+        obApplyStatusPayload(data);
+        obRenderWizardUI();
+      }
+    }
+  } catch (_) {}
+
+  let step = _obStep === 'done' ? 'pdf' : _obStep;
+  if (!_obLastScenes.length && step !== 'setup') step = 'setup';
+  else if (step === 'setup' || (!_obLastScenes.length)) step = 'setup';
+  else if (!_obState.hasCover) step = 'cover';
+  else if (_obState.missingPages.length || !_obState.donePages.length) step = 'pages';
+  else if (!_obState.hasEnding) step = 'ending';
+  else step = 'pdf';
+
+  _obStep = step;
+  obRenderWizardUI();
+  await obRunStep(step, { force: false });
+}
+
+async function obCreateBook(opts = {}) {
+  // Full pipeline for regenerate-all: setup already selected → cover → pages force → ending → pdf
+  if (_obBusy) return;
+  const force = !!opts.force;
+  if (force && !confirm('هتعيد توليد الغلاف وكل الصفحات والنهاية من جديد ثم تحفظ PDF. متأكد؟')) return;
+
+  const name = obChildName();
+  const scenes = obSelectedIds();
+  if (!name) { showToast('اكتب اسم الطفل', 'err'); return; }
+  if (scenes.length !== _obPageCount) {
+    showToast(`اختار ${_obPageCount} وظيفة`, 'err');
+    return;
+  }
+
+  _obBusy = true;
+  try {
+    if (!_obSessionId) {
+      const st = await obEnsureSession({ forceNew: false });
+      if (!st) throw new Error('فشل الجلسة');
+    }
+    _obLastScenes = [...scenes];
+    await obPersistProgress({ step: 'setup', scenes, child_name: name });
+
+    obSetProgress(10, '1/5 — غلاف البداية...');
+    await obGenerateCover(name, scenes.length, force);
+    _obState.hasCover = true;
+    await obPersistProgress({ step: 'cover', scenes });
+
+    obSetProgress(25, '2/5 — صفحات التلوين...');
+    _obState.donePages = [];
+    _obState.missingPages = [...scenes];
+    const allPages = await obGeneratePages(scenes, true);
+    const ok = allPages.filter(p => !p.error);
+    if (!ok.length) throw new Error('فشل توليد الصفحات');
+    _obState.donePages = scenes.filter(s => ok.some(p => p.scene_id === s));
+    _obState.missingPages = scenes.filter(s => !_obState.donePages.includes(s));
+    await obPersistProgress({ step: 'pages', scenes });
+
+    obSetProgress(75, '3/5 — غلاف النهاية...');
+    await obGenerateEnding(name, force);
+    _obState.hasEnding = true;
+    await obPersistProgress({ step: 'ending', scenes });
+
+    obSetProgress(90, '4/5 — حفظ PDF...');
+    await obSaveToOrder(_obState.donePages.length ? _obState.donePages : scenes, name);
+    _obStep = 'done';
+    obSetProgress(100, 'تم ✓');
+    const msg = document.getElementById('ob-msg');
+    if (msg) {
+      msg.textContent = 'تم إعادة توليد الكتاب وحفظه على الطلب كاملًا.';
+      msg.className = 'qb-msg ok';
+    }
+    showToast('الكتاب كامل اتحفظ ✓', 'ok');
+    obRenderWizardUI();
+  } catch (e) {
+    showToast(e.message || 'فشل', 'err');
+    obHideProgress();
+  } finally {
+    _obBusy = false;
   }
 }
 
 async function obRegenerateOne(kind, sceneId) {
   if (_obBusy) return;
   const name = obChildName();
-  if (!name) {
-    showToast('اكتب اسم الطفل الأول', 'err');
-    return;
-  }
+  if (!name) { showToast('اكتب اسم الطفل الأول', 'err'); return; }
   if (!_obOrder) return;
-  if (!confirm('تعيد توليد الصفحة دي وتحفظ PDF على الطلب؟')) return;
+  if (!confirm('تعيد توليد الصفحة دي وتحفظ الخطوة على الطلب؟')) return;
 
   _obBusy = true;
   try {
     if (!_obSessionId) {
-      const started = await obEnsureSession({ forceNew: false });
-      if (!started) throw new Error('فشل تجهيز الجلسة');
+      const st = await obEnsureSession({ forceNew: false });
+      if (!st) throw new Error('فشل الجلسة');
     }
-
-    let coverPage = null;
-    let endingPage = null;
-    let pageResult = null;
-
     if (kind === 'cover' || sceneId === 'cover') {
       obSetProgress(30, 'إعادة توليد غلاف البداية...');
-      coverPage = await obGenerateCover(name, _obPageCount || (_obLastScenes.length || 8), true);
+      await obGenerateCover(name, _obPageCount || (_obLastScenes.length || 8), true);
+      _obState.hasCover = true;
+      await obPersistProgress({ step: 'cover' });
     } else if (kind === 'ending' || sceneId === 'ending') {
       obSetProgress(30, 'إعادة توليد غلاف النهاية...');
-      endingPage = await obGenerateEnding(name, true);
+      await obGenerateEnding(name, true);
+      _obState.hasEnding = true;
+      await obPersistProgress({ step: 'ending' });
     } else {
       const sid = sceneId || kind;
-      if (!sid) throw new Error('صفحة غير معروفة');
       obSetProgress(30, `إعادة توليد «${sceneTitle(sid)}»...`);
       const pages = await obGeneratePages([sid], true);
-      pageResult = pages.find(p => !p.error) || pages[0];
-      if (!pageResult || pageResult.error) throw new Error(pageResult?.error || 'فشل إعادة التوليد');
+      const pageResult = pages.find(p => !p.error);
+      if (!pageResult) throw new Error(pages[0]?.error || 'فشل');
+      if (!_obState.donePages.includes(sid)) _obState.donePages.push(sid);
+      _obState.missingPages = (_obLastScenes || []).filter(s => !_obState.donePages.includes(s));
+      await obPersistProgress({ step: 'pages' });
     }
-
-    // Refresh ordered preview from session urls
-    const scenes = obSelectedIds().length ? obSelectedIds() : (_obLastScenes || []);
-    const pageItems = scenes.map(sid => ({
-      scene_id: sid,
-      title: sceneTitle(sid),
-      kind: 'page',
-    }));
-    if (pageResult) {
-      const i = pageItems.findIndex(p => p.scene_id === pageResult.scene_id);
-      if (i >= 0) pageItems[i] = { ...pageItems[i], image_b64: pageResult.image_b64 };
-      else pageItems.push({ scene_id: pageResult.scene_id, title: pageResult.title || sceneTitle(pageResult.scene_id), image_b64: pageResult.image_b64, kind: 'page' });
+    // If all ready and was on pdf before, refresh pdf
+    if (_obState.pdfReady && _obLastScenes.length && !_obState.missingPages.length) {
+      obSetProgress(80, 'تحديث PDF على الطلب...');
+      await obSaveToOrder(_obLastScenes.filter(s => _obState.donePages.includes(s)).length
+        ? _obLastScenes.filter(s => _obState.donePages.includes(s))
+        : _obLastScenes, name);
     }
-    obRenderPreviews(obBuildOrderedPreview(
-      coverPage || { scene_id: 'cover', kind: 'cover' },
-      pageItems,
-      endingPage || { scene_id: 'ending', kind: 'ending' },
-    ));
-
-    obSetProgress(80, 'حفظ PDF المحدَّث على الطلب...');
-    const toSave = scenes.length ? scenes : _obLastScenes;
-    if (!toSave.length && pageResult?.scene_id) {
-      await obSaveToOrder([pageResult.scene_id], name);
-    } else if (toSave.length) {
-      await obSaveToOrder(toSave, name);
-    } else {
-      throw new Error('مفيش صفحات محفوظة — أنشئ الكتاب كامل الأول');
-    }
-
-    obSetProgress(100, 'تم ✓ — الصفحة اتحدّثت والـ PDF اتحفظ');
-    const msg = document.getElementById('ob-msg');
-    if (msg) {
-      msg.textContent = 'تمت إعادة التوليد وحفظ PDF على الطلب.';
-      msg.className = 'qb-msg ok';
-    }
+    obSetProgress(100, 'تم ✓');
     showToast('تمت إعادة التوليد والحفظ ✓', 'ok');
+    obRenderWizardUI();
   } catch (e) {
-    showToast(e.message || 'فشل إعادة التوليد', 'err');
+    showToast(e.message || 'فشل', 'err');
     obHideProgress();
   } finally {
     _obBusy = false;
