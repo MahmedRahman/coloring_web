@@ -1259,7 +1259,9 @@ async def generate_one_kie_async(
         prompt = (
             f"{prompt}. "
             "This is image-to-image: keep the exact same child face, hair, age and identity "
-            "from the reference photo, converted to simple black-and-white coloring book line art only."
+            "from the reference photo, converted to simple black-and-white coloring book line art only. "
+            "Full-page vertical A4 portrait composition, edge-to-edge illustration filling the entire page, "
+            "no white borders, no letterboxing, no empty margins."
         )
         ref_path = refs[0]
 
@@ -1291,30 +1293,40 @@ def run_async(coro):
     return asyncio.run(coro)
 
 
+def fit_image_to_a4(img: Image.Image, dpi: int = 150) -> Image.Image:
+    """Center-crop / scale image to exact A4 aspect at print resolution."""
+    # A4 mm → pixels at dpi
+    target_w = int(210 / 25.4 * dpi)
+    target_h = int(297 / 25.4 * dpi)
+    img = img.convert("RGB")
+    iw, ih = img.size
+    if iw < 1 or ih < 1:
+        return Image.new("RGB", (target_w, target_h), "#ffffff")
+    scale = max(target_w / iw, target_h / ih)
+    nw = max(target_w, int(round(iw * scale)))
+    nh = max(target_h, int(round(ih * scale)))
+    resized = img.resize((nw, nh), Image.Resampling.LANCZOS)
+    left = (nw - target_w) // 2
+    top = (nh - target_h) // 2
+    return resized.crop((left, top, left + target_w, top + target_h))
+
+
 def write_pdf_with_margins(images: List[Image.Image], pdf_path: Path):
-    """Build A4 PDF — pages fill the sheet (images are already A4 ratio)."""
+    """Build full-bleed A4 PDF — each image covers the entire page (no white margins)."""
     page_w, page_h = A4
-    # Small print margin (~5mm) so artwork nearly fills A4
-    margin = 14
-    footer_h = 16
     c = pdf_canvas.Canvas(str(pdf_path), pagesize=A4)
-    total = len(images)
-    for idx, img in enumerate(images, start=1):
-        usable_w = page_w - 2 * margin
-        usable_h = page_h - 2 * margin - footer_h
-        iw, ih = img.size
-        scale = min(usable_w / iw, usable_h / ih)
-        draw_w, draw_h = iw * scale, ih * scale
-        x = (page_w - draw_w) / 2
-        y = margin + footer_h + (usable_h - draw_h) / 2
+    for img in images:
+        page_img = fit_image_to_a4(img)
+        # Draw edge-to-edge: full A4 background
         c.drawImage(
-            ImageReader(img), x, y,
-            width=draw_w, height=draw_h,
-            preserveAspectRatio=True, mask="auto",
+            ImageReader(page_img),
+            0,
+            0,
+            width=page_w,
+            height=page_h,
+            preserveAspectRatio=False,
+            mask="auto",
         )
-        c.setFont("Helvetica", 9)
-        c.setFillColorRGB(0.45, 0.45, 0.45)
-        c.drawCentredString(page_w / 2, 8, f"{idx} / {total}")
         c.showPage()
     c.save()
 
