@@ -729,6 +729,23 @@
     display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
     margin-top: 4px;
   }
+  .ob-prev-actions {
+    position: absolute; bottom: 6px; left: 6px; right: 6px;
+    display: flex; gap: 4px; justify-content: flex-start; flex-wrap: wrap;
+    z-index: 2;
+  }
+  .ob-prev-actions .qb-prev-zoom,
+  .ob-prev-actions .qb-prev-regen {
+    position: static;
+    border: 1px solid rgba(255,255,255,0.15);
+    cursor: pointer; font-size: 10.5px; font-weight: 700;
+    padding: 4px 8px; border-radius: 8px;
+    background: rgba(6,11,20,0.82); color: #e2e8f0;
+    backdrop-filter: blur(4px);
+  }
+  .ob-prev-actions .qb-prev-regen:hover {
+    background: rgba(56,189,248,0.9); color: #041018;
+  }
   /* Order form page (add / edit) */
   .of-page { max-width: 760px; }
   .of-card {
@@ -1763,6 +1780,7 @@ let _obPhoto = null;
 let _obPageCount = 8;
 let _obBusy = false;
 let _obView = 'detail'; // detail | products | coloring
+let _obLastScenes = []; // last successfully generated interior scene ids
 
 const ALL_SCENES = [
   {% for s in scenes %}
@@ -3011,13 +3029,18 @@ function obHideProgress() {
   if (fill) fill.style.width = '0%';
 }
 
-function obPreviewCardHTML(title, src, kind) {
+function obPreviewCardHTML(title, src, kind, sceneId) {
   const label = escHtml(title || kind || 'صفحة');
+  const sid = escHtml(sceneId || kind || '');
+  const kindSafe = escHtml(kind || 'page');
   return `
-    <div class="qb-prev-page" title="${label} — اضغط للتكبير">
+    <div class="qb-prev-page" data-kind="${kindSafe}" data-scene="${sid}" title="${label} — اضغط للتكبير">
       <span class="qb-prev-label">${label}</span>
       <img src="${src}" alt="${label}" loading="lazy">
-      <button type="button" class="qb-prev-zoom" title="تكبير">⛶ تكبير</button>
+      <div class="ob-prev-actions">
+        <button type="button" class="qb-prev-zoom" title="تكبير">⛶ تكبير</button>
+        <button type="button" class="qb-prev-regen" data-regen-kind="${kindSafe}" data-regen-scene="${sid}" title="إعادة توليد">↻ إعادة</button>
+      </div>
     </div>`;
 }
 
@@ -3028,13 +3051,24 @@ function obBindPreviews() {
     const img = card.querySelector('img');
     if (!img) return;
     const open = (e) => {
+      if (e.target.closest('.qb-prev-regen')) return;
       e.preventDefault();
       e.stopPropagation();
       openLightbox(img.src);
     };
     card.onclick = open;
-    const btn = card.querySelector('.qb-prev-zoom');
-    if (btn) btn.onclick = open;
+    const zoomBtn = card.querySelector('.qb-prev-zoom');
+    if (zoomBtn) zoomBtn.onclick = open;
+    const regenBtn = card.querySelector('.qb-prev-regen');
+    if (regenBtn) {
+      regenBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const kind = regenBtn.getAttribute('data-regen-kind') || 'page';
+        const scene = regenBtn.getAttribute('data-regen-scene') || '';
+        obRegenerateOne(kind, scene);
+      };
+    }
   });
 }
 
@@ -3050,13 +3084,45 @@ function obRenderPreviews(items) {
   wrap.innerHTML = items.map(it => {
     let src = it.src || '';
     if (!src && it.image_b64) src = `data:image/jpeg;base64,${it.image_b64}`;
-    if (!src && it.scene_id && _obSessionId) {
-      src = `/admin/api/quick-book/preview/${_obSessionId}/${it.scene_id}?t=${Date.now()}`;
+    const sceneId = it.scene_id || (it.kind === 'cover' ? 'cover' : it.kind === 'ending' ? 'ending' : '');
+    if (!src && sceneId && _obSessionId) {
+      src = `/admin/api/quick-book/preview/${_obSessionId}/${sceneId}?t=${Date.now()}`;
     }
-    return obPreviewCardHTML(it.title, src, it.kind);
+    return obPreviewCardHTML(it.title, src, it.kind || 'page', sceneId);
   }).join('');
   if (head) head.style.display = 'flex';
   obBindPreviews();
+}
+
+function obBuildOrderedPreview(coverPage, okPages, endingPage) {
+  const items = [];
+  if (coverPage && (coverPage.image_b64 || coverPage.scene_id)) {
+    items.push({
+      title: 'غلاف البداية',
+      image_b64: coverPage.image_b64,
+      scene_id: 'cover',
+      kind: 'cover',
+    });
+  }
+  (okPages || []).forEach(p => {
+    if (p && (p.image_b64 || p.scene_id)) {
+      items.push({
+        title: p.title || sceneTitle(p.scene_id),
+        image_b64: p.image_b64,
+        scene_id: p.scene_id,
+        kind: 'page',
+      });
+    }
+  });
+  if (endingPage && (endingPage.image_b64 || endingPage.scene_id)) {
+    items.push({
+      title: 'غلاف النهاية',
+      image_b64: endingPage.image_b64,
+      scene_id: 'ending',
+      kind: 'ending',
+    });
+  }
+  return items;
 }
 
 async function startOrderColoringBook(orderId) {
@@ -3074,6 +3140,7 @@ async function startOrderColoringBook(orderId) {
   _obView = 'coloring';
   _obPhoto = o.photos[0];
   _obSessionId = null;
+  _obLastScenes = [];
   renderOrderColoringBook(o);
   await obEnsureSession({ forceNew: false });
 }
@@ -3111,8 +3178,8 @@ function renderOrderColoringBook(o) {
     </div>`).join('');
 
   const savedPdf = o.pdf_filename
-    ? `<a class="btn btn-sm btn-success" href="/admin/special-orders/${o.id}/pdf/${escHtml(o.pdf_filename)}" target="_blank">تحميل PDF المحفوظ</a>`
-    : '';
+    ? `<a class="btn btn-sm btn-success" id="ob-saved-pdf" href="/admin/special-orders/${o.id}/pdf/${escHtml(o.pdf_filename)}" target="_blank">تحميل PDF المحفوظ</a>`
+    : `<a class="btn btn-sm btn-success" id="ob-saved-pdf" href="#" target="_blank" style="display:none">تحميل PDF المحفوظ</a>`;
 
   root.innerHTML = `
     <button type="button" class="so-detail-back" onclick="renderBookProductPicker(_obOrder)">← رجوع لأنواع الكتب</button>
@@ -3163,9 +3230,15 @@ function renderOrderColoringBook(o) {
 
       <div class="qb-card">
         <h3>5. إنشاء وحفظ الكتاب</h3>
-        <p class="hint">التوليد عبر <strong>Kie.ai → GPT Image 2</strong>. النتائج + PDF بيتسجلوا على الطلب #${o.id}.</p>
+        <p class="hint">
+          الترتيب: <strong>1) غلاف البداية</strong> → <strong>2) صفحات التلوين</strong> → <strong>3) غلاف النهاية</strong> →
+          <strong>حفظ PDF على الطلب #${o.id}</strong>.
+          GPT Image 2 عبر Kie.ai.
+        </p>
         <div class="qb-actions">
-          <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obCreateBook()">إنشاء وحفظ الكتاب</button>
+          <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obCreateBook({force:false})">إنشاء وحفظ الكتاب</button>
+          <button type="button" class="btn btn-ghost" id="ob-regen-all-btn" onclick="obCreateBook({force:true})">↻ إعادة توليد الكل</button>
+          <button type="button" class="btn btn-ghost" id="ob-resave-btn" onclick="obSavePdfOnly()">حفظ PDF تاني</button>
           <div class="qb-result" id="ob-result">
             <a class="btn btn-success" id="ob-download" href="#" target="_blank">تحميل PDF</a>
             <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id})">رجوع للطلب</button>
@@ -3178,8 +3251,8 @@ function renderOrderColoringBook(o) {
         </div>
         <div class="qb-msg" id="ob-msg"></div>
         <div class="qb-previews-head" id="ob-previews-head" style="display:none">
-          <p class="title">معاينة الصفحات</p>
-          <p class="hint">اضغط الصورة أو «تكبير» لعرضها بالحجم الكامل</p>
+          <p class="title">معاينة الصفحات (غلاف → صفحات → نهاية)</p>
+          <p class="hint">اضغط الصورة للتكبير · «↻ إعادة» لإعادة توليد الصفحة دي بس ثم حفظ PDF</p>
         </div>
         <div class="qb-previews" id="ob-previews"></div>
       </div>
@@ -3195,6 +3268,7 @@ function renderOrderColoringBook(o) {
       obSetPageCount(_obPageCount, null);
     }
     obSelectScenes(savedScenes);
+    _obLastScenes = [...savedScenes];
   } else {
     obSelectAuto();
   }
@@ -3206,7 +3280,6 @@ async function obPickPhoto(fn) {
   document.querySelectorAll('#ob-photo-pick .ob-photo-thumb').forEach(el => {
     el.classList.toggle('selected', el.dataset.photo === fn);
   });
-  // New photo → new session
   await obEnsureSession({ forceNew: true, photo: fn });
 }
 
@@ -3233,32 +3306,46 @@ async function obEnsureSession({ forceNew = false, photo = null } = {}) {
       if (idx >= 0) _soAll[idx] = data.order;
     }
 
-    // Resume previews
     const previews = [];
     if (data.has_cover) {
-      previews.push({ title: 'الغلاف', scene_id: 'cover', kind: 'cover' });
+      previews.push({ title: 'غلاف البداية', scene_id: 'cover', kind: 'cover' });
     }
     (data.generated_scenes || []).forEach(sid => {
       previews.push({ title: sceneTitle(sid), scene_id: sid, kind: 'page' });
     });
     if (data.has_ending) {
-      previews.push({ title: 'صفحة النهاية', scene_id: 'ending', kind: 'ending' });
+      previews.push({ title: 'غلاف النهاية', scene_id: 'ending', kind: 'ending' });
     }
     if (previews.length) obRenderPreviews(previews);
 
-    // Preselect generated scenes if any
     const gens = data.generated_scenes || [];
-    if (gens.length && document.getElementById('ob-jobs')) {
-      if ([1, 8, 12].includes(gens.length)) {
-        _obPageCount = gens.length;
-        obSetPageCount(_obPageCount, null);
+    if (gens.length) {
+      _obLastScenes = [...gens];
+      if (document.getElementById('ob-jobs')) {
+        if ([1, 8, 12].includes(gens.length)) {
+          _obPageCount = gens.length;
+          obSetPageCount(_obPageCount, null);
+        }
+        obSelectScenes(gens);
       }
-      obSelectScenes(gens);
     }
 
     if (msg && data.resumed) {
-      msg.textContent = 'تم استكمال الجلسة السابقة — تقدر تكمل أو تعيد التوليد.';
+      msg.textContent = 'تم استكمال الجلسة السابقة — تقدر تكمل أو تعيد التوليد (صفحة أو الكل).';
       msg.className = 'qb-msg ok';
+    }
+    if (data.order && data.order.pdf_filename) {
+      const a = document.getElementById('ob-download');
+      const saved = document.getElementById('ob-saved-pdf');
+      const url = `/admin/special-orders/${orderId}/pdf/${data.order.pdf_filename}`;
+      if (a) {
+        a.href = url;
+        document.getElementById('ob-result')?.classList.add('show');
+      }
+      if (saved) {
+        saved.href = url;
+        saved.style.display = '';
+      }
     }
     return data;
   } catch (e) {
@@ -3271,11 +3358,136 @@ async function obEnsureSession({ forceNew = false, photo = null } = {}) {
   }
 }
 
-async function obCreateBook() {
+function obChildName() {
+  return (document.getElementById('ob-name')?.value || '').trim();
+}
+
+async function obSaveToOrder(scenes, name) {
+  if (!_obOrder || !_obSessionId) throw new Error('مفيش جلسة كتاب');
+  const clean = (scenes || []).filter(Boolean);
+  if (!clean.length) throw new Error('مفيش صفحات للحفظ');
+  const sRes = await fetch(`/admin/api/special-orders/${_obOrder.id}/book/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: _obSessionId,
+      scenes: clean,
+      child_name: name || obChildName(),
+    }),
+  });
+  const sData = await sRes.json();
+  if (!sRes.ok) throw new Error(sData.error || 'فشل حفظ الكتاب على الطلب');
+  if (sData.order) {
+    _obOrder = sData.order;
+    const idx = _soAll.findIndex(x => x.id === _obOrder.id);
+    if (idx >= 0) _soAll[idx] = sData.order;
+  }
+  _obLastScenes = [...clean];
+  const dl = document.getElementById('ob-download');
+  const resultEl = document.getElementById('ob-result');
+  const saved = document.getElementById('ob-saved-pdf');
+  const url = sData.download_url || `/admin/special-orders/${_obOrder.id}/pdf/${sData.pdf_filename}`;
+  if (dl) {
+    dl.href = url;
+    dl.setAttribute('download', `${name || 'coloring_book'}.pdf`);
+  }
+  if (resultEl) resultEl.classList.add('show');
+  if (saved) {
+    saved.href = url;
+    saved.style.display = '';
+  }
+  return sData;
+}
+
+async function obSavePdfOnly() {
   if (_obBusy) return;
+  const name = obChildName();
+  const scenes = (obSelectedIds().length ? obSelectedIds() : _obLastScenes).filter(Boolean);
+  if (!scenes.length) {
+    showToast('مفيش صفحات جاهزة — أنشئ الكتاب الأول', 'err');
+    return;
+  }
+  if (!name) {
+    showToast('اكتب اسم الطفل', 'err');
+    return;
+  }
+  _obBusy = true;
+  try {
+    if (!_obSessionId) {
+      const started = await obEnsureSession({ forceNew: false });
+      if (!started) throw new Error('فشل تجهيز الجلسة');
+    }
+    obSetProgress(50, 'حفظ PDF على الطلب...');
+    await obSaveToOrder(scenes, name);
+    obSetProgress(100, 'تم الحفظ ✓');
+    const msg = document.getElementById('ob-msg');
+    if (msg) {
+      msg.textContent = `تم حفظ PDF (${scenes.length} صفحة + غلاف + نهاية) على الطلب #${_obOrder.id}`;
+      msg.className = 'qb-msg ok';
+    }
+    showToast('PDF اتحفظ على الطلب ✓', 'ok');
+  } catch (e) {
+    showToast(e.message || 'فشل الحفظ', 'err');
+    obHideProgress();
+  } finally {
+    _obBusy = false;
+  }
+}
+
+async function obGenerateCover(name, pageCount, force) {
+  const cRes = await fetch('/admin/api/quick-book/cover', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: _obSessionId,
+      child_name: name,
+      page_count: pageCount,
+      force: !!force,
+    }),
+  });
+  const cData = await cRes.json();
+  if (!cRes.ok) throw new Error(cData.error || 'فشل غلاف البداية');
+  return cData.page || null;
+}
+
+async function obGenerateEnding(name, force) {
+  const eRes = await fetch('/admin/api/quick-book/ending', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: _obSessionId,
+      child_name: name,
+      force: !!force,
+    }),
+  });
+  const eData = await eRes.json();
+  if (!eRes.ok) throw new Error(eData.error || 'فشل غلاف النهاية');
+  return eData.page || null;
+}
+
+async function obGeneratePages(scenes, force) {
+  const chunks = qbChunk(scenes, 2);
+  const allPages = [];
+  for (let i = 0; i < chunks.length; i++) {
+    const base = 28 + Math.round((i / Math.max(chunks.length, 1)) * 45);
+    obSetProgress(base, `GPT Image 2 — صفحات التلوين ${i + 1}/${chunks.length}...`);
+    const gRes = await fetch('/admin/api/quick-book/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: _obSessionId, scenes: chunks[i], force: !!force }),
+    });
+    const gData = await gRes.json();
+    if (!gRes.ok) throw new Error(gData.error || 'فشل التوليد');
+    allPages.push(...(gData.pages || []));
+  }
+  return allPages;
+}
+
+async function obCreateBook(opts = {}) {
+  if (_obBusy) return;
+  const force = !!opts.force;
   const msg = document.getElementById('ob-msg');
-  const nameEl = document.getElementById('ob-name');
-  const name = (nameEl && nameEl.value || '').trim();
+  const name = obChildName();
   const scenes = obSelectedIds();
   if (msg) { msg.className = 'qb-msg'; msg.textContent = ''; }
 
@@ -3289,7 +3501,7 @@ async function obCreateBook() {
   }
   if (!name) {
     if (msg) { msg.textContent = 'اكتب اسم الطفل.'; msg.className = 'qb-msg err'; }
-    if (nameEl) nameEl.focus();
+    document.getElementById('ob-name')?.focus();
     return;
   }
   if (scenes.length !== _obPageCount) {
@@ -3300,40 +3512,40 @@ async function obCreateBook() {
     return;
   }
 
+  if (force && !confirm('هتعيد توليد الغلاف وكل الصفحات وغلاف النهاية من جديد. متأكد؟')) {
+    return;
+  }
+
   _obBusy = true;
   const btn = document.getElementById('ob-run-btn');
+  const regenBtn = document.getElementById('ob-regen-all-btn');
   if (btn) btn.disabled = true;
+  if (regenBtn) regenBtn.disabled = true;
   const resultEl = document.getElementById('ob-result');
   if (resultEl) resultEl.classList.remove('show');
 
   try {
-    obSetProgress(6, 'تجهيز جلسة الطلب...');
+    obSetProgress(4, 'تجهيز جلسة الطلب...');
     if (!_obSessionId) {
       const started = await obEnsureSession({ forceNew: false });
       if (!started) throw new Error('فشل تجهيز الجلسة');
     }
 
-    const chunks = qbChunk(scenes, 2);
-    const allPages = [];
-    const livePreview = [];
-    for (let i = 0; i < chunks.length; i++) {
-      const base = 12 + Math.round((i / chunks.length) * 55);
-      obSetProgress(base, `GPT Image 2 — توليد دفعة ${i + 1} من ${chunks.length}...`);
-      const gRes = await fetch('/admin/api/quick-book/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: _obSessionId, scenes: chunks[i], force: false }),
-      });
-      const gData = await gRes.json();
-      if (!gRes.ok) throw new Error(gData.error || 'فشل التوليد');
-      const batch = gData.pages || [];
-      allPages.push(...batch);
-      batch.filter(p => !p.error && p.image_b64).forEach(p => {
-        livePreview.push({ title: p.title || sceneTitle(p.scene_id), image_b64: p.image_b64, kind: 'page' });
-      });
-      obRenderPreviews(livePreview);
+    // 1) غلاف البداية أولاً
+    obSetProgress(12, '1/4 — توليد غلاف البداية...');
+    let coverPage = null;
+    try {
+      coverPage = await obGenerateCover(name, scenes.length || _obPageCount, force);
+      if (coverPage) {
+        obRenderPreviews(obBuildOrderedPreview(coverPage, [], null));
+      }
+    } catch (coverErr) {
+      showToast('غلاف البداية فشل — هنكمل وصفحات التلوين (غلاف بسيط في PDF)', 'err');
     }
 
+    // 2) صفحات التلوين
+    obSetProgress(28, '2/4 — توليد صفحات التلوين...');
+    const allPages = await obGeneratePages(scenes, force);
     const failed = allPages.filter(p => p.error);
     const okPages = allPages.filter(p => !p.error);
     if (!okPages.length) throw new Error(failed[0]?.error || 'فشل توليد كل الصفحات');
@@ -3341,86 +3553,31 @@ async function obCreateBook() {
 
     const okSet = new Set(okPages.map(p => p.scene_id));
     const order = scenes.filter(id => okSet.has(id));
+    _obLastScenes = [...order];
+    obRenderPreviews(obBuildOrderedPreview(coverPage, okPages, null));
 
-    obSetProgress(72, 'توليد غلاف البداية...');
-    let coverPage = null;
-    try {
-      const cRes = await fetch('/admin/api/quick-book/cover', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: _obSessionId,
-          child_name: name,
-          page_count: order.length || _obPageCount,
-          force: false,
-        }),
-      });
-      const cData = await cRes.json();
-      if (!cRes.ok) throw new Error(cData.error || 'فشل الغلاف');
-      coverPage = cData.page || null;
-      if (coverPage && coverPage.image_b64) {
-        livePreview.unshift({ title: 'الغلاف', image_b64: coverPage.image_b64, kind: 'cover' });
-        obRenderPreviews(livePreview);
-      }
-    } catch (coverErr) {
-      showToast('الغلاف الملوّن فشل — هيستخدم غلاف بسيط', 'err');
-    }
-
-    obSetProgress(84, 'توليد صفحة النهاية...');
+    // 3) غلاف النهاية آخراً
+    obSetProgress(78, '3/4 — توليد غلاف النهاية...');
     let endingPage = null;
     try {
-      const eRes = await fetch('/admin/api/quick-book/ending', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: _obSessionId,
-          child_name: name,
-          force: false,
-        }),
-      });
-      const eData = await eRes.json();
-      if (!eRes.ok) throw new Error(eData.error || 'فشل صفحة النهاية');
-      endingPage = eData.page || null;
-      if (endingPage && endingPage.image_b64) {
-        livePreview.push({ title: 'صفحة النهاية', image_b64: endingPage.image_b64, kind: 'ending' });
-        obRenderPreviews(livePreview);
-      }
+      endingPage = await obGenerateEnding(name, force);
     } catch (endErr) {
-      showToast('صفحة النهاية فشلت — هيكمل PDF من غيرها', 'err');
+      showToast('غلاف النهاية فشل — هيتجاب PDF من غيره لو مفيش نسخة قديمة', 'err');
     }
 
-    obSetProgress(93, 'حفظ PDF على الطلب...');
-    const sRes = await fetch(`/admin/api/special-orders/${_obOrder.id}/book/save`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_id: _obSessionId,
-        scenes: order,
-        child_name: name,
-      }),
-    });
-    const sData = await sRes.json();
-    if (!sRes.ok) throw new Error(sData.error || 'فشل حفظ الكتاب');
+    // Preview final order: cover → pages → ending
+    obRenderPreviews(obBuildOrderedPreview(coverPage, okPages, endingPage));
 
-    if (sData.order) {
-      _obOrder = sData.order;
-      const idx = _soAll.findIndex(x => x.id === _obOrder.id);
-      if (idx >= 0) _soAll[idx] = sData.order;
-    }
+    // 4) حفظ PDF + تسجيل النتائج على الطلب
+    obSetProgress(92, '4/4 — حفظ PDF والنتائج على الطلب...');
+    await obSaveToOrder(order, name);
 
-    const a = document.getElementById('ob-download');
-    if (a) {
-      a.href = sData.download_url || `/admin/special-orders/${_obOrder.id}/pdf/${sData.pdf_filename}`;
-      a.setAttribute('download', `${name || 'coloring_book'}.pdf`);
-    }
-    if (resultEl) resultEl.classList.add('show');
-
-    obSetProgress(100, 'تم الحفظ ✓ — الكتاب مربوط بالطلب');
+    obSetProgress(100, 'تم الحفظ ✓ — غلاف + صفحات + نهاية مربوطين بالطلب');
     if (msg) {
-      msg.textContent = `تم إنشاء وحفظ كتاب ${order.length} صفحة لـ «${name}» على الطلب #${_obOrder.id}`;
+      msg.textContent = `تم إنشاء وحفظ الكتاب لـ «${name}» على الطلب #${_obOrder.id}: غلاف بداية + ${order.length} صفحة تلوين + غلاف نهاية`;
       msg.className = 'qb-msg ok';
     }
-    showToast('الكتاب جاهز ومحفوظ على الطلب ✓', 'ok');
+    showToast(force ? 'تمت إعادة التوليد والحفظ ✓' : 'الكتاب جاهز ومحفوظ على الطلب ✓', 'ok');
   } catch (e) {
     if (msg) {
       msg.textContent = e.message || 'حصل خطأ';
@@ -3431,6 +3588,86 @@ async function obCreateBook() {
   } finally {
     _obBusy = false;
     if (btn) btn.disabled = false;
+    if (regenBtn) regenBtn.disabled = false;
+  }
+}
+
+async function obRegenerateOne(kind, sceneId) {
+  if (_obBusy) return;
+  const name = obChildName();
+  if (!name) {
+    showToast('اكتب اسم الطفل الأول', 'err');
+    return;
+  }
+  if (!_obOrder) return;
+  if (!confirm('تعيد توليد الصفحة دي وتحفظ PDF على الطلب؟')) return;
+
+  _obBusy = true;
+  try {
+    if (!_obSessionId) {
+      const started = await obEnsureSession({ forceNew: false });
+      if (!started) throw new Error('فشل تجهيز الجلسة');
+    }
+
+    let coverPage = null;
+    let endingPage = null;
+    let pageResult = null;
+
+    if (kind === 'cover' || sceneId === 'cover') {
+      obSetProgress(30, 'إعادة توليد غلاف البداية...');
+      coverPage = await obGenerateCover(name, _obPageCount || (_obLastScenes.length || 8), true);
+    } else if (kind === 'ending' || sceneId === 'ending') {
+      obSetProgress(30, 'إعادة توليد غلاف النهاية...');
+      endingPage = await obGenerateEnding(name, true);
+    } else {
+      const sid = sceneId || kind;
+      if (!sid) throw new Error('صفحة غير معروفة');
+      obSetProgress(30, `إعادة توليد «${sceneTitle(sid)}»...`);
+      const pages = await obGeneratePages([sid], true);
+      pageResult = pages.find(p => !p.error) || pages[0];
+      if (!pageResult || pageResult.error) throw new Error(pageResult?.error || 'فشل إعادة التوليد');
+    }
+
+    // Refresh ordered preview from session urls
+    const scenes = obSelectedIds().length ? obSelectedIds() : (_obLastScenes || []);
+    const pageItems = scenes.map(sid => ({
+      scene_id: sid,
+      title: sceneTitle(sid),
+      kind: 'page',
+    }));
+    if (pageResult) {
+      const i = pageItems.findIndex(p => p.scene_id === pageResult.scene_id);
+      if (i >= 0) pageItems[i] = { ...pageItems[i], image_b64: pageResult.image_b64 };
+      else pageItems.push({ scene_id: pageResult.scene_id, title: pageResult.title || sceneTitle(pageResult.scene_id), image_b64: pageResult.image_b64, kind: 'page' });
+    }
+    obRenderPreviews(obBuildOrderedPreview(
+      coverPage || { scene_id: 'cover', kind: 'cover' },
+      pageItems,
+      endingPage || { scene_id: 'ending', kind: 'ending' },
+    ));
+
+    obSetProgress(80, 'حفظ PDF المحدَّث على الطلب...');
+    const toSave = scenes.length ? scenes : _obLastScenes;
+    if (!toSave.length && pageResult?.scene_id) {
+      await obSaveToOrder([pageResult.scene_id], name);
+    } else if (toSave.length) {
+      await obSaveToOrder(toSave, name);
+    } else {
+      throw new Error('مفيش صفحات محفوظة — أنشئ الكتاب كامل الأول');
+    }
+
+    obSetProgress(100, 'تم ✓ — الصفحة اتحدّثت والـ PDF اتحفظ');
+    const msg = document.getElementById('ob-msg');
+    if (msg) {
+      msg.textContent = 'تمت إعادة التوليد وحفظ PDF على الطلب.';
+      msg.className = 'qb-msg ok';
+    }
+    showToast('تمت إعادة التوليد والحفظ ✓', 'ok');
+  } catch (e) {
+    showToast(e.message || 'فشل إعادة التوليد', 'err');
+    obHideProgress();
+  } finally {
+    _obBusy = false;
   }
 }
 
