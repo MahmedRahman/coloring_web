@@ -860,14 +860,48 @@
   }
   .qb-result.show { display: flex; }
   .qb-previews {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px;
-    margin-top: 12px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px;
+    margin-top: 14px;
   }
   .qb-prev-page {
-    border-radius: 10px; overflow: hidden; border: 1px solid var(--border-2);
-    background: #fff; aspect-ratio: 210/297;
+    border-radius: 12px; overflow: hidden; border: 1px solid var(--border-2);
+    background: #fff; aspect-ratio: 210/297; position: relative;
+    cursor: zoom-in; transition: border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .qb-prev-page:hover {
+    border-color: rgba(56,189,248,0.55);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.35);
   }
   .qb-prev-page img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .qb-prev-zoom {
+    position: absolute; left: 6px; bottom: 6px;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 8px; border-radius: 8px;
+    background: rgba(6,11,20,0.82); color: #fff;
+    border: 1px solid rgba(255,255,255,0.15);
+    font-size: 11px; font-weight: 700; cursor: pointer;
+    backdrop-filter: blur(4px);
+  }
+  .qb-prev-zoom:hover { background: rgba(14,165,233,0.9); }
+  .qb-prev-label {
+    position: absolute; right: 6px; top: 6px;
+    max-width: calc(100% - 16px);
+    padding: 3px 7px; border-radius: 7px;
+    background: rgba(6,11,20,0.75); color: #e8eef9;
+    font-size: 10.5px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .qb-previews-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin-top: 14px; flex-wrap: wrap;
+  }
+  .qb-previews-head .title {
+    margin: 0; font-size: 13px; font-weight: 700; color: var(--text-2);
+  }
+  .qb-previews-head .hint {
+    margin: 0; font-size: 11.5px; color: var(--muted); font-weight: 500;
+  }
   .qb-msg { font-size: 13px; font-weight: 600; min-height: 18px; }
   .qb-msg.err { color: var(--danger); }
   .qb-msg.ok { color: var(--ok); }
@@ -1429,6 +1463,10 @@
             <div class="qb-progress-bar"><div class="qb-progress-fill" id="qb-progress-fill"></div></div>
           </div>
           <div class="qb-msg" id="qb-msg"></div>
+          <div class="qb-previews-head" id="qb-previews-head" style="display:none">
+            <p class="title">معاينة الصفحات</p>
+            <p class="hint">اضغط الصورة أو «تكبير» لعرضها بالحجم الكامل</p>
+          </div>
           <div class="qb-previews" id="qb-previews"></div>
         </div>
       </div>
@@ -1765,6 +1803,9 @@ function qbOnPhoto(input) {
   const url = URL.createObjectURL(f);
   img.src = url;
   img.style.display = 'block';
+  img.style.cursor = 'zoom-in';
+  img.title = 'اضغط للتكبير';
+  img.onclick = () => openLightbox(url);
   if (ph) ph.style.display = 'none';
   document.getElementById('qb-clear-photo').style.display = '';
   document.getElementById('qb-result').classList.remove('show');
@@ -1797,6 +1838,53 @@ function qbSetProgress(pct, text) {
 function qbHideProgress() {
   document.getElementById('qb-progress').classList.remove('show');
   document.getElementById('qb-progress-fill').style.width = '0%';
+}
+
+function qbPreviewCardHTML(title, b64, kind) {
+  const src = `data:image/jpeg;base64,${b64}`;
+  const label = escHtml(title || kind || 'صفحة');
+  // Use encoded src for onclick via data attribute (safer than injecting full base64 in onclick)
+  return `
+    <div class="qb-prev-page" data-qb-src="1" title="${label} — اضغط للتكبير">
+      <span class="qb-prev-label">${label}</span>
+      <img src="${src}" alt="${label}" loading="lazy">
+      <button type="button" class="qb-prev-zoom" title="تكبير">⛶ تكبير</button>
+    </div>`;
+}
+
+function qbBindPreviews() {
+  const wrap = document.getElementById('qb-previews');
+  if (!wrap) return;
+  wrap.querySelectorAll('.qb-prev-page').forEach(card => {
+    const img = card.querySelector('img');
+    if (!img) return;
+    const open = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openLightbox(img.src);
+    };
+    card.onclick = open;
+    const btn = card.querySelector('.qb-prev-zoom');
+    if (btn) btn.onclick = open;
+  });
+}
+
+function qbRenderPreviews(items) {
+  // items: [{title, image_b64, kind?}]
+  const wrap = document.getElementById('qb-previews');
+  const head = document.getElementById('qb-previews-head');
+  if (!wrap) return;
+  if (!items || !items.length) {
+    wrap.innerHTML = '';
+    if (head) head.style.display = 'none';
+    return;
+  }
+  wrap.innerHTML = items
+    .filter(it => it && it.image_b64)
+    .map(it => qbPreviewCardHTML(it.title, it.image_b64, it.kind))
+    .join('');
+  if (head) head.style.display = 'flex';
+  qbBindPreviews();
 }
 
 function qbChunk(arr, size) {
@@ -1851,8 +1939,9 @@ async function qbCreateBook() {
     // 2) Generate in chunks of 2 via Kie GPT Image 2 (each page ~60s)
     const chunks = qbChunk(scenes, 2);
     const allPages = [];
+    const livePreview = [];
     for (let i = 0; i < chunks.length; i++) {
-      const base = 15 + Math.round((i / chunks.length) * 70);
+      const base = 15 + Math.round((i / chunks.length) * 60);
       qbSetProgress(base, `GPT Image 2 — توليد دفعة ${i + 1} من ${chunks.length}...`);
       const gRes = await fetch('/admin/api/quick-book/generate', {
         method: 'POST',
@@ -1861,7 +1950,12 @@ async function qbCreateBook() {
       });
       const gData = await gRes.json();
       if (!gRes.ok) throw new Error(gData.error || 'فشل التوليد');
-      allPages.push(...(gData.pages || []));
+      const batch = gData.pages || [];
+      allPages.push(...batch);
+      batch.filter(p => !p.error && p.image_b64).forEach(p => {
+        livePreview.push({ title: p.title || p.scene_id, image_b64: p.image_b64, kind: 'page' });
+      });
+      qbRenderPreviews(livePreview);
     }
 
     const failed = allPages.filter(p => p.error);
@@ -1878,7 +1972,7 @@ async function qbCreateBook() {
     const order = scenes.filter(id => okSet.has(id));
 
     // Premium front cover
-    qbSetProgress(82, 'توليد غلاف البداية...');
+    qbSetProgress(78, 'توليد غلاف البداية...');
     let coverPage = null;
     try {
       const cRes = await fetch('/admin/api/quick-book/cover', {
@@ -1894,12 +1988,16 @@ async function qbCreateBook() {
       const cData = await cRes.json();
       if (!cRes.ok) throw new Error(cData.error || 'فشل الغلاف');
       coverPage = cData.page || null;
+      if (coverPage && coverPage.image_b64) {
+        livePreview.unshift({ title: 'الغلاف', image_b64: coverPage.image_b64, kind: 'cover' });
+        qbRenderPreviews(livePreview);
+      }
     } catch (coverErr) {
       showToast('الغلاف الملوّن فشل — هيستخدم غلاف بسيط', 'err');
     }
 
     // Premium ending page (full color)
-    qbSetProgress(90, 'توليد صفحة النهاية (تهانينا!)...');
+    qbSetProgress(88, 'توليد صفحة النهاية (تهانينا!)...');
     let endingPage = null;
     try {
       const eRes = await fetch('/admin/api/quick-book/ending', {
@@ -1914,32 +2012,26 @@ async function qbCreateBook() {
       const eData = await eRes.json();
       if (!eRes.ok) throw new Error(eData.error || 'فشل صفحة النهاية');
       endingPage = eData.page || null;
+      if (endingPage && endingPage.image_b64) {
+        livePreview.push({ title: 'صفحة النهاية', image_b64: endingPage.image_b64, kind: 'ending' });
+        qbRenderPreviews(livePreview);
+      }
     } catch (endErr) {
       showToast('صفحة النهاية فشلت — هيكمل PDF من غيرها', 'err');
     }
 
-    // previews
-    const previews = document.getElementById('qb-previews');
-    const previewParts = [];
+    // Final ordered preview: cover → pages → ending
+    const finalItems = [];
     if (coverPage && coverPage.image_b64) {
-      previewParts.push(`
-        <div class="qb-prev-page" title="الغلاف">
-          <img src="data:image/jpeg;base64,${coverPage.image_b64}" alt="غلاف">
-        </div>`);
+      finalItems.push({ title: 'الغلاف', image_b64: coverPage.image_b64 });
     }
     okPages.forEach(p => {
-      previewParts.push(`
-      <div class="qb-prev-page" title="${escHtml(p.title || p.scene_id)}">
-        <img src="data:image/jpeg;base64,${p.image_b64}" alt="${escHtml(p.title || '')}">
-      </div>`);
+      if (p.image_b64) finalItems.push({ title: p.title || p.scene_id, image_b64: p.image_b64 });
     });
     if (endingPage && endingPage.image_b64) {
-      previewParts.push(`
-        <div class="qb-prev-page" title="صفحة النهاية">
-          <img src="data:image/jpeg;base64,${endingPage.image_b64}" alt="نهاية">
-        </div>`);
+      finalItems.push({ title: 'صفحة النهاية', image_b64: endingPage.image_b64 });
     }
-    previews.innerHTML = previewParts.join('');
+    qbRenderPreviews(finalItems);
 
     qbSetProgress(97, 'جاري تجهيز PDF (غلاف + صفحات + نهاية)...');
     const pdfUrl = `/admin/api/quick-book/pdf/${_qbSessionId}?order=${encodeURIComponent(order.join(','))}&name=${encodeURIComponent(name)}`;
@@ -1948,13 +2040,13 @@ async function qbCreateBook() {
     a.setAttribute('download', `${name || 'coloring_book'}.pdf`);
     document.getElementById('qb-result').classList.add('show');
 
-    qbSetProgress(100, 'الكتاب جاهز ✓');
+    qbSetProgress(100, 'الكتاب جاهز ✓ — اضغط أي صورة للتكبير');
     const extras = [coverPage ? 'غلاف' : null, endingPage ? 'نهاية' : null].filter(Boolean).join(' + ');
     msg.textContent = extras
       ? `تم إنشاء كتاب ${order.length} صفحة + ${extras} لـ «${name}»`
       : `تم إنشاء كتاب ${order.length} صفحة لـ «${name}»`;
     msg.className = 'qb-msg ok';
-    showToast('الكتاب جاهز — تقدر تحمل PDF', 'ok');
+    showToast('الكتاب جاهز — اضغط الصورة للتكبير', 'ok');
   } catch (e) {
     msg.textContent = e.message || 'حصل خطأ';
     msg.className = 'qb-msg err';
@@ -1970,7 +2062,7 @@ function qbReset() {
   qbClearPhoto();
   document.getElementById('qb-name').value = '';
   document.getElementById('qb-result').classList.remove('show');
-  document.getElementById('qb-previews').innerHTML = '';
+  qbRenderPreviews([]);
   document.getElementById('qb-msg').textContent = '';
   qbHideProgress();
   qbSelectAuto();
@@ -2986,7 +3078,7 @@ function openLightbox(src) {
   if (!lb) {
     lb = document.createElement('div');
     lb.id = 'so-lightbox'; lb.className = 'lightbox';
-    lb.innerHTML = '<img id="so-lb-img"><button class="lightbox-close-btn" onclick="document.getElementById(\'so-lightbox\').classList.remove(\'open\')">✕ إغلاق الصورة</button>';
+    lb.innerHTML = '<img id="so-lb-img" alt="معاينة"><button type="button" class="lightbox-close-btn">✕ إغلاق</button>';
     lb.onclick = (e) => {
       if (e.target === lb || e.target.classList.contains('lightbox-close-btn')) {
         lb.classList.remove('open');
@@ -2994,7 +3086,12 @@ function openLightbox(src) {
     };
     document.body.appendChild(lb);
   }
-  document.getElementById('so-lb-img').src = src;
+  const img = document.getElementById('so-lb-img');
+  img.src = src;
+  img.style.maxWidth = '94vw';
+  img.style.maxHeight = '90vh';
+  img.style.objectFit = 'contain';
+  img.style.background = '#fff';
   lb.classList.add('open');
 }
 
