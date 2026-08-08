@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import csv
 import io
 import json
 import os
@@ -87,6 +88,7 @@ def app_base_url() -> str:
 PAGE_WIDTH = 1120
 PAGE_HEIGHT = 1584  # exact A4 aspect: 1120/1584 == 210/297
 MAX_PAGES = 8
+ADMIN_MAX_PAGES = 12
 
 PROMPT_VARIANTS = {
     "a": (
@@ -309,6 +311,14 @@ def init_db():
             conn.execute("ALTER TABLE special_orders ADD COLUMN pdf_filename TEXT")
         if "assigned_to" not in so_cols:
             conn.execute("ALTER TABLE special_orders ADD COLUMN assigned_to TEXT")
+        if "share_token" not in so_cols:
+            conn.execute("ALTER TABLE special_orders ADD COLUMN share_token TEXT")
+        if "share_expires_at" not in so_cols:
+            conn.execute("ALTER TABLE special_orders ADD COLUMN share_expires_at TEXT")
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_special_orders_share_token "
+            "ON special_orders(share_token) WHERE share_token IS NOT NULL"
+        )
         conn.commit()
         conn.close()
 
@@ -447,6 +457,7 @@ def collect_admin_stats() -> dict:
         ).fetchall()
 
         # Last 14 days book counts (fill missing days with 0)
+        cutoff_day = (now - timedelta(days=13)).strftime("%Y-%m-%d")
         daily_rows = conn.execute(
             """
             SELECT substr(created_at, 1, 10) AS day, COUNT(*) AS c
@@ -455,16 +466,50 @@ def collect_admin_stats() -> dict:
             GROUP BY day
             ORDER BY day
             """,
-            ((now - timedelta(days=13)).strftime("%Y-%m-%d"),),
+            (cutoff_day,),
+        ).fetchall()
+        # Last 14 days revenue (paid payments by paid_at date)
+        daily_revenue_rows = conn.execute(
+            """
+            SELECT substr(paid_at, 1, 10) AS day, COALESCE(SUM(amount_cents), 0) AS c
+            FROM payments
+            WHERE status = 'paid' AND paid_at >= ?
+            GROUP BY day
+            ORDER BY day
+            """,
+            (cutoff_day,),
+        ).fetchall()
+        # Last 14 days new user signups
+        daily_users_rows = conn.execute(
+            """
+            SELECT substr(created_at, 1, 10) AS day, COUNT(*) AS c
+            FROM users
+            WHERE created_at >= ?
+            GROUP BY day
+            ORDER BY day
+            """,
+            (cutoff_day,),
         ).fetchall()
         conn.close()
 
     by_day = {r["day"]: int(r["c"]) for r in daily_rows}
+    rev_by_day = {r["day"]: int(r["c"]) for r in daily_revenue_rows}
+    usr_by_day = {r["day"]: int(r["c"]) for r in daily_users_rows}
     daily = []
+    daily_revenue = []
+    daily_users = []
     for i in range(13, -1, -1):
         d = (now - timedelta(days=i)).strftime("%Y-%m-%d")
         daily.append({"day": d, "label": d[5:], "count": by_day.get(d, 0)})
+        daily_revenue.append({
+            "day": d,
+            "label": d[5:],
+            "count": round(rev_by_day.get(d, 0) / 100, 2),
+        })
+        daily_users.append({"day": d, "label": d[5:], "count": usr_by_day.get(d, 0)})
     max_daily = max((d["count"] for d in daily), default=0) or 1
+    max_daily_revenue = max((d["count"] for d in daily_revenue), default=0) or 1
+    max_daily_users = max((d["count"] for d in daily_users), default=0) or 1
 
     sessions_count = sum(1 for p in SESSIONS_DIR.iterdir() if p.is_dir()) if SESSIONS_DIR.exists() else 0
     shares_count = sum(1 for p in SHARES_DIR.glob("*.json")) if SHARES_DIR.exists() else 0
@@ -513,6 +558,10 @@ def collect_admin_stats() -> dict:
         "generated_at": now.strftime("%Y-%m-%d %H:%M UTC"),
         "daily": daily,
         "max_daily": max_daily,
+        "daily_revenue": daily_revenue,
+        "max_daily_revenue": max_daily_revenue,
+        "daily_users": daily_users,
+        "max_daily_users": max_daily_users,
         "top_scenes": [
             {"scene_id": r["scene_id"], "title": scene_title(r["scene_id"]), "count": r["c"]}
             for r in top
@@ -2037,7 +2086,150 @@ def admin_logout():
 @admin_required
 def admin_dashboard():
     stats = collect_admin_stats()
-    return render_template("admin.html", stats=stats)
+    return render_template("admin.html", stats=stats, scenes=SCENES)
+
+
+@app.route("/admin/api/quick-book/upload", methods=["POST"])
+@admin_required
+def admin_quick_book_upload():
+    """Admin: upload child photo for quick book (no freemium limits)."""
+    f = request.files.get("photo") or (request.files.getlist("photos") or [None])[0]
+    if not f or not f.filename:
+        return jsonify({"error": "ارفع صورة الطفل."}), 400
+
+    session_id = secrets.token_hex(12)
+    d = SESSIONS_DIR / session_id
+    d.mkdir()
+    try:
+        img = Image.open(f.stream).convert("RGB")
+        err = validate_portrait_image(img)
+        if err:
+            shutil.rmtree(d, ignore_errors=True)
+            return jsonify({"error": err}), 400
+        max_side = 1600
+        if max(img.size) > max_side:
+            img.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+        img.save(d / "input_0.png", "PNG")
+        (d / "input.png").write_bytes((d / "input_0.png").read_bytes())
+    except Exception:
+        shutil.rmtree(d, ignore_errors=True)
+        return jsonify({"error": "الصورة مش صالحة. جرّب JPG أو PNG."}), 400
+
+    ensure_multi_refs(d)
+    return jsonify({"ok": True, "session_id": session_id})
+
+
+@app.route("/admin/api/quick-book/generate", methods=["POST"])
+@admin_required
+def admin_quick_book_generate():
+    """Admin: generate coloring pages (no freemium / credit checks)."""
+    if not ACCOUNT_ID or not API_TOKEN:
+        return jsonify({"error": "مفاتيح Cloudflare غير مضبوطة على السيرفر."}), 500
+
+    data = request.get_json(silent=True) or {}
+    session_id = (data.get("session_id") or "").strip()
+    if not session_id.isalnum() or len(session_id) > 40:
+        return jsonify({"error": "session غير صالح."}), 400
+    d = SESSIONS_DIR / session_id
+    if not d.exists():
+        return jsonify({"error": "الجلسة مش موجودة. ارفع الصورة تاني."}), 404
+
+    scene_ids = data.get("scenes") or []
+    if not isinstance(scene_ids, list) or not scene_ids:
+        return jsonify({"error": "اختار وظيفة واحدة على الأقل."}), 400
+    if len(scene_ids) > ADMIN_MAX_PAGES:
+        return jsonify({"error": f"أقصى عدد للصفحات هو {ADMIN_MAX_PAGES}."}), 400
+
+    force = bool(data.get("force"))
+    style = {
+        "variant": data.get("variant") or DEFAULT_VARIANT,
+        "line_weight": data.get("line_weight") or "normal",
+        "detail": data.get("detail") or "normal",
+        "art_style": data.get("art_style") or "cartoon",
+    }
+
+    scenes = []
+    for sid in scene_ids:
+        if not isinstance(sid, str) or not SCENE_ID_RE.match(sid):
+            return jsonify({"error": "وظيفة غير صالحة."}), 400
+        scene = scene_by_id(sid, d)
+        if not scene:
+            return jsonify({"error": f"الوظيفة مش موجودة: {sid}"}), 400
+        scenes.append(scene)
+
+    async def _run_all():
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            tasks = [generate_one_async(d, sc, force, style, client) for sc in scenes]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            out = []
+            for sc, res in zip(scenes, results):
+                if isinstance(res, Exception):
+                    out.append({"scene_id": sc["id"], "error": friendly_error(res)})
+                else:
+                    out.append(res)
+            return out
+
+    try:
+        pages = run_async(_run_all())
+    except Exception as e:
+        return jsonify({"error": friendly_error(e)}), 500
+
+    ok_ids = [p["scene_id"] for p in pages if not p.get("error")]
+    created_ids = [p["scene_id"] for p in pages if not p.get("error") and p.get("created")]
+    if created_ids:
+        ip = get_remote_address()
+        now = datetime.now(timezone.utc).isoformat()
+        with _db_lock:
+            conn = db_connect()
+            conn.execute(
+                "INSERT INTO books (created_at, ip, session_id, pages, user_id) VALUES (?, ?, ?, ?, ?)",
+                (now, ip, session_id, len(created_ids), None),
+            )
+            for sid in created_ids:
+                conn.execute(
+                    "INSERT INTO scene_picks (created_at, scene_id) VALUES (?, ?)",
+                    (now, sid),
+                )
+            conn.commit()
+            conn.close()
+
+    return jsonify({
+        "ok": True,
+        "pages": pages,
+        "ok_count": len(ok_ids),
+        "failed": [p for p in pages if p.get("error")],
+    })
+
+
+@app.route("/admin/api/quick-book/pdf/<session_id>")
+@admin_required
+def admin_quick_book_pdf(session_id: str):
+    """Admin: download generated PDF for a quick-book session."""
+    if not session_id.isalnum() or len(session_id) > 40:
+        abort(400, "Bad session")
+    d = SESSIONS_DIR / session_id
+    if not d.exists():
+        abort(404, "Session not found")
+
+    order = request.args.get("order", "").split(",")
+    child_name = (request.args.get("name") or "").strip()[:40]
+    pages = []
+    for sid in order:
+        sid = sid.strip()
+        if not sid or not SCENE_ID_RE.match(sid):
+            continue
+        p = page_path(d, sid)
+        if p.exists():
+            pages.append(Image.open(p).convert("RGB"))
+    if not pages:
+        return jsonify({"error": "مفيش صفحات جاهزة. ولّد الكتاب الأول."}), 400
+
+    cover = make_cover_page(child_name)
+    pdf_path = d / "coloring_book.pdf"
+    write_pdf_with_margins([cover] + pages, pdf_path)
+    safe_name = re.sub(r"[^\w\u0600-\u06FF\-]+", "_", child_name or "coloring_book")[:40]
+    download_name = f"{safe_name or 'coloring_book'}.pdf"
+    return send_file(pdf_path, as_attachment=True, download_name=download_name)
 
 
 @app.route("/admin/api/stats")
@@ -2130,6 +2322,115 @@ def admin_payments():
     })
 
 
+@app.route("/admin/api/users")
+@admin_required
+def admin_users_search():
+    """Search users by username/email. Empty q → latest 50."""
+    q = (request.args.get("q") or "").strip()[:80]
+    with _db_lock:
+        conn = db_connect()
+        if q:
+            like = f"%{q}%"
+            rows = conn.execute(
+                """
+                SELECT id, username, email, created_at, book_credits, auth_provider
+                FROM users
+                WHERE username LIKE ? OR email LIKE ?
+                ORDER BY id DESC
+                LIMIT 100
+                """,
+                (like, like),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT id, username, email, created_at, book_credits, auth_provider
+                FROM users
+                ORDER BY id DESC
+                LIMIT 50
+                """
+            ).fetchall()
+        conn.close()
+    return jsonify({"total": len(rows), "users": [dict(r) for r in rows]})
+
+
+def _csv_download(filename: str, header: list, rows: list):
+    """Build a CSV download response (BOM for correct Arabic in Excel)."""
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(header)
+    writer.writerows(rows)
+    return app.response_class(
+        "﻿" + buf.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.route("/admin/api/export/users.csv")
+@admin_required
+def admin_export_users():
+    with _db_lock:
+        conn = db_connect()
+        rows = conn.execute(
+            "SELECT id, username, email, created_at, book_credits, auth_provider "
+            "FROM users ORDER BY id"
+        ).fetchall()
+        conn.close()
+    return _csv_download(
+        "users.csv",
+        ["id", "username", "email", "created_at", "book_credits", "auth_provider"],
+        [tuple(r) for r in rows],
+    )
+
+
+@app.route("/admin/api/export/books.csv")
+@admin_required
+def admin_export_books():
+    with _db_lock:
+        conn = db_connect()
+        rows = conn.execute(
+            """
+            SELECT b.id, b.created_at, b.pages, b.ip, b.session_id,
+                   u.username, u.email
+            FROM books b
+            LEFT JOIN users u ON u.id = b.user_id
+            ORDER BY b.id
+            """
+        ).fetchall()
+        conn.close()
+    return _csv_download(
+        "books.csv",
+        ["id", "created_at", "pages", "ip", "session_id", "username", "email"],
+        [tuple(r) for r in rows],
+    )
+
+
+@app.route("/admin/api/export/payments.csv")
+@admin_required
+def admin_export_payments():
+    with _db_lock:
+        conn = db_connect()
+        rows = conn.execute(
+            """
+            SELECT p.id, p.special_reference, p.amount_cents, p.credits, p.status,
+                   p.created_at, p.paid_at, p.paymob_order_id, p.paymob_txn_id,
+                   u.username, u.email
+            FROM payments p
+            LEFT JOIN users u ON u.id = p.user_id
+            ORDER BY p.id
+            """
+        ).fetchall()
+        conn.close()
+    return _csv_download(
+        "payments.csv",
+        ["id", "special_reference", "amount_cents", "credits", "status",
+         "created_at", "paid_at", "paymob_order_id", "paymob_txn_id",
+         "username", "email"],
+        [tuple(r) for r in rows],
+    )
+
+
 @app.route("/admin/api/user/<int:user_id>/notify", methods=["POST"])
 @admin_required
 def admin_notify_user(user_id: int):
@@ -2217,23 +2518,40 @@ def _safe_photo_name(filename: str) -> Optional[str]:
     return f"{secrets.token_hex(8)}.{ext}"
 
 
+def _order_share_active(token: Optional[str], expires_raw: Optional[str]) -> bool:
+    if not token or not expires_raw:
+        return False
+    try:
+        exp = datetime.fromisoformat(expires_raw)
+    except ValueError:
+        return False
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    return exp > datetime.now(timezone.utc)
+
+
 def _order_to_dict(row: sqlite3.Row, photos: list) -> dict:
     d = dict(row)
     d["photos"] = photos
-    # pdf_filename / assigned_to may not exist in older rows
-    if "pdf_filename" not in d:
-        d["pdf_filename"] = None
-    if "assigned_to" not in d:
-        d["assigned_to"] = None
+    # pdf_filename / assigned_to / share fields may not exist in older rows
+    for key in ("pdf_filename", "assigned_to", "share_token", "share_expires_at"):
+        if key not in d:
+            d[key] = None
+    token = d.get("share_token")
+    d["share_active"] = _order_share_active(token, d.get("share_expires_at"))
+    d["share_url"] = f"{app_base_url()}/so/{token}" if token else None
     return d
 
 
 @app.route("/admin/api/special-orders", methods=["GET"])
 @admin_required
 def admin_list_special_orders():
-    """List special orders. Supports ?status=pending|done and ?client=<search>."""
+    """List special orders. Supports ?status=pending|done and ?q= / ?client=<search>."""
     status_filter = request.args.get("status", "").strip().lower()
-    client_search = request.args.get("client", "").strip()
+    # Accept both ?q= and legacy ?client=
+    search = (
+        request.args.get("q") or request.args.get("client") or ""
+    ).strip()
     with _db_lock:
         conn = db_connect()
         conditions = []
@@ -2241,10 +2559,20 @@ def admin_list_special_orders():
         if status_filter in ("pending", "done"):
             conditions.append("status = ?")
             params.append(status_filter)
-        if client_search:
-            conditions.append("(client_name LIKE ? OR assigned_to LIKE ?)")
-            like = f"%{client_search}%"
-            params.extend([like, like])
+        if search:
+            like = f"%{search}%"
+            conditions.append(
+                "("
+                "CAST(id AS TEXT) LIKE ? OR "
+                "child_name LIKE ? OR "
+                "client_name LIKE ? OR "
+                "phone LIKE ? OR "
+                "email LIKE ? OR "
+                "assigned_to LIKE ? OR "
+                "notes LIKE ?"
+                ")"
+            )
+            params.extend([like] * 7)
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
         rows = conn.execute(
             f"SELECT * FROM special_orders {where} ORDER BY id DESC",
@@ -2554,7 +2882,8 @@ def admin_delete_order_pdf(order_id: int):
             return jsonify({"error": "الطلب مش موجود."}), 404
         old_pdf = row["pdf_filename"]
         conn.execute(
-            "UPDATE special_orders SET pdf_filename=NULL, updated_at=? WHERE id=?",
+            "UPDATE special_orders SET pdf_filename=NULL, share_token=NULL, "
+            "share_expires_at=NULL, updated_at=? WHERE id=?",
             (datetime.now(timezone.utc).isoformat(), order_id),
         )
         conn.commit()
@@ -2562,6 +2891,166 @@ def admin_delete_order_pdf(order_id: int):
     if old_pdf:
         (SPECIAL_ORDERS_DIR / str(order_id) / old_pdf).unlink(missing_ok=True)
     return jsonify({"ok": True})
+
+
+# ─── Public share links for special-order PDFs ───────────────────────────────
+
+ORDER_SHARE_DAYS = int(os.environ.get("ORDER_SHARE_DAYS", "7"))
+
+
+@app.route("/admin/api/special-orders/<int:order_id>/share", methods=["POST"])
+@admin_required
+def admin_create_order_share(order_id: int):
+    """Create (or regenerate) a public share link for the order's PDF."""
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(days=ORDER_SHARE_DAYS)
+    token = secrets.token_hex(16)
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute(
+            "SELECT id, pdf_filename FROM special_orders WHERE id = ?",
+            (order_id,),
+        ).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "الطلب مش موجود."}), 404
+        if not row["pdf_filename"]:
+            conn.close()
+            return jsonify({"error": "ارفع ملف PDF الأول قبل إنشاء رابط مشاركة."}), 400
+        conn.execute(
+            "UPDATE special_orders SET share_token=?, share_expires_at=?, updated_at=? WHERE id=?",
+            (token, expires.isoformat(), now.isoformat(), order_id),
+        )
+        conn.commit()
+        conn.close()
+    return jsonify({
+        "ok": True,
+        "url": f"{app_base_url()}/so/{token}",
+        "token": token,
+        "expires_at": expires.isoformat(),
+    }), 201
+
+
+@app.route("/admin/api/special-orders/<int:order_id>/share", methods=["DELETE"])
+@admin_required
+def admin_revoke_order_share(order_id: int):
+    """Revoke the public share link of an order."""
+    now = datetime.now(timezone.utc).isoformat()
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT id FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "الطلب مش موجود."}), 404
+        conn.execute(
+            "UPDATE special_orders SET share_token=NULL, share_expires_at=NULL, updated_at=? WHERE id=?",
+            (now, order_id),
+        )
+        conn.commit()
+        conn.close()
+    return jsonify({"ok": True})
+
+
+def _norm_order_phone(raw: str) -> str:
+    """Normalize order phone for sibling matching (Egypt-friendly)."""
+    digits = re.sub(r"\D", "", raw or "")
+    if digits.startswith("0020"):
+        digits = digits[2:]
+    if digits.startswith("20") and len(digits) > 11:
+        digits = digits[2:]
+    if digits.startswith("0"):
+        digits = digits[1:]
+    return digits[-10:] if len(digits) >= 10 else digits
+
+
+@app.route("/so/<token>")
+@limiter.limit("60 per hour")
+def get_order_share(token: str):
+    """Public (no-auth) branded share page: view the order's PDF + siblings' PDFs."""
+    if not SHARE_ID_RE.match(token):
+        abort(404)
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute(
+            "SELECT id, child_name, phone, pdf_filename, share_expires_at "
+            "FROM special_orders WHERE share_token = ?",
+            (token,),
+        ).fetchone()
+        if not row or not row["pdf_filename"]:
+            conn.close()
+            abort(404)
+        # Siblings: orders for the same parent phone that have a PDF ready
+        phone_key = _norm_order_phone(row["phone"] or "")
+        siblings = []
+        if phone_key:
+            candidates = conn.execute(
+                "SELECT id, child_name, phone FROM special_orders "
+                "WHERE pdf_filename IS NOT NULL ORDER BY id"
+            ).fetchall()
+            siblings = [r for r in candidates if _norm_order_phone(r["phone"] or "") == phone_key]
+        if not any(r["id"] == row["id"] for r in siblings):
+            siblings.append(row)
+        conn.close()
+
+    if not _order_share_active(token, row["share_expires_at"]):
+        return render_template("order_share.html", expired=True), 410
+
+    exp = datetime.fromisoformat(row["share_expires_at"])
+    kids = [{"id": r["id"], "name": (r["child_name"] or "طفلي")} for r in siblings]
+    return render_template(
+        "order_share.html",
+        expired=False,
+        token=token,
+        kids=kids,
+        main_id=row["id"],
+        expires_label=exp.strftime("%Y/%m/%d"),
+    )
+
+
+@app.route("/so/<token>/pdf/<int:order_id>")
+@limiter.limit("120 per hour")
+def get_order_share_pdf(token: str, order_id: int):
+    """Serve a PDF inline via share token — token order or a sibling (same phone)."""
+    if not SHARE_ID_RE.match(token):
+        abort(404)
+    with _db_lock:
+        conn = db_connect()
+        token_row = conn.execute(
+            "SELECT id, phone, pdf_filename, share_expires_at "
+            "FROM special_orders WHERE share_token = ?",
+            (token,),
+        ).fetchone()
+        if not token_row or not token_row["pdf_filename"]:
+            conn.close()
+            abort(404)
+        target = conn.execute(
+            "SELECT id, child_name, phone, pdf_filename FROM special_orders "
+            "WHERE id = ? AND pdf_filename IS NOT NULL",
+            (order_id,),
+        ).fetchone()
+        conn.close()
+    if not target:
+        abort(404)
+    # Target must be the token's own order or a sibling (same parent phone)
+    token_phone = _norm_order_phone(token_row["phone"] or "")
+    target_phone = _norm_order_phone(target["phone"] or "")
+    same_family = (target["id"] == token_row["id"]) or (
+        token_phone and token_phone == target_phone
+    )
+    if not same_family:
+        abort(404)
+    if not _order_share_active(token, token_row["share_expires_at"]):
+        abort(410)
+    pdf_path = SPECIAL_ORDERS_DIR / str(target["id"]) / target["pdf_filename"]
+    if not pdf_path.exists():
+        abort(404)
+    child = (target["child_name"] or "child").strip() or "child"
+    # Inline so the parent can view the design directly in the browser
+    return send_file(
+        pdf_path,
+        mimetype="application/pdf",
+        download_name=f"{child}-coloring-book.pdf",
+    )
 
 
 if __name__ == "__main__":

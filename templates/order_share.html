@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لونّي — كتاب التلوين الخاص بك</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --display: "Baloo Bhaijaan 2","SF Arabic",sans-serif;
+  --font:    "IBM Plex Sans Arabic","SF Arabic",Tahoma,sans-serif;
+  --ink:    #1a1a2e;
+  --muted:  #6b7280;
+  --coral:  #e85d4c;
+  --lavender:#8b5cf6;
+  --mint:   #10b981;
+  --bg:     #fdfaf6;
+  --card:   #ffffff;
+  --border: #e5e7eb;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);color:var(--ink);background:var(--bg);line-height:1.65;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+a{color:inherit;text-decoration:none}
+
+/* Header */
+.sh-head{
+  position:sticky;top:0;z-index:20;
+  background:rgba(255,255,255,.94);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+.sh-head-inner{
+  max-width:1000px;margin:0 auto;padding:14px 20px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.sh-brand{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.03em;line-height:1}
+.sh-brand span{color:var(--coral)}
+.sh-head-chip{
+  display:inline-flex;align-items:center;gap:7px;
+  background:linear-gradient(135deg,#f5f3ff,#fdf4ff);
+  border:1.5px solid #e9d5ff;color:var(--lavender);
+  border-radius:999px;padding:6px 14px;font-size:12.5px;font-weight:700;
+}
+
+/* Layout */
+.sh-main{flex:1;max-width:1000px;width:100%;margin:0 auto;padding:34px 20px 50px}
+.sh-hero{text-align:center;margin-bottom:26px}
+.sh-hero h1{
+  font-family:var(--display);font-weight:800;
+  font-size:clamp(24px,4.5vw,36px);line-height:1.25;margin-bottom:8px;
+}
+.sh-hero h1 .hl{color:var(--coral)}
+.sh-hero p{color:var(--muted);font-size:15px;max-width:52ch;margin:0 auto}
+.sh-expiry{
+  display:inline-flex;align-items:center;gap:7px;margin-top:14px;
+  background:#fff;border:1.5px solid var(--border);border-radius:999px;
+  padding:6px 14px;font-size:12.5px;font-weight:700;color:var(--muted);
+}
+.sh-expiry .dot{width:8px;height:8px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 3px rgba(16,185,129,.18)}
+
+/* Kids tabs */
+.kids-tabs{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
+.kid-tab{
+  display:inline-flex;align-items:center;gap:9px;
+  background:#fff;border:2px solid var(--border);border-radius:14px;
+  padding:8px 16px 8px 10px;cursor:pointer;font-family:var(--font);
+  transition:border-color .15s,box-shadow .15s,transform .15s;
+}
+.kid-tab:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.08)}
+.kid-tab.active{border-color:var(--coral);box-shadow:0 8px 20px rgba(232,93,76,.18)}
+.kid-tab-ava{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:800;font-size:16px;font-family:var(--display);
+  background:linear-gradient(135deg,#a855f7,#ec4899);
+}
+.kid-tab:nth-child(2n) .kid-tab-ava{background:linear-gradient(135deg,#3b82f6,#8b5cf6)}
+.kid-tab:nth-child(3n) .kid-tab-ava{background:linear-gradient(135deg,#f59e0b,#ef4444)}
+.kid-tab-name{font-weight:800;font-size:14px;color:var(--ink)}
+.kid-tab-sub{font-size:11px;color:var(--muted);font-weight:600}
+.kid-tab.active .kid-tab-sub{color:var(--coral)}
+
+/* Viewer */
+.viewer-card{
+  background:var(--card);border:1.5px solid var(--border);border-radius:20px;
+  overflow:hidden;box-shadow:0 16px 44px rgba(26,26,46,.08);
+}
+.viewer-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  padding:14px 18px;border-bottom:1.5px solid var(--border);background:#fff;
+}
+.viewer-title{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px}
+.viewer-title .ico{
+  width:38px;height:38px;border-radius:11px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:19px;
+  background:linear-gradient(135deg,#fef0ed,#fde2dd);
+}
+.viewer-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:10px 18px;border-radius:11px;font-family:var(--font);
+  font-weight:700;font-size:13.5px;border:0;cursor:pointer;
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+.btn:hover{transform:translateY(-2px)}
+.btn-coral{background:var(--coral);color:#fff;box-shadow:0 4px 16px rgba(232,93,76,.3)}
+.btn-outline{background:#fff;color:var(--ink);border:1.5px solid var(--border)}
+.btn-outline:hover{border-color:var(--ink)}
+.viewer-frame{
+  width:100%;height:76vh;min-height:420px;border:0;display:block;background:#f3f4f6;
+}
+.viewer-fallback{padding:14px 18px;font-size:12.5px;color:var(--muted);text-align:center;background:#fafafa;border-top:1px solid var(--border)}
+.viewer-fallback a{color:var(--coral);font-weight:700}
+
+/* Expired state */
+.expired-card{
+  max-width:520px;margin:40px auto;text-align:center;
+  background:#fff;border:1.5px solid var(--border);border-radius:22px;
+  padding:46px 30px;box-shadow:0 16px 44px rgba(26,26,46,.08);
+}
+.expired-ico{
+  width:84px;height:84px;border-radius:50%;margin:0 auto 18px;
+  display:flex;align-items:center;justify-content:center;font-size:38px;
+  background:linear-gradient(135deg,#fef0ed,#fde2dd);
+}
+.expired-card h1{font-family:var(--display);font-size:26px;font-weight:800;margin-bottom:10px}
+.expired-card p{color:var(--muted);font-size:14.5px;margin-bottom:22px;line-height:1.7}
+
+/* Footer */
+.sh-foot{
+  border-top:1px solid var(--border);background:#fff;
+  padding:22px 20px;text-align:center;
+}
+.sh-foot .fbrand{font-family:var(--display);font-weight:800;font-size:20px}
+.sh-foot .fbrand span{color:var(--coral)}
+.sh-foot p{color:var(--muted);font-size:12.5px;margin-top:6px}
+.sh-foot a.fb{color:#1877f2;font-weight:700}
+
+@media(max-width:640px){
+  .viewer-frame{height:64vh}
+  .viewer-bar{flex-direction:column;align-items:stretch}
+  .viewer-actions{justify-content:stretch}
+  .viewer-actions .btn{flex:1}
+}
+</style>
+</head>
+<body>
+
+<header class="sh-head">
+  <div class="sh-head-inner">
+    <a class="sh-brand" href="/">لونّ<span>ي</span></a>
+    <span class="sh-head-chip">🎨 كتاب تلوين مخصص</span>
+  </div>
+</header>
+
+{% if expired %}
+<main class="sh-main">
+  <div class="expired-card">
+    <div class="expired-ico">⏳</div>
+    <h1>الرابط ده انتهى صلاحيته</h1>
+    <p>
+      روابط المشاركة بتفضل شغالة 7 أيام بس.<br>
+      لو عايز تشوف كتاب التلوين تاني، كلّمنا وهنبعتلك رابط جديد على طول.
+    </p>
+    <a class="btn btn-coral" href="https://www.facebook.com/Lawenyapp" target="_blank" rel="noopener noreferrer">
+      تواصل معنا على فيسبوك
+    </a>
+  </div>
+</main>
+{% else %}
+<main class="sh-main">
+  <div class="sh-hero">
+    <h1>أهلًا بيكم 👋<br>ده كتاب التلوين المخصص <span class="hl">لأطفالكم</span></h1>
+    <p>التصميم جاهز! راجعوه ولو عاجبكم اطبعوه على ورق A4 عادي وخدوا أجمل ذكرى لطفلكم.</p>
+    <span class="sh-expiry"><span class="dot"></span> الرابط صالح حتى {{ expires_label }}</span>
+  </div>
+
+  {% if kids|length > 1 %}
+  <div class="kids-tabs" role="tablist">
+    {% for k in kids %}
+    <button type="button"
+            class="kid-tab {{ 'active' if k.id == main_id else '' }}"
+            data-pdf="{{ url_for('get_order_share_pdf', token=token, order_id=k.id) }}"
+            data-name="{{ k.name }}"
+            onclick="switchKid(this)" role="tab">
+      <span class="kid-tab-ava">{{ (k.name or 'ط')[:1] }}</span>
+      <span>
+        <span class="kid-tab-name">{{ k.name }}</span><br>
+        <span class="kid-tab-sub">كتاب {{ k.name }}</span>
+      </span>
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="viewer-card">
+    <div class="viewer-bar">
+      <div class="viewer-title">
+        <span class="ico">📖</span>
+        <span id="viewer-name">كتاب {{ kids[0].name if kids else 'طفلكم' }}</span>
+      </div>
+      <div class="viewer-actions">
+        <a class="btn btn-outline" id="btn-open-tab" href="{{ url_for('get_order_share_pdf', token=token, order_id=main_id) }}" target="_blank">↗ فتح في تبويب</a>
+        <a class="btn btn-coral" id="btn-download" href="{{ url_for('get_order_share_pdf', token=token, order_id=main_id) }}" download>⬇ تحميل PDF</a>
+      </div>
+    </div>
+    <iframe class="viewer-frame" id="pdf-frame"
+            src="{{ url_for('get_order_share_pdf', token=token, order_id=main_id) }}"
+            title="معاينة كتاب التلوين"></iframe>
+    <div class="viewer-fallback">
+      لو المعاينة مش ظاهرة على جهازك، استخدم زر
+      <a href="{{ url_for('get_order_share_pdf', token=token, order_id=main_id) }}" id="fallback-link" download>تحميل PDF</a>
+      أو افتحه في تبويب جديد.
+    </div>
+  </div>
+</main>
+{% endif %}
+
+<footer class="sh-foot">
+  <div class="fbrand">لونّ<span>ي</span></div>
+  <p>كتب تلوين مخصصة باسم طفلك · صُنعت بحب ❤️ · <a class="fb" href="https://www.facebook.com/Lawenyapp" target="_blank" rel="noopener noreferrer">فيسبوك</a></p>
+</footer>
+
+{% if not expired %}
+<script>
+const initialName = {{ kids|tojson }}.find(k => k.id === {{ main_id }});
+const viewerName = document.getElementById('viewer-name');
+if (initialName) viewerName.textContent = 'كتاب ' + initialName.name;
+
+function switchKid(btn) {
+  document.querySelectorAll('.kid-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const url  = btn.getAttribute('data-pdf');
+  const name = btn.getAttribute('data-name');
+  document.getElementById('pdf-frame').src     = url;
+  document.getElementById('btn-open-tab').href = url;
+  document.getElementById('btn-download').href = url;
+  document.getElementById('fallback-link').href = url;
+  viewerName.textContent = 'كتاب ' + name;
+}
+</script>
+{% endif %}
+</body>
+</html>

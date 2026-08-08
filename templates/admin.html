@@ -397,10 +397,13 @@
 
   /* ── Special Orders Cards & Grid ── */
   .so-toolbar {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+    display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px;
   }
-  .so-toolbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .so-toolbar-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .so-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; }
   .filter-btn {
     padding: 7px 16px; border-radius: 999px;
     border: 1.5px solid var(--border-2);
@@ -421,207 +424,263 @@
   .filter-btn.active-pending {
     background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.4); color: var(--warn);
   }
-  /* Search input in toolbar */
-  .so-search {
-    background: var(--card); border: 1.5px solid var(--border-2);
-    border-radius: 9px; color: var(--text); font-size: 13px;
-    padding: 7px 12px; outline: none; width: 220px;
-    transition: border-color .18s;
+  .so-search-wrap {
+    position: relative; flex: 1; min-width: min(100%, 280px); max-width: 420px;
   }
-  .so-search:focus { border-color: var(--primary); }
+  .so-search {
+    width: 100%;
+    background: var(--surface-2); border: 1.5px solid var(--border-2);
+    border-radius: 11px; color: var(--text); font-size: 13.5px;
+    padding: 10px 38px 10px 14px; outline: none;
+    transition: border-color .18s, box-shadow .18s;
+    font-family: inherit;
+  }
+  .so-search:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(56,189,248,0.12);
+  }
   .so-search::placeholder { color: var(--muted); }
-  .filter-divider { width: 1px; height: 22px; background: var(--border-2); flex-shrink: 0; }
+  .so-search-ico {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); font-size: 14px; pointer-events: none;
+  }
+  .so-results-note {
+    font-size: 12.5px; color: var(--muted); font-weight: 600;
+    min-height: 18px;
+  }
 
-  /* Grid */
   .so-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
-    gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
   }
-  /* Card Redesign */
+  .so-empty {
+    grid-column: 1 / -1; text-align: center; padding: 48px 20px;
+    color: var(--muted); font-size: 14px;
+  }
+  .so-empty-ico { display: block; font-size: 36px; margin-bottom: 10px; }
+
+  /* Clearer list card */
   .so-card {
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 16px; overflow: hidden;
-    transition: border-color .2s, box-shadow .2s, transform .2s;
+    background: var(--surface);
+    border: 1px solid var(--border-2);
+    border-radius: 14px;
+    overflow: hidden;
     display: flex; flex-direction: column;
+    transition: border-color .18s, box-shadow .18s, transform .18s;
+    cursor: pointer;
     position: relative;
   }
+  .so-card::before {
+    content: '';
+    position: absolute; top: 0; right: 0; left: 0; height: 3px;
+  }
+  .so-card.status-pending::before { background: var(--warn); }
+  .so-card.status-done::before { background: var(--ok); }
   .so-card:hover {
-    border-color: rgba(167,139,250,0.5);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
-    transform: translateY(-3px);
+    border-color: rgba(56,189,248,0.45);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.28);
+    transform: translateY(-2px);
   }
-  .so-card.status-done   { border-top: 4px solid var(--ok); }
-  .so-card.status-pending { border-top: 4px solid var(--warn); }
-
-  /* Card Header */
   .so-card-head {
-    padding: 16px 18px 12px;
-    border-bottom: 1px solid var(--border);
-    display: flex; flex-direction: column; gap: 8px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+    padding: 16px 16px 12px;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px;
   }
-  .so-card-head-top {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  .so-card-identity { min-width: 0; flex: 1; }
+  .so-card-meta-top {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
   }
-  .so-child-title-wrap {
-    display: flex; align-items: center; gap: 10px;
-  }
-  .so-child-avatar {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: linear-gradient(135deg, #a78bfa 0%, #38bdf8 100%);
-    display: grid; place-items: center; font-size: 18px; flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(167,139,250,0.3);
+  .so-id-badge {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    color: var(--muted); background: var(--bg-2);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 2px 7px;
   }
   .so-child-name-text {
-    font-weight: 800; font-size: 18px; color: var(--text); line-height: 1.2;
+    font-weight: 800; font-size: 19px; color: var(--text);
+    line-height: 1.25; letter-spacing: -0.02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .so-card-head-sub {
-    font-size: 13.5px; color: var(--muted); font-weight: 500;
-    display: flex; align-items: center; gap: 6px; margin-top: 2px;
+  .so-client-line {
+    margin-top: 4px; font-size: 13px; color: var(--muted); font-weight: 500;
   }
-  .so-card-head-sub strong { color: #f3f4f6; font-weight: 700; }
+  .so-client-line strong { color: var(--text-2); font-weight: 700; }
 
-  /* Card Body */
   .so-card-body {
-    padding: 14px 18px; flex: 1;
-    display: flex; flex-direction: column; gap: 12px;
+    padding: 0 16px 14px;
+    display: flex; flex-direction: column; gap: 0;
+    flex: 1;
   }
-  .so-chips-row {
-    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  .so-info-list {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    overflow: hidden;
+    background: var(--bg-2);
   }
-  .so-chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 5px 11px; border-radius: 8px;
-    background: var(--bg-2); border: 1px solid var(--border-2);
-    font-size: 12.5px; color: var(--text-2); font-weight: 600;
+  .so-info-row {
+    display: grid; grid-template-columns: 88px 1fr; gap: 8px;
+    align-items: center;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
   }
-  .so-chip-assigned {
-    background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3);
-    color: var(--primary);
+  .so-info-row:last-child { border-bottom: 0; }
+  .so-info-label {
+    color: var(--muted); font-size: 11.5px; font-weight: 700;
   }
-  .so-chip-pdf {
-    background: rgba(167,139,250,0.12); border-color: rgba(167,139,250,0.3);
-    color: #a78bfa;
+  .so-info-value {
+    color: var(--text); font-weight: 600;
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  .so-info-value.muted { color: var(--muted); font-weight: 500; }
+  .so-info-phone {
+    display: inline-flex; align-items: center; gap: 8px; min-width: 0;
+  }
+  .so-info-phone a.phone-num {
+    color: var(--text); text-decoration: none; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .so-info-phone a.phone-num:hover { color: var(--primary); }
   .btn-whatsapp-icon {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 26px; height: 26px; border-radius: 50%;
+    width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0;
     background: #25d366; color: white; text-decoration: none;
-    font-size: 13px; font-weight: bold; transition: transform .15s, opacity .15s;
+    font-size: 12px; transition: transform .15s;
   }
-  .btn-whatsapp-icon:hover { transform: scale(1.1); opacity: .9; }
+  .btn-whatsapp-icon:hover { transform: scale(1.08); }
   .btn-whatsapp {
     background: #25d366 !important; color: white !important;
     font-weight: 700 !important; border: 0 !important;
   }
   .btn-whatsapp:hover { opacity: .9; }
 
-  .so-notes-snippet {
-    background: var(--bg-2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 10px 12px;
-    font-size: 12.5px; color: var(--text-2); line-height: 1.5;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden;
+  .so-flags {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px;
   }
+  .so-flag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 9px; border-radius: 7px;
+    font-size: 11.5px; font-weight: 700;
+    background: var(--surface-2); border: 1px solid var(--border-2);
+    color: var(--text-2);
+  }
+  .so-flag.on-pdf { color: var(--violet); border-color: rgba(167,139,250,0.35); background: var(--violet-dim); }
+  .so-flag.on-share { color: var(--ok); border-color: rgba(52,211,153,0.35); background: var(--ok-dim); }
+  .so-flag.on-photos { color: var(--primary); border-color: rgba(56,189,248,0.3); background: var(--primary-dim); }
 
-  .so-photos-strip {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    margin-top: 4px;
-  }
-  .so-photo-thumb {
-    width: 140px; height: 140px; border-radius: 14px;
-    object-fit: cover; border: 2px solid var(--border-2);
-    cursor: pointer; transition: transform .18s, border-color .18s, box-shadow .18s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  }
-  .so-photo-thumb:hover {
-    transform: scale(1.05); border-color: var(--primary);
-    box-shadow: 0 6px 18px rgba(56,189,248,0.35);
-  }
-
-  /* Card Footer */
   .so-card-foot {
     display: flex; align-items: center; gap: 8px;
-    padding: 12px 18px; border-top: 1px solid var(--border);
-    background: var(--bg-2); flex-wrap: wrap;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: rgba(6,11,20,0.35);
+    flex-wrap: wrap;
+  }
+  .so-date {
+    margin-right: auto; font-family: var(--mono);
+    font-size: 11px; color: var(--muted);
   }
   .btn-details {
-    background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #0ea5e9, #6366f1);
     color: white; font-weight: 700; border: none; padding: 7px 14px;
-    border-radius: 8px; font-size: 13px; transition: opacity .15s;
+    border-radius: 8px; font-size: 12.5px;
   }
-  .btn-details:hover { opacity: .9; }
+  .btn-details:hover { filter: brightness(1.08); }
 
-  /* ── Order Details Modal Styling ── */
-  .modal-xl { max-width: 820px; width: 94%; }
-  .so-detail-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding-bottom: 16px; margin-bottom: 20px;
-    border-bottom: 1.5px solid var(--border-2);
+  /* ── Full-page order detail ── */
+  .so-detail-page { max-width: 980px; }
+  .so-detail-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-bottom: 16px; color: var(--muted); font-size: 13px; font-weight: 600;
+    background: none; border: 0; padding: 0; cursor: pointer;
   }
-  .so-detail-title-wrap { display: flex; align-items: center; gap: 14px; }
+  .so-detail-back:hover { color: var(--primary); }
+  .so-detail-hero {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border-2);
+    border-radius: 16px; padding: 20px 22px; margin-bottom: 16px;
+  }
+  .so-detail-hero-main { display: flex; align-items: center; gap: 14px; min-width: 0; }
   .so-detail-icon {
-    width: 46px; height: 46px; border-radius: 12px;
-    background: linear-gradient(135deg, #8b5cf6 0%, #38bdf8 100%);
-    display: grid; place-items: center; font-size: 24px; color: white;
+    width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
+    background: linear-gradient(145deg, #38bdf8, #6366f1);
+    display: grid; place-items: center; font-size: 24px;
+  }
+  .so-detail-hero h2 {
+    margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em;
+  }
+  .so-detail-hero .sub {
+    margin: 4px 0 0; color: var(--muted); font-size: 13px;
+  }
+  .so-detail-hero-actions {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
   }
   .so-detail-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;
   }
-  @media (max-width: 700px) {
+  @media (max-width: 760px) {
     .so-detail-grid { grid-template-columns: 1fr; }
   }
   .so-detail-card {
-    background: var(--bg-2); border: 1.5px solid var(--border);
-    border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px;
+    background: var(--surface); border: 1px solid var(--border-2);
+    border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px;
   }
+  .so-detail-card.full { grid-column: 1 / -1; }
   .so-detail-section-title {
-    font-size: 15px; font-weight: 800; color: var(--text);
-    margin-bottom: 4px; display: flex; align-items: center; gap: 8px;
+    margin: 0; font-size: 14px; font-weight: 800; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
   }
-  .so-detail-rows { display: flex; flex-direction: column; gap: 10px; }
-  .so-detail-row {
-    display: flex; flex-direction: column; gap: 3px;
-  }
+  .so-detail-rows { display: flex; flex-direction: column; gap: 12px; }
+  .so-detail-row { display: flex; flex-direction: column; gap: 3px; }
   .so-d-label {
-    font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 700;
+    font-size: 11px; letter-spacing: 0.04em; color: var(--muted); font-weight: 700;
   }
-  .so-d-value {
-    font-size: 14px; color: var(--text); font-weight: 600;
-  }
-  .so-d-value.highlight {
-    font-size: 17px; font-weight: 800; color: #38bdf8;
-  }
+  .so-d-value { font-size: 14.5px; color: var(--text); font-weight: 600; }
+  .so-d-value.highlight { font-size: 18px; font-weight: 800; color: var(--primary); }
   .so-phone-link { color: var(--primary); text-decoration: none; font-weight: 700; font-size: 15px; }
   .so-detail-notes-box {
-    margin-top: 6px; background: var(--surface); border: 1px solid var(--border-2);
-    border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.6;
-    color: var(--text-2); white-space: pre-wrap;
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 11px; padding: 14px; font-size: 13.5px; line-height: 1.65;
+    color: var(--text-2); white-space: pre-wrap; min-height: 56px;
   }
   .so-detail-photos-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;
   }
   .so-detail-photo-card {
     position: relative; border-radius: 12px; overflow: hidden;
-    border: 1.5px solid var(--border-2); background: var(--surface);
+    border: 1.5px solid var(--border-2); background: var(--bg-2);
     transition: transform .18s, border-color .18s;
   }
-  .so-detail-photo-card:hover {
-    transform: translateY(-2px); border-color: var(--primary);
-  }
+  .so-detail-photo-card:hover { transform: translateY(-2px); border-color: var(--primary); }
   .so-detail-photo-card img {
-    width: 100%; height: 140px; object-fit: cover; cursor: pointer; display: block;
+    width: 100%; height: 150px; object-fit: cover; cursor: pointer; display: block;
   }
   .so-photo-card-actions {
     display: flex; justify-content: space-between; padding: 6px 8px;
-    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
   }
   .so-detail-pdf-card {
-    background: var(--surface); border: 1px dashed rgba(167,139,250,0.4);
-    border-radius: 12px; padding: 14px; display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; flex-wrap: wrap;
+    background: var(--bg-2); border: 1px dashed rgba(167,139,250,0.4);
+    border-radius: 12px; padding: 14px; display: flex; align-items: center;
+    justify-content: space-between; gap: 12px; flex-wrap: wrap;
   }
+  .so-detail-actions-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border-2);
+    border-radius: 14px; padding: 14px 16px;
+  }
+  .so-detail-actions-bar .left,
+  .so-detail-actions-bar .right {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  }
+  .so-detail-loading, .so-detail-error {
+    text-align: center; padding: 60px 20px; color: var(--muted);
+  }
+  .so-detail-error { color: var(--danger); }
   /* Full-size photo lightbox */
   .lightbox {
     display: none; position: fixed; inset: 0; z-index: 400;
@@ -707,10 +766,117 @@
   .so-pdf-row {
     display: flex; align-items: center; gap: 8px; padding: 8px 0 6px;
   }
+
+  /* ── Quick Book ── */
+  .qb-wrap { max-width: 820px; display: flex; flex-direction: column; gap: 14px; }
+  .qb-card {
+    background: var(--surface); border: 1px solid var(--border-2);
+    border-radius: 14px; padding: 18px 20px;
+  }
+  .qb-card h3 {
+    margin: 0 0 6px; font-size: 15px; font-weight: 800;
+  }
+  .qb-card .hint { margin: 0 0 14px; color: var(--muted); font-size: 12.5px; }
+  .qb-upload {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .qb-preview {
+    width: 120px; height: 120px; border-radius: 14px;
+    border: 1.5px dashed var(--border-2); background: var(--bg-2);
+    display: grid; place-items: center; overflow: hidden; flex-shrink: 0;
+    color: var(--muted); font-size: 12px; text-align: center; padding: 8px;
+  }
+  .qb-preview img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .qb-upload-actions { display: flex; flex-direction: column; gap: 8px; }
+  .qb-field label {
+    display: block; font-size: 12px; font-weight: 700; color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .qb-field input[type="text"] {
+    width: 100%; max-width: 360px; padding: 10px 12px;
+    background: var(--bg-2); border: 1px solid var(--border-2);
+    border-radius: 9px; color: var(--text); font-family: inherit; font-size: 14px;
+    outline: none;
+  }
+  .qb-field input[type="text"]:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(56,189,248,0.12);
+  }
+  .qb-page-opts { display: flex; gap: 10px; flex-wrap: wrap; }
+  .qb-page-opt {
+    min-width: 120px; padding: 12px 16px; border-radius: 12px;
+    border: 1.5px solid var(--border-2); background: var(--bg-2);
+    color: var(--muted); font-weight: 700; font-size: 14px; cursor: pointer;
+    transition: all .15s; text-align: center;
+  }
+  .qb-page-opt small { display: block; font-size: 11px; font-weight: 500; margin-top: 4px; opacity: .8; }
+  .qb-page-opt.active {
+    border-color: rgba(56,189,248,0.55); background: var(--primary-dim); color: var(--primary);
+  }
+  .qb-jobs {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
+  }
+  .qb-job {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 12px 8px; border-radius: 12px; border: 1.5px solid var(--border-2);
+    background: var(--bg-2); cursor: pointer; transition: all .15s;
+    user-select: none; text-align: center;
+  }
+  .qb-job:hover { border-color: rgba(56,189,248,0.35); }
+  .qb-job.selected {
+    border-color: rgba(56,189,248,0.6); background: var(--primary-dim);
+    box-shadow: 0 0 0 1px rgba(56,189,248,0.25);
+  }
+  .qb-job .emoji { font-size: 22px; line-height: 1; }
+  .qb-job .title { font-size: 13px; font-weight: 700; color: var(--text); }
+  .qb-job-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .qb-sel-count { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .qb-sel-count.ok { color: var(--ok); }
+  .qb-sel-count.bad { color: var(--warn); }
+  .qb-actions {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .qb-progress {
+    display: none; margin-top: 4px;
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .qb-progress.show { display: block; }
+  .qb-progress-text { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 8px; }
+  .qb-progress-bar {
+    height: 8px; border-radius: 99px; background: rgba(15,25,45,0.9); overflow: hidden;
+  }
+  .qb-progress-fill {
+    height: 100%; width: 0%; border-radius: 99px;
+    background: linear-gradient(90deg, #38bdf8, #6366f1);
+    transition: width .35s ease;
+  }
+  .qb-result {
+    display: none; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+  .qb-result.show { display: flex; }
+  .qb-previews {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px;
+    margin-top: 12px;
+  }
+  .qb-prev-page {
+    border-radius: 10px; overflow: hidden; border: 1px solid var(--border-2);
+    background: #fff; aspect-ratio: 210/297;
+  }
+  .qb-prev-page img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .qb-msg { font-size: 13px; font-weight: 600; min-height: 18px; }
+  .qb-msg.err { color: var(--danger); }
+  .qb-msg.ok { color: var(--ok); }
 </style>
 </head>
 <body>
 {% set max_daily = stats.max_daily %}
+{% set max_daily_revenue = stats.max_daily_revenue %}
+{% set max_daily_users = stats.max_daily_users %}
 {% set max_job = stats.top_scenes[0].count if stats.top_scenes else 1 %}
 {% set delta = stats.books_today - stats.books_yesterday %}
 
@@ -726,6 +892,7 @@
 </div>
 <div class="mobile-nav-strip">
   <button type="button" class="mobile-nav-btn active" data-section="overview" onclick="showSection('overview')">◆ الرئيسية</button>
+  <button type="button" class="mobile-nav-btn" data-section="quick-book" onclick="showSection('quick-book')">⚡ كتاب سريع</button>
   <button type="button" class="mobile-nav-btn" data-section="special-orders" onclick="showSection('special-orders')">📱 طلبات خاصة</button>
   <button type="button" class="mobile-nav-btn" data-section="users" onclick="showSection('users')">◎ المستخدمين</button>
   <button type="button" class="mobile-nav-btn" data-section="books" onclick="showSection('books')">▤ الكتب</button>
@@ -746,6 +913,12 @@
       <button type="button" class="nav-item active" data-section="overview" onclick="showSection('overview')">
         <span class="nav-ico">◆</span> نظرة عامة
       </button>
+      <button type="button" class="nav-item" data-section="quick-book" onclick="showSection('quick-book')">
+        <span class="nav-ico">⚡</span> إنشاء كتاب سريع
+      </button>
+      <button type="button" class="nav-item" data-section="special-orders" id="nav-special-orders" onclick="showSection('special-orders')">
+        <span class="nav-ico">📱</span> طلبات خاصة
+      </button>
       <button type="button" class="nav-item" data-section="users" onclick="showSection('users')">
         <span class="nav-ico">◎</span> المستخدمون
       </button>
@@ -757,9 +930,6 @@
       </button>
       <button type="button" class="nav-item" data-section="jobs" onclick="showSection('jobs')">
         <span class="nav-ico">✦</span> الوظائف
-      </button>
-      <button type="button" class="nav-item" data-section="special-orders" id="nav-special-orders" onclick="showSection('special-orders')">
-        <span class="nav-ico">📱</span> طلبات خاصة
       </button>
     </nav>
 
@@ -796,7 +966,7 @@
         <div class="kpi kpi-blue">
           <div class="kpi-icon">📚</div><div class="glow"></div>
           <p class="label">كتب اليوم</p>
-          <p class="value">{{ stats.books_today }}</p>
+          <p class="value" data-kpi="books_today">{{ stats.books_today }}</p>
           {% if delta > 0 %}<p class="hint up">▲ +{{ delta }} عن أمس</p>
           {% elif delta < 0 %}<p class="hint down">▼ {{ delta }} عن أمس</p>
           {% else %}<p class="hint flat">═ نفس أمس</p>{% endif %}
@@ -804,31 +974,31 @@
         <div class="kpi kpi-indigo">
           <div class="kpi-icon">📅</div><div class="glow"></div>
           <p class="label">آخر 7 أيام</p>
-          <p class="value">{{ stats.books_week }}</p>
+          <p class="value" data-kpi="books_week">{{ stats.books_week }}</p>
           <p class="hint">هذا الشهر: {{ stats.books_month }}</p>
         </div>
         <div class="kpi kpi-green">
           <div class="kpi-icon">👥</div><div class="glow"></div>
           <p class="label">المستخدمون</p>
-          <p class="value">{{ stats.users_total }}</p>
+          <p class="value" data-kpi="users_total">{{ stats.users_total }}</p>
           <p class="hint up">+{{ stats.users_week }} هذا الأسبوع</p>
         </div>
         <div class="kpi kpi-yellow">
           <div class="kpi-icon">🗒️</div><div class="glow"></div>
           <p class="label">صفحات مولّدة</p>
-          <p class="value">{{ stats.pages_total }}</p>
+          <p class="value" data-kpi="pages_total">{{ stats.pages_total }}</p>
           <p class="hint">متوسط {{ stats.avg_pages }} / كتاب</p>
         </div>
         <div class="kpi kpi-violet">
           <div class="kpi-icon">💰</div><div class="glow"></div>
           <p class="label">إجمالي الإيرادات</p>
-          <p class="value" style="font-size:26px">{{ stats.revenue_egp }} ج</p>
+          <p class="value" style="font-size:26px" data-kpi="revenue_egp" data-suffix=" ج">{{ stats.revenue_egp }} ج</p>
           <p class="hint">{{ stats.payments_paid }} دفعة ناجحة</p>
         </div>
         <div class="kpi kpi-orange">
           <div class="kpi-icon">📈</div><div class="glow"></div>
           <p class="label">معدل التحويل</p>
-          <p class="value" style="font-size:26px">{{ stats.conversion_rate }}%</p>
+          <p class="value" style="font-size:26px" data-kpi="conversion_rate" data-suffix="%">{{ stats.conversion_rate }}%</p>
           <p class="hint">{{ stats.payments_total }} طلب إجمالي</p>
         </div>
       </div>
@@ -856,14 +1026,55 @@
           <div class="panel-head"><h2>ملخص سريع</h2><span class="sub">حالة النظام</span></div>
           <div class="panel-body">
             <div class="mini-grid">
-              <div class="mini"><p class="l">إجمالي الكتب</p><p class="v">{{ stats.books_total }}</p></div>
-              <div class="mini"><p class="l">مستخدمون اليوم</p><p class="v">{{ stats.users_today }}</p></div>
-              <div class="mini"><p class="l">جلسات نشطة</p><p class="v">{{ stats.sessions_active }}</p></div>
-              <div class="mini"><p class="l">روابط مشاركة</p><p class="v">{{ stats.shares_active }}</p></div>
+              <div class="mini"><p class="l">إجمالي الكتب</p><p class="v" data-kpi="books_total">{{ stats.books_total }}</p></div>
+              <div class="mini"><p class="l">مستخدمون اليوم</p><p class="v" data-kpi="users_today">{{ stats.users_today }}</p></div>
+              <div class="mini"><p class="l">جلسات نشطة</p><p class="v" data-kpi="sessions_active">{{ stats.sessions_active }}</p></div>
+              <div class="mini"><p class="l">روابط مشاركة</p><p class="v" data-kpi="shares_active">{{ stats.shares_active }}</p></div>
             </div>
             <p style="margin:14px 0 0;font-size:12px;color:var(--muted)">
               الحد المجاني: <strong style="color:var(--text)">{{ stats.free_books_per_month }}</strong> كتب / شهر / IP
             </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>الإيرادات — 14 يوم</h2>
+            <span class="sub">جنيه يوميًا (مدفوعات ناجحة)</span>
+          </div>
+          <div class="panel-body">
+            {% if stats.payments_paid %}
+            <div class="chart-wrap">
+              {% for d in stats.daily_revenue %}
+              {% set h = ((d.count / max_daily_revenue) * 168)|round|int %}
+              <div class="bar-col" title="{{ d.day }}: {{ d.count }} ج">
+                <div class="c">{{ d.count|int if d.count else '' }}</div>
+                <div class="bar" style="height: {{ [h, 4]|max }}px;background:linear-gradient(180deg,#34d399,#059669)"></div>
+                <div class="d">{{ d.label }}</div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}<p class="empty"><span class="empty-ico">💰</span>لسة مفيش إيرادات.</p>{% endif %}
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>مستخدمون جدد — 14 يوم</h2>
+            <span class="sub">تسجيلات يومية</span>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap">
+              {% for d in stats.daily_users %}
+              {% set h = ((d.count / max_daily_users) * 168)|round|int %}
+              <div class="bar-col" title="{{ d.day }}: {{ d.count }} مستخدم">
+                <div class="c">{{ d.count if d.count else '' }}</div>
+                <div class="bar" style="height: {{ [h, 4]|max }}px;background:linear-gradient(180deg,#a78bfa,#6366f1)"></div>
+                <div class="d">{{ d.label }}</div>
+              </div>
+              {% endfor %}
+            </div>
           </div>
         </div>
       </div>
@@ -943,7 +1154,13 @@
       <div class="panel">
         <div class="panel-head">
           <h2>المستخدمون</h2>
-          <span class="sub">آخر {{ stats.recent_users|length }} مستخدم</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <input id="users-search" class="so-search" type="search"
+                   placeholder="🔍 بحث بالاسم أو الإيميل..."
+                   oninput="searchUsers(this.value)" style="min-width:220px">
+            <a class="btn btn-sm" href="/admin/api/export/users.csv" download>⬇ CSV</a>
+            <span class="sub" id="users-count-note">آخر {{ stats.recent_users|length }} مستخدم</span>
+          </div>
         </div>
         <div class="panel-body flush">
           {% if stats.recent_users %}
@@ -1007,7 +1224,13 @@
         </div>
       </div>
       <div class="panel">
-        <div class="panel-head"><h2>سجل الكتب</h2><span class="sub">آخر {{ stats.recent_books|length }} كتاب</span></div>
+        <div class="panel-head">
+          <h2>سجل الكتب</h2>
+          <div style="display:flex;align-items:center;gap:8px">
+            <a class="btn btn-sm" href="/admin/api/export/books.csv" download>⬇ CSV</a>
+            <span class="sub">آخر {{ stats.recent_books|length }} كتاب</span>
+          </div>
+        </div>
         <div class="panel-body flush">
           {% if stats.recent_books %}
           <div class="table-wrap">
@@ -1059,7 +1282,13 @@
         </div>
       </div>
       <div class="panel">
-        <div class="panel-head"><h2>سجل المدفوعات</h2><span class="sub">آخر {{ stats.recent_payments|length }} عملية</span></div>
+        <div class="panel-head">
+          <h2>سجل المدفوعات</h2>
+          <div style="display:flex;align-items:center;gap:8px">
+            <a class="btn btn-sm" href="/admin/api/export/payments.csv" download>⬇ CSV</a>
+            <span class="sub">آخر {{ stats.recent_payments|length }} عملية</span>
+          </div>
+        </div>
         <div class="panel-body flush">
           {% if stats.recent_payments %}
           <div class="table-wrap">
@@ -1116,23 +1345,122 @@
       </div>
     </section>
 
+    <!-- QUICK BOOK -->
+    <section class="section" id="section-quick-book">
+      <div class="qb-wrap">
+        <div class="qb-card">
+          <h3>1. صورة الطفل</h3>
+          <p class="hint">ارفع صورة واضحة للوجه — JPG أو PNG</p>
+          <div class="qb-upload">
+            <div class="qb-preview" id="qb-preview">
+              <span id="qb-preview-ph">مفيش صورة</span>
+              <img id="qb-preview-img" alt="" style="display:none">
+            </div>
+            <div class="qb-upload-actions">
+              <label class="btn btn-primary" style="cursor:pointer;margin:0">
+                اختيار صورة
+                <input type="file" id="qb-photo" accept="image/*" hidden onchange="qbOnPhoto(this)">
+              </label>
+              <button type="button" class="btn btn-sm btn-ghost" onclick="qbClearPhoto()" id="qb-clear-photo" style="display:none">مسح الصورة</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="qb-card">
+          <h3>2. اسم الطفل</h3>
+          <p class="hint">هيظهر على غلاف الكتاب</p>
+          <div class="qb-field">
+            <label for="qb-name">الاسم</label>
+            <input type="text" id="qb-name" maxlength="40" placeholder="مثال: ياسين" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="qb-card">
+          <h3>3. عدد الصفحات</h3>
+          <p class="hint">غلاف + صفحات التلوين (تختار الوظائف تحت)</p>
+          <div class="qb-page-opts">
+            <button type="button" class="qb-page-opt active" data-pages="8" onclick="qbSetPageCount(8, this)">
+              8 صفحات
+              <small>كتاب قياسي</small>
+            </button>
+            <button type="button" class="qb-page-opt" data-pages="12" onclick="qbSetPageCount(12, this)">
+              12 صفحة
+              <small>كل الوظائف</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="qb-card">
+          <h3>4. اختيار الوظائف</h3>
+          <p class="hint">اختار عدد الوظائف = عدد الصفحات بالظبط</p>
+          <div class="qb-job-toolbar">
+            <span class="qb-sel-count" id="qb-sel-count">مختار 0 / 8</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button type="button" class="btn btn-sm btn-ghost" onclick="qbSelectAuto()">اختيار تلقائي</button>
+              <button type="button" class="btn btn-sm btn-ghost" onclick="qbClearJobs()">مسح الاختيار</button>
+            </div>
+          </div>
+          <div class="qb-jobs" id="qb-jobs">
+            {% for s in scenes %}
+            <div class="qb-job" data-id="{{ s.id }}" data-title="{{ s.title }}" onclick="qbToggleJob(this)">
+              <span class="emoji">{{ s.emoji }}</span>
+              <span class="title">{{ s.title }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="qb-card">
+          <h3>5. إنشاء الكتاب</h3>
+          <p class="hint">التوليد بياخد دقيقة أو دقيقتين حسب عدد الصفحات</p>
+          <div class="qb-actions">
+            <button type="button" class="btn btn-primary" id="qb-run-btn" onclick="qbCreateBook()">إنشاء PDF</button>
+            <div class="qb-result" id="qb-result">
+              <a class="btn btn-success" id="qb-download" href="#" download>تحميل PDF</a>
+              <button type="button" class="btn btn-ghost" onclick="qbReset()">طلب جديد</button>
+            </div>
+          </div>
+          <div class="qb-progress" id="qb-progress">
+            <div class="qb-progress-text" id="qb-progress-text">جاري التوليد...</div>
+            <div class="qb-progress-bar"><div class="qb-progress-fill" id="qb-progress-fill"></div></div>
+          </div>
+          <div class="qb-msg" id="qb-msg"></div>
+          <div class="qb-previews" id="qb-previews"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- SPECIAL ORDERS -->
     <section class="section" id="section-special-orders">
       <div class="so-toolbar">
-        <div class="so-filters">
-          <button class="filter-btn active" data-filter="all" onclick="filterOrders('all', this)">📋 الكل</button>
-          <button class="filter-btn" data-filter="pending" onclick="filterOrders('pending', this)">⏳ معلّق</button>
-          <button class="filter-btn" data-filter="done" onclick="filterOrders('done', this)">✅ مكتمل</button>
-          <input id="so-search" class="so-search" type="search"
-                 placeholder="🔍 بحث باسم الأب أو المسؤول..."
-                 oninput="searchOrders(this.value)">
+        <div class="so-toolbar-row">
+          <div class="so-filters">
+            <button class="filter-btn active" data-filter="all" onclick="filterOrders('all', this)">الكل</button>
+            <button class="filter-btn" data-filter="pending" onclick="filterOrders('pending', this)">معلّق</button>
+            <button class="filter-btn" data-filter="done" onclick="filterOrders('done', this)">مكتمل</button>
+          </div>
+          <button class="btn btn-primary" onclick="openOrderModal(null)">+ طلب جديد</button>
         </div>
-        <button class="btn btn-primary" onclick="openOrderModal(null)">
-          + طلب جديد
-        </button>
+        <div class="so-toolbar-row">
+          <div class="so-search-wrap">
+            <span class="so-search-ico">⌕</span>
+            <input id="so-search" class="so-search" type="search"
+                   placeholder="بحث: اسم الطفل، ولي الأمر، تليفون، رقم الطلب، مسؤول..."
+                   oninput="searchOrders(this.value)"
+                   autocomplete="off">
+          </div>
+          <div class="so-results-note" id="so-results-note"></div>
+        </div>
       </div>
       <div class="so-grid" id="so-grid">
         <div class="so-empty"><span class="so-empty-ico">📱</span>جاري التحميل...</div>
+      </div>
+    </section>
+
+    <!-- SPECIAL ORDER DETAIL (standalone page) -->
+    <section class="section" id="section-order-detail">
+      <div class="so-detail-page" id="so-detail-root">
+        <div class="so-detail-loading">جاري تحميل التفاصيل...</div>
       </div>
     </section>
   </main>
@@ -1221,77 +1549,6 @@
   </div>
 </div>
 
-<!-- Order Detail Modal (Full view) -->
-<div class="modal-overlay" id="order-detail-modal">
-  <div class="modal modal-xl">
-    <div class="so-detail-header">
-      <div class="so-detail-title-wrap">
-        <div class="so-detail-icon">📋</div>
-        <div>
-          <h3 id="so-detail-title" style="margin:0;font-size:20px">تفاصيل الطلب</h3>
-          <p class="modal-sub" id="so-detail-sub" style="margin:2px 0 0">تاريخ الطلب: --</p>
-        </div>
-      </div>
-      <div id="so-detail-status-badge"></div>
-    </div>
-
-    <div class="so-detail-grid">
-      <!-- Info Column -->
-      <div class="so-detail-card">
-        <h4 class="so-detail-section-title">👤 البيانات الأساسية</h4>
-        <div class="so-detail-rows">
-          <div class="so-detail-row">
-            <span class="so-d-label">🧒 اسم الطفل:</span>
-            <span class="so-d-value highlight" id="so-detail-child"></span>
-          </div>
-          <div class="so-detail-row">
-            <span class="so-d-label">👤 ولي الأمر / الأب:</span>
-            <span class="so-d-value" id="so-detail-client"></span>
-          </div>
-          <div class="so-detail-row">
-            <span class="so-d-label">📞 رقم التليفون:</span>
-            <div id="so-detail-phone-wrap" style="display:flex;align-items:center;gap:8px"></div>
-          </div>
-          <div class="so-detail-row">
-            <span class="so-d-label">📧 البريد الإلكتروني:</span>
-            <span class="so-d-value" id="so-detail-email"></span>
-          </div>
-          <div class="so-detail-row">
-            <span class="so-d-label">👷 الشخص المسؤول:</span>
-            <span class="so-d-value" id="so-detail-assigned"></span>
-          </div>
-        </div>
-
-        <div>
-          <span class="so-d-label" style="display:block;margin-bottom:4px">📝 الملاحظات والتفاصيل:</span>
-          <div id="so-detail-notes" class="so-detail-notes-box"></div>
-        </div>
-      </div>
-
-      <!-- Attachments & Media Column -->
-      <div class="so-detail-card">
-        <h4 class="so-detail-section-title">🖼️ المرفقات والملفات</h4>
-        
-        <div>
-          <label class="so-d-label" style="display:block;margin-bottom:8px">📷 صور الطفل المرفوعة:</label>
-          <div id="so-detail-photos" class="so-detail-photos-grid"></div>
-        </div>
-
-        <div style="margin-top:10px">
-          <label class="so-d-label" style="display:block;margin-bottom:8px">📄 ملف الـ PDF الخاص بالطلب:</label>
-          <div id="so-detail-pdf-box"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal-actions" style="margin-top:20px; justify-content:space-between; flex-wrap:wrap">
-      <div style="display:flex;gap:8px;flex-wrap:wrap" id="so-detail-quick-actions">
-        <!-- Quick action buttons rendered via JS -->
-      </div>
-      <button class="btn btn-ghost" onclick="closeModal('order-detail-modal')">إلغاء وإغلاق</button>
-    </div>
-  </div>
-</div>
 
 <!-- Credits Modal -->
 <div class="modal-overlay" id="credits-modal">
@@ -1348,27 +1605,47 @@ let _modalOrderId = null;
 let _existingPhotos = []; // filenames currently on server
 let _modalFiles = [];     // preview photos for modal upload
 let _creditsUserId = null;
+let _detailOrderId = null; // current order detail page id
 
 const sectionMeta = {
   overview:        { title: 'نظرة عامة',       sub: 'متابعة الأداء والمستخدمين والكتب' },
+  'quick-book':    { title: 'إنشاء كتاب سريع', sub: 'صورة + اسم + وظائف → PDF جاهز' },
   users:           { title: 'المستخدمون',      sub: 'إدارة الحسابات والـ Credits' },
   books:           { title: 'الكتب',           sub: 'سجل الكتب المولّدة' },
   payments:        { title: 'المدفوعات',       sub: 'سجل المعاملات المالية' },
   jobs:            { title: 'الوظائف',         sub: 'ترتيب الوظائف حسب الاستخدام' },
   'special-orders':{ title: 'طلبات خاصة',      sub: 'طلبات الواتساب — تسجيل وإدارة' },
+  'order-detail':  { title: 'تفاصيل الطلب',    sub: 'عرض وإدارة الطلب' },
 };
 
-function showSection(id) {
+function parseRoute(hash) {
+  const h = (hash || '').replace(/^#/, '');
+  // #order/123 or #order-123
+  const m = h.match(/^order[\/-](\d+)$/);
+  if (m) return { section: 'order-detail', orderId: parseInt(m[1], 10) };
+  if (sectionMeta[h]) return { section: h, orderId: null };
+  return { section: 'overview', orderId: null };
+}
+
+function showSection(id, orderId) {
+  // Support hash strings and detail routes
+  if (typeof id === 'string' && (id.startsWith('order/') || id.startsWith('order-'))) {
+    const route = parseRoute(id);
+    id = route.section;
+    orderId = route.orderId;
+  }
   if (!sectionMeta[id]) id = 'overview';
-  
+  if (id !== 'order-detail') orderId = null;
+
   // Hide all sections, show active section
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   const targetSec = document.getElementById('section-' + id);
   if (targetSec) targetSec.classList.add('active');
 
-  // Highlight active state on all nav elements (desktop sidebar + mobile strip)
+  // Highlight nav — detail keeps "special-orders" active
+  const navHighlight = id === 'order-detail' ? 'special-orders' : id;
   document.querySelectorAll('[data-section]').forEach(el => {
-    if (el.getAttribute('data-section') === id) {
+    if (el.getAttribute('data-section') === navHighlight) {
       el.classList.add('active');
     } else {
       el.classList.remove('active');
@@ -1382,13 +1659,21 @@ function showSection(id) {
   if (subEl && sectionMeta[id])   subEl.textContent   = sectionMeta[id].sub;
 
   // Update URL hash
-  if (location.hash !== '#' + id) {
-    history.pushState(null, '', '#' + id);
+  let nextHash;
+  if (id === 'order-detail' && orderId) {
+    nextHash = '#order/' + orderId;
+  } else {
+    nextHash = '#' + id;
+  }
+  if (location.hash !== nextHash) {
+    history.pushState(null, '', nextHash);
   }
 
-  // Auto load special orders if selected
   if (id === 'special-orders') {
     loadOrders();
+  }
+  if (id === 'order-detail' && orderId) {
+    openOrderDetailPage(orderId);
   }
 }
 
@@ -1401,6 +1686,237 @@ function showToast(msg, type = '') {
   setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 350); }, 3000);
 }
 
+/* ════════════════ Quick Book ════════════════ */
+let _qbPageCount = 8;
+let _qbFile = null;
+let _qbSessionId = null;
+let _qbBusy = false;
+let _qbPreviewUrls = []; // revoke later
+
+function qbSelectedIds() {
+  return Array.from(document.querySelectorAll('.qb-job.selected')).map(el => el.dataset.id);
+}
+
+function qbUpdateSelCount() {
+  const n = qbSelectedIds().length;
+  const el = document.getElementById('qb-sel-count');
+  if (!el) return;
+  el.textContent = `مختار ${n} / ${_qbPageCount}`;
+  el.classList.remove('ok', 'bad');
+  if (n === _qbPageCount) el.classList.add('ok');
+  else el.classList.add('bad');
+}
+
+function qbSetPageCount(n, btn) {
+  _qbPageCount = n;
+  document.querySelectorAll('.qb-page-opt').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else {
+    document.querySelectorAll('.qb-page-opt').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.pages, 10) === n);
+    });
+  }
+  // trim selection if over limit
+  const selected = document.querySelectorAll('.qb-job.selected');
+  if (selected.length > n) {
+    Array.from(selected).slice(n).forEach(el => el.classList.remove('selected'));
+  }
+  // auto-fill if empty or under
+  if (qbSelectedIds().length < n) qbSelectAuto();
+  else qbUpdateSelCount();
+}
+
+function qbToggleJob(el) {
+  if (el.classList.contains('selected')) {
+    el.classList.remove('selected');
+  } else {
+    if (qbSelectedIds().length >= _qbPageCount) {
+      showToast(`الحد الأقصى ${_qbPageCount} وظائف`, 'err');
+      return;
+    }
+    el.classList.add('selected');
+  }
+  qbUpdateSelCount();
+}
+
+function qbSelectAuto() {
+  document.querySelectorAll('.qb-job').forEach(el => el.classList.remove('selected'));
+  Array.from(document.querySelectorAll('.qb-job')).slice(0, _qbPageCount)
+    .forEach(el => el.classList.add('selected'));
+  qbUpdateSelCount();
+}
+
+function qbClearJobs() {
+  document.querySelectorAll('.qb-job').forEach(el => el.classList.remove('selected'));
+  qbUpdateSelCount();
+}
+
+function qbOnPhoto(input) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  _qbFile = f;
+  _qbSessionId = null;
+  const img = document.getElementById('qb-preview-img');
+  const ph = document.getElementById('qb-preview-ph');
+  const url = URL.createObjectURL(f);
+  img.src = url;
+  img.style.display = 'block';
+  if (ph) ph.style.display = 'none';
+  document.getElementById('qb-clear-photo').style.display = '';
+  document.getElementById('qb-result').classList.remove('show');
+  document.getElementById('qb-previews').innerHTML = '';
+  document.getElementById('qb-msg').textContent = '';
+}
+
+function qbClearPhoto() {
+  _qbFile = null;
+  _qbSessionId = null;
+  const input = document.getElementById('qb-photo');
+  if (input) input.value = '';
+  const img = document.getElementById('qb-preview-img');
+  const ph = document.getElementById('qb-preview-ph');
+  img.src = '';
+  img.style.display = 'none';
+  if (ph) ph.style.display = '';
+  document.getElementById('qb-clear-photo').style.display = 'none';
+}
+
+function qbSetProgress(pct, text) {
+  const wrap = document.getElementById('qb-progress');
+  const fill = document.getElementById('qb-progress-fill');
+  const t = document.getElementById('qb-progress-text');
+  wrap.classList.add('show');
+  fill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  if (text) t.textContent = text;
+}
+
+function qbHideProgress() {
+  document.getElementById('qb-progress').classList.remove('show');
+  document.getElementById('qb-progress-fill').style.width = '0%';
+}
+
+function qbChunk(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+async function qbCreateBook() {
+  if (_qbBusy) return;
+  const msg = document.getElementById('qb-msg');
+  const name = (document.getElementById('qb-name').value || '').trim();
+  const scenes = qbSelectedIds();
+  msg.className = 'qb-msg';
+  msg.textContent = '';
+
+  if (!_qbFile) {
+    msg.textContent = 'ارفع صورة الطفل الأول.';
+    msg.className = 'qb-msg err';
+    return;
+  }
+  if (!name) {
+    msg.textContent = 'اكتب اسم الطفل.';
+    msg.className = 'qb-msg err';
+    document.getElementById('qb-name').focus();
+    return;
+  }
+  if (scenes.length !== _qbPageCount) {
+    msg.textContent = `اختار ${_qbPageCount} وظيفة بالظبط (مختار حالياً ${scenes.length}).`;
+    msg.className = 'qb-msg err';
+    return;
+  }
+
+  _qbBusy = true;
+  const btn = document.getElementById('qb-run-btn');
+  btn.disabled = true;
+  document.getElementById('qb-result').classList.remove('show');
+  document.getElementById('qb-previews').innerHTML = '';
+
+  try {
+    // 1) Upload
+    qbSetProgress(8, 'جاري رفع الصورة...');
+    if (!_qbSessionId) {
+      const fd = new FormData();
+      fd.append('photo', _qbFile);
+      const upRes = await fetch('/admin/api/quick-book/upload', { method: 'POST', body: fd });
+      const upData = await upRes.json();
+      if (!upRes.ok) throw new Error(upData.error || 'فشل رفع الصورة');
+      _qbSessionId = upData.session_id;
+    }
+
+    // 2) Generate in chunks of 4 (safer with server timeout)
+    const chunks = qbChunk(scenes, 4);
+    const allPages = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const base = 15 + Math.round((i / chunks.length) * 70);
+      qbSetProgress(base, `جاري توليد الصفحات... دفعة ${i + 1} من ${chunks.length}`);
+      const gRes = await fetch('/admin/api/quick-book/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: _qbSessionId, scenes: chunks[i], force: false }),
+      });
+      const gData = await gRes.json();
+      if (!gRes.ok) throw new Error(gData.error || 'فشل التوليد');
+      allPages.push(...(gData.pages || []));
+    }
+
+    const failed = allPages.filter(p => p.error);
+    const okPages = allPages.filter(p => !p.error);
+    if (!okPages.length) {
+      throw new Error(failed[0]?.error || 'فشل توليد كل الصفحات');
+    }
+    if (failed.length) {
+      showToast(`تم ${okPages.length} صفحة — فشل ${failed.length}`, 'err');
+    }
+
+    // Keep order as selected
+    const okSet = new Set(okPages.map(p => p.scene_id));
+    const order = scenes.filter(id => okSet.has(id));
+
+    // previews
+    const previews = document.getElementById('qb-previews');
+    previews.innerHTML = okPages.map(p => `
+      <div class="qb-prev-page" title="${escHtml(p.title || p.scene_id)}">
+        <img src="data:image/jpeg;base64,${p.image_b64}" alt="${escHtml(p.title || '')}">
+      </div>`).join('');
+
+    qbSetProgress(92, 'جاري تجهيز PDF...');
+    const pdfUrl = `/admin/api/quick-book/pdf/${_qbSessionId}?order=${encodeURIComponent(order.join(','))}&name=${encodeURIComponent(name)}`;
+    const a = document.getElementById('qb-download');
+    a.href = pdfUrl;
+    a.setAttribute('download', `${name || 'coloring_book'}.pdf`);
+    document.getElementById('qb-result').classList.add('show');
+
+    qbSetProgress(100, 'الكتاب جاهز ✓');
+    msg.textContent = `تم إنشاء كتاب ${order.length} صفحة لـ «${name}»`;
+    msg.className = 'qb-msg ok';
+    showToast('الكتاب جاهز — تقدر تحمل PDF', 'ok');
+  } catch (e) {
+    msg.textContent = e.message || 'حصل خطأ';
+    msg.className = 'qb-msg err';
+    showToast(e.message || 'فشل الإنشاء', 'err');
+    qbHideProgress();
+  } finally {
+    _qbBusy = false;
+    btn.disabled = false;
+  }
+}
+
+function qbReset() {
+  qbClearPhoto();
+  document.getElementById('qb-name').value = '';
+  document.getElementById('qb-result').classList.remove('show');
+  document.getElementById('qb-previews').innerHTML = '';
+  document.getElementById('qb-msg').textContent = '';
+  qbHideProgress();
+  qbSelectAuto();
+}
+
+// Init default job selection when DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById('qb-jobs')) qbSelectAuto();
+});
+
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(o => {
@@ -1409,6 +1925,129 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
 });
+
+/* Users live search */
+let _userSearchTimer = null;
+function searchUsers(q) {
+  clearTimeout(_userSearchTimer);
+  _userSearchTimer = setTimeout(() => loadUsers((q || '').trim()), 250);
+}
+
+async function loadUsers(q) {
+  const note = document.getElementById('users-count-note');
+  try {
+    const res  = await fetch('/admin/api/users?q=' + encodeURIComponent(q));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ');
+    renderUsers(data.users || []);
+    if (note) note.textContent = q ? `${data.total} نتيجة` : `آخر ${data.total} مستخدم`;
+  } catch (err) {
+    showToast('فشل البحث: ' + err.message, 'err');
+  }
+}
+
+function renderUsers(users) {
+  const tbody = document.getElementById('users-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (!users.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 7;
+    td.className = 'empty';
+    td.textContent = 'لا نتائج مطابقة.';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+  users.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.id = `user-row-${u.id}`;
+
+    const tdId = document.createElement('td');
+    tdId.className = 'mono muted';
+    tdId.textContent = u.id;
+    tr.appendChild(tdId);
+
+    const tdUser = document.createElement('td');
+    const row = document.createElement('div');
+    row.className = 'user-row';
+    const ava = document.createElement('span');
+    ava.className = 'avatar';
+    ava.textContent = (u.username || '?').charAt(0).toUpperCase();
+    const cell = document.createElement('div');
+    cell.className = 'user-cell';
+    const strong = document.createElement('strong');
+    strong.textContent = u.username || '';
+    cell.appendChild(strong);
+    row.appendChild(ava); row.appendChild(cell);
+    tdUser.appendChild(row);
+    tr.appendChild(tdUser);
+
+    const tdEmail = document.createElement('td');
+    tdEmail.className = 'muted';
+    tdEmail.style.fontSize = '12px';
+    tdEmail.textContent = u.email || '';
+    tr.appendChild(tdEmail);
+
+    const tdDate = document.createElement('td');
+    tdDate.className = 'mono muted';
+    tdDate.textContent = (u.created_at || '').slice(0, 10);
+    tr.appendChild(tdDate);
+
+    const tdCredits = document.createElement('td');
+    const pill = document.createElement('span');
+    pill.className = 'credits-pill';
+    pill.id = `credits-${u.id}`;
+    pill.textContent = `✦ ${u.book_credits || 0}`;
+    tdCredits.appendChild(pill);
+    tr.appendChild(tdCredits);
+
+    const tdProv = document.createElement('td');
+    const badge = document.createElement('span');
+    const provider = u.auth_provider || 'email';
+    badge.className = 'badge ' + (provider === 'google' ? 'badge-green' : 'badge-violet');
+    badge.textContent = provider;
+    tdProv.appendChild(badge);
+    tr.appendChild(tdProv);
+
+    const tdAct = document.createElement('td');
+    const acts = document.createElement('div');
+    acts.className = 'actions';
+    const bCredits = document.createElement('button');
+    bCredits.className = 'btn btn-sm btn-success';
+    bCredits.textContent = 'Credits';
+    bCredits.onclick = () => openCreditsModal(u.id, u.username || '', u.book_credits || 0);
+    const bNotify = document.createElement('button');
+    bNotify.className = 'btn btn-sm';
+    bNotify.textContent = 'إشعار';
+    bNotify.onclick = () => openNotifyModal(u.id, u.username || '');
+    const bDelete = document.createElement('button');
+    bDelete.className = 'btn btn-sm btn-danger';
+    bDelete.textContent = 'حذف';
+    bDelete.onclick = () => confirmDelete(u.id, u.username || '');
+    acts.appendChild(bCredits); acts.appendChild(bNotify); acts.appendChild(bDelete);
+    tdAct.appendChild(acts);
+    tr.appendChild(tdAct);
+
+    tbody.appendChild(tr);
+  });
+}
+
+/* KPI auto-refresh (every 30s, no full reload) */
+async function refreshKpis() {
+  try {
+    const res = await fetch('/admin/api/stats');
+    if (!res.ok) return;
+    const s = await res.json();
+    document.querySelectorAll('[data-kpi]').forEach(el => {
+      const key = el.getAttribute('data-kpi');
+      if (s[key] === undefined || s[key] === null) return;
+      el.textContent = s[key] + (el.getAttribute('data-suffix') || '');
+    });
+  } catch (e) { /* silent — keep old numbers */ }
+}
+setInterval(refreshKpis, 30000);
 
 /* Credits */
 
@@ -1557,9 +2196,10 @@ async function loadOrders(filter) {
   if (filter !== undefined) _soFilter = filter;
   const params = new URLSearchParams();
   if (_soFilter && _soFilter !== 'all') params.set('status', _soFilter);
-  const clientQ = (document.getElementById('so-search')?.value || '').trim();
-  if (clientQ) params.set('client', clientQ);
+  const q = (document.getElementById('so-search')?.value || '').trim();
+  if (q) params.set('q', q);
   const url = '/admin/api/special-orders' + (params.toString() ? '?' + params.toString() : '');
+  const note = document.getElementById('so-results-note');
   try {
     const res = await fetch(url);
     if (res.status === 401) {
@@ -1570,19 +2210,25 @@ async function loadOrders(filter) {
     if (!res.ok) throw new Error(data.error || 'فشل التحميل');
     _soAll = data.orders || [];
     renderOrders(_soAll);
+    if (note) {
+      if (q) note.textContent = `${_soAll.length} نتيجة`;
+      else if (_soFilter === 'pending') note.textContent = `${_soAll.length} طلب معلّق`;
+      else if (_soFilter === 'done') note.textContent = `${_soAll.length} طلب مكتمل`;
+      else note.textContent = `${_soAll.length} طلب`;
+    }
   } catch(e) {
     console.error('loadOrders error:', e);
     const grid = document.getElementById('so-grid');
     if (grid) {
       grid.innerHTML = '<div class="so-empty"><span class="so-empty-ico">⚠️</span>حدث خطأ أثناء تحميل الطلبات. حاول مجدداً.</div>';
     }
+    if (note) note.textContent = '';
   }
 }
 
 function searchOrders(val) {
-  // debounce 350ms
   clearTimeout(window._soSearchTimer);
-  window._soSearchTimer = setTimeout(() => loadOrders(), 350);
+  window._soSearchTimer = setTimeout(() => loadOrders(), 300);
 }
 
 function filterOrders(f, btn) {
@@ -1599,7 +2245,10 @@ function filterOrders(f, btn) {
 function renderOrders(orders) {
   const grid = document.getElementById('so-grid');
   if (!orders.length) {
-    grid.innerHTML = '<div class="so-empty"><span class="so-empty-ico">📱</span>مفيش طلبات في هذه الفئة.</div>';
+    const q = (document.getElementById('so-search')?.value || '').trim();
+    grid.innerHTML = q
+      ? '<div class="so-empty"><span class="so-empty-ico">⌕</span>مفيش نتائج مطابقة للبحث.</div>'
+      : '<div class="so-empty"><span class="so-empty-ico">📱</span>مفيش طلبات في هذه الفئة.</div>';
     return;
   }
   grid.innerHTML = orders.map(o => orderCardHTML(o)).join('');
@@ -1609,185 +2258,294 @@ function photoURL(orderId, filename) {
   return `/admin/special-orders/${orderId}/photo/${filename}`;
 }
 
+function formatOrderDate(raw) {
+  if (!raw) return '—';
+  return String(raw).slice(0, 16).replace('T', ' ');
+}
+
 function orderCardHTML(o) {
   const isDone = o.status === 'done';
   const statusBadge = isDone
-    ? '<span class="badge badge-green">✓ مكتمل</span>'
-    : '<span class="badge badge-yellow">⏳ معلّق</span>';
+    ? '<span class="badge badge-green">مكتمل</span>'
+    : '<span class="badge badge-yellow">معلّق</span>';
 
-  // Phone & WhatsApp link
-  let phoneChip = '';
+  let phoneCell = '<span class="so-info-value muted">—</span>';
   if (o.phone) {
-    const rawPhone = o.phone.replace(/[^0-9]/g, '');
+    const rawPhone = String(o.phone).replace(/[^0-9]/g, '');
     const waPhone = rawPhone.startsWith('0') ? '2' + rawPhone : rawPhone;
-    phoneChip = `
-      <div class="so-chip">
-        <a href="https://wa.me/${waPhone}" target="_blank" class="btn-whatsapp-icon" title="مراسلة واتساب">💬</a>
-        <a href="tel:${escHtml(o.phone)}" style="color:var(--text-2);text-decoration:none">${escHtml(o.phone)}</a>
+    phoneCell = `
+      <div class="so-info-phone">
+        <a class="phone-num" href="tel:${escHtml(o.phone)}" onclick="event.stopPropagation()">${escHtml(o.phone)}</a>
+        <a href="https://wa.me/${waPhone}" target="_blank" class="btn-whatsapp-icon"
+           title="واتساب" onclick="event.stopPropagation()">💬</a>
       </div>`;
   }
 
-  // Assigned person chip
-  const assignedChip = o.assigned_to ? `
-    <div class="so-chip so-chip-assigned">
-      👷 ${escHtml(o.assigned_to)}
-    </div>` : '';
-
-  // PDF Chip
-  const pdfChip = o.pdf_filename ? `
-    <div class="so-chip so-chip-pdf">
-      📄 PDF مرفق
-    </div>` : '';
-
-  // Photos thumbnail strip (up to 4 thumbnails + count)
-  let photosStrip = '';
+  const flags = [];
   if (o.photos && o.photos.length) {
-    const visiblePhotos = o.photos.slice(0, 4);
-    const countBadge = o.photos.length > 4 ? `<span style="font-size:12px;color:var(--muted);font-weight:600;align-self:center">+${o.photos.length - 4} صور</span>` : '';
-    photosStrip = `
-      <div class="so-photos-strip">
-        ${visiblePhotos.map(fn => `
-          <img class="so-photo-thumb" src="${photoURL(o.id, fn)}" alt="صورة" onclick="openLightbox('${photoURL(o.id, fn)}')">
-        `).join('')}
-        ${countBadge}
-      </div>`;
+    flags.push(`<span class="so-flag on-photos">${o.photos.length} صورة</span>`);
+  }
+  if (o.pdf_filename) {
+    flags.push('<span class="so-flag on-pdf">PDF</span>');
+  }
+  if (o.pdf_filename && o.share_active) {
+    flags.push('<span class="so-flag on-share">رابط نشط</span>');
   }
 
-  // Notes snippet
-  const notesHTML = o.notes
-    ? `<div class="so-notes-snippet">📝 ${escHtml(o.notes)}</div>` : '';
-
-  const date = (o.created_at || '').slice(0, 16).replace('T', ' ');
   const toggleLabel = isDone ? '↩ معلّق' : '✓ مكتمل';
   const toggleClass = isDone ? 'btn-ghost' : 'btn-success';
+  const date = formatOrderDate(o.created_at);
 
   return `
-  <div class="so-card status-${o.status}" id="so-card-${o.id}">
+  <div class="so-card status-${escHtml(o.status || 'pending')}" id="so-card-${o.id}"
+       onclick="openOrderDetailPage(${o.id})" role="button" tabindex="0"
+       onkeydown="if(event.key==='Enter')openOrderDetailPage(${o.id})">
     <div class="so-card-head">
-      <div class="so-card-head-top">
-        <div class="so-child-title-wrap">
-          <div class="so-child-avatar">🧒</div>
-          <div class="so-child-name-text">${escHtml(o.child_name)}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
+      <div class="so-card-identity">
+        <div class="so-card-meta-top">
           <span class="so-id-badge">#${o.id}</span>
           ${statusBadge}
         </div>
+        <div class="so-child-name-text">${escHtml(o.child_name || 'بدون اسم')}</div>
+        <div class="so-client-line">
+          ولي الأمر:
+          <strong>${escHtml(o.client_name || 'غير محدد')}</strong>
+        </div>
       </div>
-      ${o.client_name ? `
-      <div class="so-card-head-sub">
-        👤 ولي الأمر: <strong>${escHtml(o.client_name)}</strong>
-      </div>` : ''}
     </div>
 
     <div class="so-card-body">
-      <div class="so-chips-row">
-        ${phoneChip}
-        ${assignedChip}
-        ${pdfChip}
+      <div class="so-info-list">
+        <div class="so-info-row">
+          <span class="so-info-label">التليفون</span>
+          ${phoneCell}
+        </div>
+        <div class="so-info-row">
+          <span class="so-info-label">المسؤول</span>
+          <span class="so-info-value ${o.assigned_to ? '' : 'muted'}">${escHtml(o.assigned_to || 'غير معيّن')}</span>
+        </div>
+        <div class="so-info-row">
+          <span class="so-info-label">التاريخ</span>
+          <span class="so-info-value mono" style="font-size:12px">${date}</span>
+        </div>
       </div>
-      ${notesHTML}
-      ${photosStrip}
+      ${flags.length ? `<div class="so-flags">${flags.join('')}</div>` : ''}
     </div>
 
-    <div class="so-card-foot">
-      <button class="btn btn-sm btn-details" onclick="openOrderDetailModal(${o.id})">👁️ التفاصيل</button>
-      <button class="btn btn-sm ${toggleClass}" onclick="toggleStatus(${o.id},'${o.status}',this)">${toggleLabel}</button>
-      <button class="btn btn-sm btn-ghost" onclick="openOrderModal(${o.id})" title="تعديل">✏️</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteOrder(${o.id})" title="حذف">🗑️</button>
-      <span class="so-date" style="margin-right:auto">${date}</span>
+    <div class="so-card-foot" onclick="event.stopPropagation()">
+      <button class="btn btn-sm btn-details" onclick="openOrderDetailPage(${o.id})">التفاصيل</button>
+      <button class="btn btn-sm ${toggleClass}" onclick="toggleStatus(${o.id},'${escHtml(o.status)}')">${toggleLabel}</button>
+      <button class="btn btn-sm btn-ghost" onclick="openOrderModal(${o.id})" title="تعديل">تعديل</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteOrder(${o.id})" title="حذف">حذف</button>
     </div>
   </div>`;
 }
 
-/* Order Details Modal JS */
-function openOrderDetailModal(id) {
-  const o = _soAll.find(x => x.id === id);
-  if (!o) return;
+/* ── Order Detail Page (standalone section) ── */
+async function openOrderDetailPage(id) {
+  _detailOrderId = id;
+  const routeHash = '#order/' + id;
+
+  // Ensure section is visible + URL is correct without re-entering openOrderDetailPage loop
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const sec = document.getElementById('section-order-detail');
+  if (sec) sec.classList.add('active');
+
+  document.querySelectorAll('[data-section]').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-section') === 'special-orders');
+  });
+
+  const titleEl = document.getElementById('page-title');
+  const subEl   = document.getElementById('page-sub');
+  if (titleEl) titleEl.textContent = 'تفاصيل الطلب #' + id;
+  if (subEl)   subEl.textContent   = 'عرض وإدارة الطلب';
+
+  if (location.hash !== routeHash) {
+    history.pushState(null, '', routeHash);
+  }
+
+  const root = document.getElementById('so-detail-root');
+  if (root) root.innerHTML = '<div class="so-detail-loading">جاري تحميل التفاصيل...</div>';
+
+  let o = _soAll.find(x => x.id === id);
+  try {
+    const res = await fetch(`/admin/api/special-orders/${id}`);
+    if (res.status === 401) { window.location.href = '/admin/login'; return; }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'الطلب مش موجود');
+    o = data.order;
+    // keep list cache in sync
+    const idx = _soAll.findIndex(x => x.id === id);
+    if (idx >= 0) _soAll[idx] = o;
+    else _soAll.unshift(o);
+  } catch (e) {
+    if (root) {
+      root.innerHTML = `
+        <button class="so-detail-back" onclick="showSection('special-orders')">← رجوع للطلبات</button>
+        <div class="so-detail-error">${escHtml(e.message)}</div>`;
+    }
+    return;
+  }
+
+  renderOrderDetail(o);
+}
+
+function renderOrderDetail(o) {
+  const root = document.getElementById('so-detail-root');
+  if (!root || !o) return;
 
   const isDone = o.status === 'done';
   const statusBadge = isDone
-    ? '<span class="badge badge-green" style="font-size:13px">✓ مكتمل</span>'
-    : '<span class="badge badge-yellow" style="font-size:13px">⏳ معلّق</span>';
+    ? '<span class="badge badge-green" style="font-size:13px">مكتمل</span>'
+    : '<span class="badge badge-yellow" style="font-size:13px">معلّق</span>';
+  const toggleLabel = isDone ? '↩ تحويل لمعلّق' : '✓ تحديد كمكتمل';
+  const toggleClass = isDone ? 'btn-ghost' : 'btn-success';
 
-  document.getElementById('so-detail-title').textContent = `طلب رقم #${o.id} - ${o.child_name}`;
-  document.getElementById('so-detail-sub').textContent  = `تاريخ الإنشاء: ${(o.created_at || '').slice(0,16).replace('T',' ')}`;
-  document.getElementById('so-detail-status-badge').innerHTML = statusBadge;
-
-  document.getElementById('so-detail-child').textContent  = o.child_name || '—';
-  document.getElementById('so-detail-client').textContent = o.client_name || 'غير محدد';
-  
-  // Phone + WhatsApp
-  const phoneWrap = document.getElementById('so-detail-phone-wrap');
+  let phoneHTML = '<span class="muted">—</span>';
+  let waBtn = '';
   if (o.phone) {
-    const rawPhone = o.phone.replace(/[^0-9]/g, '');
+    const rawPhone = String(o.phone).replace(/[^0-9]/g, '');
     const waPhone = rawPhone.startsWith('0') ? '2' + rawPhone : rawPhone;
-    phoneWrap.innerHTML = `
-      <a href="tel:${escHtml(o.phone)}" class="so-phone-link">📞 ${escHtml(o.phone)}</a>
-      <a href="https://wa.me/${waPhone}" target="_blank" class="btn btn-sm btn-whatsapp" style="margin-right:6px">
-        💬 مراسلة واتساب
-      </a>`;
-  } else {
-    phoneWrap.innerHTML = '<span class="muted">—</span>';
+    phoneHTML = `<a href="tel:${escHtml(o.phone)}" class="so-phone-link">${escHtml(o.phone)}</a>`;
+    waBtn = `<a href="https://wa.me/${waPhone}" target="_blank" class="btn btn-whatsapp">محادثة واتساب</a>`;
   }
 
-  document.getElementById('so-detail-email').textContent    = o.email || 'غير محدد';
-  document.getElementById('so-detail-assigned').textContent = o.assigned_to ? `👷 ${o.assigned_to}` : 'غير محدد';
-
-  // Notes
-  const notesEl = document.getElementById('so-detail-notes');
-  notesEl.textContent = o.notes || 'لا توجد ملاحظات إضافية لهذا الطلب.';
-
-  // Photos Gallery
-  const photosWrap = document.getElementById('so-detail-photos');
+  let photosHTML;
   if (o.photos && o.photos.length) {
-    photosWrap.innerHTML = o.photos.map(fn => `
+    photosHTML = o.photos.map(fn => `
       <div class="so-detail-photo-card">
-        <img src="${photoURL(o.id, fn)}" onclick="openLightbox('${photoURL(o.id, fn)}')">
+        <img src="${photoURL(o.id, fn)}" onclick="openLightbox('${photoURL(o.id, fn)}')" alt="صورة">
         <div class="so-photo-card-actions">
-          <a href="${photoURL(o.id, fn)}" target="_blank" class="btn btn-sm btn-ghost" style="padding:2px 6px;font-size:11px" title="تحميل">📥</a>
-          <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:11px" onclick="deleteDetailPhoto(${o.id}, '${fn}')" title="حذف">✕</button>
+          <a href="${photoURL(o.id, fn)}" target="_blank" class="btn btn-sm btn-ghost" style="padding:2px 6px;font-size:11px">تحميل</a>
+          <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:11px"
+                  onclick="deleteDetailPhoto(${o.id}, '${fn}')">حذف</button>
         </div>
       </div>`).join('');
   } else {
-    photosWrap.innerHTML = '<p class="muted" style="font-size:12.5px;margin:4px 0">مفيش صور مرفوعة للطلب ده حتى الآن.</p>';
+    photosHTML = '<p class="muted" style="font-size:13px;margin:0">مفيش صور مرفوعة.</p>';
   }
 
-  // PDF Box
-  const pdfBox = document.getElementById('so-detail-pdf-box');
+  let pdfHTML;
   if (o.pdf_filename) {
-    pdfBox.innerHTML = `
+    pdfHTML = `
       <div class="so-detail-pdf-card">
-        <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0">
           <span style="font-size:26px">📄</span>
-          <div>
-            <strong style="color:var(--text);display:block;font-size:13px;word-break:break-all">${o.pdf_filename}</strong>
-            <span style="color:var(--muted);font-size:11.5px">ملف PDF مرفق وجاهز</span>
+          <div style="min-width:0">
+            <strong style="color:var(--text);display:block;font-size:13px;word-break:break-all">${escHtml(o.pdf_filename)}</strong>
+            <span style="color:var(--muted);font-size:11.5px">ملف PDF مرفق</span>
           </div>
         </div>
-        <div style="display:flex;gap:6px">
-          <a href="/admin/special-orders/${o.id}/pdf/${o.pdf_filename}" target="_blank" class="btn btn-sm btn-primary">📥 تحميل PDF</a>
-          <button class="btn btn-sm btn-danger" onclick="deleteDetailPdf(${o.id})">✕ حذف</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <a href="/admin/special-orders/${o.id}/pdf/${o.pdf_filename}" target="_blank" class="btn btn-sm btn-primary">تحميل PDF</a>
+          <button class="btn btn-sm btn-danger" onclick="deleteDetailPdf(${o.id})">حذف</button>
         </div>
       </div>`;
   } else {
-    pdfBox.innerHTML = '<p class="muted" style="font-size:12.5px;margin:4px 0">مفيش ملف PDF مرفق للطلب ده.</p>';
+    pdfHTML = '<p class="muted" style="font-size:13px;margin:0">مفيش ملف PDF مرفق.</p>';
   }
 
-  // Bottom Quick Actions
-  const toggleLabel = isDone ? '↩ تحويل لمعلّق' : '✓ تحديد كمكتمل';
-  const toggleClass = isDone ? 'btn-ghost' : 'btn-success';
-  const rawPhone = (o.phone || '').replace(/[^0-9]/g, '');
-  const waPhone  = rawPhone.startsWith('0') ? '2' + rawPhone : rawPhone;
+  let shareHTML = '';
+  if (o.pdf_filename && o.share_token && o.share_active) {
+    const exp = (o.share_expires_at || '').slice(0, 10);
+    shareHTML = `
+      <div style="background:var(--bg-2);border:1px solid rgba(52,211,153,0.3);border-radius:12px;padding:12px 14px">
+        <div style="font-size:12px;font-weight:700;color:var(--ok);margin-bottom:8px">
+          رابط مشاركة نشط <span style="color:var(--muted);font-weight:500">(ينتهي ${exp})</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <input id="so-share-url-input" readonly value="${escHtml(o.share_url)}"
+                 onclick="this.select()"
+                 style="flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border-2);border-radius:8px;color:var(--text-2);padding:8px 10px;font-size:12px;font-family:var(--mono);direction:ltr">
+          <button class="btn btn-sm btn-primary" onclick="copyShareLink()">نسخ</button>
+          <a class="btn btn-sm btn-ghost" href="${escHtml(o.share_url)}" target="_blank">معاينة</a>
+          <button class="btn btn-sm btn-danger" onclick="revokeShare(${o.id})">إلغاء</button>
+        </div>
+      </div>`;
+  } else if (o.pdf_filename) {
+    const hadExpired = o.share_token && !o.share_active;
+    shareHTML = `
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-sm" onclick="createShare(${o.id})">
+          ${hadExpired ? 'إعادة إنشاء رابط' : 'إنشاء رابط مشاركة'}
+        </button>
+        <span class="muted" style="font-size:11.5px">رابط عام للأب — صالح 7 أيام</span>
+      </div>`;
+  }
 
-  document.getElementById('so-detail-quick-actions').innerHTML = `
-    ${o.phone ? `<a href="https://wa.me/${waPhone}" target="_blank" class="btn btn-whatsapp">💬 محادثة الواتساب المباشرة</a>` : ''}
-    <button class="btn ${toggleClass}" onclick="toggleStatus(${o.id}, '${o.status}'); closeModal('order-detail-modal');">${toggleLabel}</button>
-    <button class="btn btn-ghost" onclick="closeModal('order-detail-modal'); openOrderModal(${o.id});">✏️ تعديل البيانات</button>
-    <button class="btn btn-danger" onclick="deleteOrder(${o.id}); closeModal('order-detail-modal');">🗑️ حذف الطلب</button>
+  root.innerHTML = `
+    <button type="button" class="so-detail-back" onclick="showSection('special-orders')">← رجوع لقائمة الطلبات</button>
+
+    <div class="so-detail-hero">
+      <div class="so-detail-hero-main">
+        <div class="so-detail-icon">📋</div>
+        <div>
+          <h2>${escHtml(o.child_name || 'بدون اسم')}</h2>
+          <p class="sub">طلب #${o.id} · ${formatOrderDate(o.created_at)}</p>
+        </div>
+      </div>
+      <div class="so-detail-hero-actions">
+        ${statusBadge}
+        ${waBtn}
+        <button class="btn ${toggleClass}" onclick="toggleStatus(${o.id}, '${escHtml(o.status)}')">${toggleLabel}</button>
+        <button class="btn btn-ghost" onclick="openOrderModal(${o.id})">تعديل</button>
+      </div>
+    </div>
+
+    <div class="so-detail-grid">
+      <div class="so-detail-card">
+        <h3 class="so-detail-section-title">البيانات الأساسية</h3>
+        <div class="so-detail-rows">
+          <div class="so-detail-row">
+            <span class="so-d-label">اسم الطفل</span>
+            <span class="so-d-value highlight">${escHtml(o.child_name || '—')}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">ولي الأمر</span>
+            <span class="so-d-value">${escHtml(o.client_name || 'غير محدد')}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">التليفون</span>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${phoneHTML}</div>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">البريد</span>
+            <span class="so-d-value">${escHtml(o.email || '—')}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">المسؤول</span>
+            <span class="so-d-value">${escHtml(o.assigned_to || 'غير معيّن')}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="so-detail-card">
+        <h3 class="so-detail-section-title">الملاحظات</h3>
+        <div class="so-detail-notes-box">${escHtml(o.notes || 'لا توجد ملاحظات.')}</div>
+      </div>
+
+      <div class="so-detail-card full">
+        <h3 class="so-detail-section-title">الصور (${(o.photos || []).length})</h3>
+        <div class="so-detail-photos-grid">${photosHTML}</div>
+      </div>
+
+      <div class="so-detail-card full">
+        <h3 class="so-detail-section-title">ملف PDF والمشاركة</h3>
+        <div id="so-detail-pdf-box">${pdfHTML}</div>
+        <div id="so-detail-share-box" style="margin-top:12px">${shareHTML}</div>
+      </div>
+    </div>
+
+    <div class="so-detail-actions-bar">
+      <div class="left">
+        <button class="btn btn-ghost" onclick="showSection('special-orders')">رجوع</button>
+        <button class="btn" onclick="openOrderModal(${o.id})">تعديل البيانات</button>
+      </div>
+      <div class="right">
+        <button class="btn btn-danger" onclick="deleteOrder(${o.id})">حذف الطلب</button>
+      </div>
+    </div>
   `;
-
-  openModal('order-detail-modal');
 }
 
 async function deleteDetailPhoto(orderId, filename) {
@@ -1796,8 +2554,7 @@ async function deleteDetailPhoto(orderId, filename) {
     const res = await fetch(`/admin/api/special-orders/${orderId}/photo/${filename}`, {method:'DELETE'});
     if (!res.ok) throw new Error('خطأ في الحذف');
     showToast('تم حذف الصورة ✓', 'ok');
-    await loadOrders();
-    openOrderDetailModal(orderId);
+    openOrderDetailPage(orderId);
   } catch(e) { showToast(e.message, 'err'); }
 }
 
@@ -1807,9 +2564,57 @@ async function deleteDetailPdf(orderId) {
     const res = await fetch(`/admin/api/special-orders/${orderId}/pdf`, {method:'DELETE'});
     if (!res.ok) throw new Error('خطأ في الحذف');
     showToast('تم حذف PDF ✓', 'ok');
-    await loadOrders();
-    openOrderDetailModal(orderId);
+    openOrderDetailPage(orderId);
   } catch(e) { showToast(e.message, 'err'); }
+}
+
+/* Public share link for the parent */
+async function createShare(orderId) {
+  try {
+    const res  = await fetch(`/admin/api/special-orders/${orderId}/share`, {method: 'POST'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطأ في إنشاء الرابط');
+    showToast('تم إنشاء رابط المشاركة ✓', 'ok');
+    copyText(data.url);
+    openOrderDetailPage(orderId);
+  } catch(e) { showToast(e.message, 'err'); }
+}
+
+async function revokeShare(orderId) {
+  if (!confirm('إلغاء رابط المشاركة؟ الأب مش هيقدر يفتحه تاني.')) return;
+  try {
+    const res = await fetch(`/admin/api/special-orders/${orderId}/share`, {method: 'DELETE'});
+    if (!res.ok) throw new Error('خطأ في الإلغاء');
+    showToast('تم إلغاء الرابط ✓', 'ok');
+    openOrderDetailPage(orderId);
+  } catch(e) { showToast(e.message, 'err'); }
+}
+
+function copyShareLink() {
+  const inp = document.getElementById('so-share-url-input');
+  if (inp) copyText(inp.value);
+}
+
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('تم نسخ الرابط ✓', 'ok'))
+      .catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); showToast('تم نسخ الرابط ✓', 'ok'); }
+  catch (e) { showToast('انسخ الرابط يدويًا', 'err'); }
+  document.body.removeChild(ta);
 }
 
 function escHtml(s) {
@@ -1827,7 +2632,12 @@ async function toggleStatus(id, current, btn) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'خطأ');
     showToast(newStatus === 'done' ? '✅ تم تحديد الطلب كمكتمل' : '⏳ الطلب رجع معلّق', 'ok');
-    loadOrders();
+    // refresh list and/or detail
+    if (_detailOrderId === id && document.getElementById('section-order-detail')?.classList.contains('active')) {
+      openOrderDetailPage(id);
+    } else {
+      loadOrders();
+    }
   } catch(e) { showToast(e.message, 'err'); }
 }
 
@@ -1838,9 +2648,15 @@ async function deleteOrder(id) {
     const res  = await fetch(`/admin/api/special-orders/${id}`, {method:'DELETE'});
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'خطأ');
-    const card = document.getElementById(`so-card-${id}`);
-    if (card) { card.style.transition = 'opacity .3s'; card.style.opacity = '0'; setTimeout(()=>card.remove(),320); }
     showToast(`تم حذف الطلب #${id} ✓`, 'ok');
+    if (_detailOrderId === id) {
+      _detailOrderId = null;
+      showSection('special-orders');
+    } else {
+      const card = document.getElementById(`so-card-${id}`);
+      if (card) { card.style.transition = 'opacity .3s'; card.style.opacity = '0'; setTimeout(()=>card.remove(),320); }
+      loadOrders();
+    }
   } catch(e) { showToast(e.message,'err'); }
 }
 
@@ -2027,7 +2843,14 @@ async function submitOrderForm() {
     msgEl.textContent = isEdit ? 'تم التعديل ✓' : 'تم إضافة الطلب ✓';
     msgEl.className   = 'modal-msg ok';
     showToast(isEdit ? 'تم تعديل الطلب ✓' : 'تم إضافة الطلب ✓', 'ok');
-    setTimeout(() => { closeModal('order-modal'); loadOrders(); }, 700);
+    setTimeout(() => {
+      closeModal('order-modal');
+      if (_detailOrderId && document.getElementById('section-order-detail')?.classList.contains('active')) {
+        openOrderDetailPage(_detailOrderId);
+      } else {
+        loadOrders();
+      }
+    }, 700);
   } catch(e) { msgEl.textContent = e.message; msgEl.className = 'modal-msg err'; }
 }
 
@@ -2124,26 +2947,24 @@ document.addEventListener('click', (e) => {
   }
 });
 
-window.addEventListener('hashchange', () => {
-  const h = (location.hash || '#overview').slice(1);
-  showSection(sectionMeta[h] ? h : 'overview');
-});
+function applyHashRoute() {
+  const route = parseRoute(location.hash || '#overview');
+  if (route.section === 'order-detail' && route.orderId) {
+    openOrderDetailPage(route.orderId);
+  } else {
+    showSection(route.section);
+  }
+}
 
-window.addEventListener('popstate', () => {
-  const h = (location.hash || '#overview').slice(1);
-  showSection(sectionMeta[h] ? h : 'overview');
-});
+window.addEventListener('hashchange', applyHashRoute);
+window.addEventListener('popstate', applyHashRoute);
 
 // Initial tab activation on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-  const initialHash = (location.hash || '#overview').slice(1);
-  showSection(sectionMeta[initialHash] ? initialHash : 'overview');
-});
+document.addEventListener('DOMContentLoaded', applyHashRoute);
 
 // Immediate execution fallback
 (function() {
-  const initialHash = (location.hash || '#overview').slice(1);
-  showSection(sectionMeta[initialHash] ? initialHash : 'overview');
+  applyHashRoute();
 })();
 </script>
 </body>

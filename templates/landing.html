@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>لونّي — كتاب تلوين باسم طفلك</title>
-<meta name="description" content="حوّل صورة طفلك إلى كتاب تلوين باسمه، جاهز للطباعة في دقائق.">
+<title>لونّي — كتاب تلوين مخصص لطفلك</title>
+<meta name="description" content="حوّل صورة طفلك إلى كتاب تلوين مخصص باسمه، جاهز للطباعة PDF في دقائق.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,10 +38,20 @@ img{max-width:100%;display:block}
   position:sticky;top:0;z-index:50;
   display:flex;align-items:center;justify-content:space-between;
   gap:16px;padding:14px 32px;
-  background:rgba(255,255,255,.97);
-  border-bottom:1px solid var(--border);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  min-height:60px;
+  background:rgba(255,255,255,.9);
+  border-bottom:1px solid rgba(229,231,235,.85);
+  backdrop-filter:blur(20px) saturate(1.08);-webkit-backdrop-filter:blur(20px) saturate(1.08);
+  min-height:64px;
+  box-shadow:0 1px 0 rgba(26,26,46,.03);
+  transition:background .2s ease,border-color .2s ease,box-shadow .2s ease,min-height .2s ease,padding .2s ease;
+}
+.nav.is-scrolled{
+  background:rgba(255,255,255,.98);
+  border-bottom-color:rgba(0,0,0,.09);
+  box-shadow:0 10px 28px rgba(26,26,46,.08);
+  min-height:58px;
+  padding-top:10px;
+  padding-bottom:10px;
 }
 .nav-brand{
   font-family:var(--display);font-weight:800;font-size:26px;
@@ -49,14 +59,16 @@ img{max-width:100%;display:block}
   line-height:1;
 }
 .nav-brand span{color:var(--coral)}
-.nav-links{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
+.nav-links{display:flex;align-items:center;gap:6px;flex:1;justify-content:center}
 .nav-links a{
-  padding:8px 16px;font-size:14px;font-weight:600;
-  color:var(--muted);border-radius:8px;
-  transition:color .15s,background .15s;
+  padding:9px 16px;font-size:14px;font-weight:700;
+  color:var(--muted);border-radius:10px;
+  transition:color .15s,background .15s,box-shadow .15s;
   white-space:nowrap;
 }
 .nav-links a:hover{color:var(--ink);background:rgba(0,0,0,.05)}
+.nav-links .btn{color:#fff}
+.nav-links .btn:hover{color:#fff;background:var(--ink)}
 .nav-auth{display:flex;align-items:center;gap:8px;flex-shrink:0}
 
 /* ====== BUTTONS ====== */
@@ -71,6 +83,7 @@ img{max-width:100%;display:block}
 .btn-primary:hover{box-shadow:0 8px 24px rgba(26,26,46,.3)}
 .btn-coral{background:var(--coral);color:#fff;box-shadow:0 4px 20px rgba(232,93,76,.35)}
 .btn-coral:hover{box-shadow:0 8px 28px rgba(232,93,76,.45)}
+.btn-white{background:#fff;color:var(--ink);box-shadow:0 6px 20px rgba(0,0,0,.18)}
 .btn-outline{background:#fff;color:var(--ink);border:2px solid var(--border)}
 .btn-outline:hover{border-color:var(--ink)}
 .btn-nav-sm{
@@ -88,9 +101,8 @@ img{max-width:100%;display:block}
 /* ====== HERO ====== */
 .hero-section{
   background:linear-gradient(135deg,#fff8f5 0%,#fef0ed 40%,#f8f0ff 80%,#f0f4ff 100%);
-  position:relative;overflow:hidden;padding:72px 32px 88px;
+  position:relative;overflow:hidden;padding:72px 32px 96px;
 }
-/* Decorative blobs */
 .hero-section::before{
   content:'';position:absolute;
   width:600px;height:600px;border-radius:50%;
@@ -105,12 +117,20 @@ img{max-width:100%;display:block}
 }
 .hero-inner{
   max-width:1160px;margin:0 auto;
-  display:grid;grid-template-columns:1.1fr 1fr;
+  display:grid;grid-template-columns:1.05fr 1fr;
   gap:64px;align-items:center;position:relative;z-index:1;
 }
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#fff;border:1.5px solid var(--border);
+  border-radius:999px;padding:7px 16px;
+  font-size:13px;font-weight:800;color:var(--ink);
+  box-shadow:0 4px 12px rgba(0,0,0,.06);margin-bottom:22px;
+}
+.hero-badge .dot{width:9px;height:9px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 4px rgba(16,185,129,.18)}
 .hero-text h1{
   font-family:var(--display);
-  font-size:clamp(36px,5.5vw,64px);
+  font-size:clamp(36px,5.5vw,60px);
   font-weight:800;line-height:1.15;
   color:var(--ink);margin-bottom:20px;
   letter-spacing:-.02em;
@@ -127,152 +147,137 @@ img{max-width:100%;display:block}
 }
 .hero-sub{
   font-size:18px;color:var(--muted);line-height:1.75;
-  margin-bottom:36px;max-width:44ch;
+  margin-bottom:30px;max-width:44ch;
 }
-.hero-cta{display:flex;gap:14px;flex-wrap:wrap}
-.hero-visual{display:flex;align-items:center;justify-content:center;position:relative}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.hero-note{margin-top:18px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hero-note b{color:var(--ink)}
+.hero-note .sep{width:4px;height:4px;border-radius:50%;background:var(--border)}
 
-/* Floating decorations */
+/* Hero visual composition */
+.hero-visual{position:relative;display:flex;justify-content:center}
+.hero-photo-main{
+  width:100%;max-width:400px;aspect-ratio:4/5;object-fit:cover;
+  border-radius:28px;transform:rotate(-2.5deg);
+  box-shadow:0 40px 90px rgba(26,26,46,.22);
+  border:6px solid #fff;
+}
+.hero-float-card{
+  position:absolute;background:#fff;border-radius:18px;
+  box-shadow:0 18px 44px rgba(26,26,46,.18);
+  border:1.5px solid rgba(0,0,0,.05);
+  overflow:hidden;
+}
+.hero-float-card img{width:100%;height:100%;object-fit:cover}
+.hero-card-top{
+  top:6%;inset-inline-start:-6%;
+  width:132px;height:132px;transform:rotate(6deg);
+  animation:floaty 5s ease-in-out infinite;
+}
+.hero-card-chip{
+  position:absolute;bottom:-14px;right:-8px;
+  background:var(--ink);color:#fff;
+  font-size:11px;font-weight:800;padding:6px 12px;border-radius:999px;
+  box-shadow:0 8px 18px rgba(0,0,0,.25);white-space:nowrap;
+}
+.hero-card-bottom{
+  bottom:8%;inset-inline-end:-8%;
+  width:150px;transform:rotate(-5deg);
+  animation:floaty 6s ease-in-out infinite reverse;
+  padding:10px;
+}
+.hero-card-bottom img{border-radius:12px;aspect-ratio:4/3}
+.hero-card-cap{font-size:11px;font-weight:800;color:var(--ink);text-align:center;padding-top:8px}
 .hero-deco{
   position:absolute;animation:floaty 4s ease-in-out infinite;
-  pointer-events:none;font-size:28px;opacity:.85;
+  pointer-events:none;font-size:26px;opacity:.9;
   filter:drop-shadow(0 4px 8px rgba(0,0,0,.15));
 }
-@keyframes floaty{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-14px) rotate(12deg)}}
-
-/* Book card illustration */
-.hero-book{
-  width:100%;max-width:310px;
-  border-radius:24px;
-  background:linear-gradient(155deg,#9333ea 0%,#c026d3 50%,#ec4899 100%);
-  padding:30px 24px 26px;
-  box-shadow:
-    0 40px 100px rgba(147,51,234,.4),
-    16px 16px 0 rgba(0,0,0,.07),
-    inset 0 1px 0 rgba(255,255,255,.2);
-  position:relative;overflow:hidden;text-align:center;
-  color:#fff;font-family:var(--display);
-  transform:rotate(-2deg);
-  transition:transform .3s ease;
-}
-.hero-book:hover{transform:rotate(0deg) scale(1.02)}
-.hero-book::before{
-  content:'';position:absolute;inset:0;
-  background:
-    radial-gradient(circle at 15% 85%,rgba(255,255,255,.18) 0%,transparent 55%),
-    radial-gradient(circle at 85% 10%,rgba(255,255,255,.12) 0%,transparent 50%);
-}
-/* Spine effect */
-.hero-book::after{
-  content:'';position:absolute;
-  top:0;right:0;bottom:0;width:12px;
-  background:rgba(0,0,0,.15);
-  border-radius:0 24px 24px 0;
-}
-.hero-book-stars{
-  font-size:14px;letter-spacing:2px;margin-bottom:6px;
-  position:relative;opacity:.9;
-}
-.hero-book-kicker{
-  font-size:13px;opacity:.75;margin-bottom:6px;
-  position:relative;font-weight:600;
-}
-.hero-book-name{
-  font-size:46px;font-weight:800;color:#fef08a;
-  margin-bottom:20px;position:relative;
-  text-shadow:0 3px 14px rgba(0,0,0,.3);
-  letter-spacing:-.02em;
-}
-.hero-book-char{
-  width:140px;height:140px;border-radius:50%;margin:0 auto;
-  position:relative;
-  background:rgba(255,255,255,.18);
-  border:3px solid rgba(255,255,255,.4);
-  display:flex;align-items:center;justify-content:center;
-  font-size:78px;
-  box-shadow:0 8px 24px rgba(0,0,0,.2);
-}
-.hero-book-badge{
-  position:relative;margin-top:20px;
-  display:inline-flex;align-items:center;gap:6px;
-  background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);
-  border-radius:999px;padding:6px 16px;
-  font-size:14px;font-weight:700;letter-spacing:.02em;
-}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-14px) rotate(10deg)}}
 
 /* ====== SECTION COMMONS ====== */
 .sec{padding:72px 28px}
 .sec-inner{max-width:1200px;margin:0 auto}
 .sec-bg{background:var(--card)}
+.sec-kicker{
+  text-align:center;font-size:13px;font-weight:800;letter-spacing:.06em;
+  color:var(--coral);margin-bottom:10px;
+}
 .sec-title{
   font-family:var(--display);
   font-size:clamp(24px,3.5vw,34px);
   font-weight:800;color:var(--ink);
-  text-align:center;margin-bottom:40px;
+  text-align:center;margin-bottom:14px;
 }
+.sec-sub{text-align:center;color:var(--muted);font-size:15px;max-width:56ch;margin:0 auto 40px}
 
 /* ====== KIDS CAROUSEL ====== */
 .kids-track{
   display:flex;gap:14px;
-  overflow-x:auto;padding:4px 4px 20px;
+  overflow-x:auto;padding:10px 4px 22px;
   scroll-snap-type:x mandatory;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;
 }
 .kids-track::-webkit-scrollbar{display:none}
 .kid-card{
-  flex:0 0 152px;background:#fff;
-  border:1.5px solid var(--border);border-radius:16px;
-  padding:14px 10px 12px;text-align:center;
+  flex:0 0 172px;background:#fff;
+  border:1.5px solid var(--border);border-radius:18px;
+  padding:16px 12px 14px;text-align:center;
   scroll-snap-align:start;
   box-shadow:0 2px 8px rgba(0,0,0,.06);
   transition:transform .2s,box-shadow .2s;
 }
-.kid-card:hover{transform:translateY(-5px);box-shadow:0 12px 28px rgba(0,0,0,.12)}
-.kid-avatar{
-  width:62px;height:62px;border-radius:50%;margin:0 auto 8px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:26px;font-weight:800;color:#fff;
-  font-family:var(--display);box-shadow:0 4px 12px rgba(0,0,0,.2);
+.kid-card:hover{transform:translateY(-5px);box-shadow:0 14px 30px rgba(0,0,0,.12)}
+.kid-ava{
+  width:84px;height:84px;border-radius:50%;margin:0 auto 12px;
+  object-fit:cover;border:4px solid #fff;
+  box-shadow:0 6px 18px rgba(0,0,0,.16),0 0 0 2px var(--border);
 }
-.kid-book-mini{
-  width:100%;aspect-ratio:3/4;border-radius:10px;
-  border:1.5px solid var(--border);margin-bottom:10px;
-  display:flex;align-items:center;justify-content:center;font-size:30px;
+.kid-name{font-weight:800;font-size:15px;color:var(--ink);font-family:var(--display)}
+.kid-job{
+  display:inline-flex;align-items:center;gap:5px;margin-top:7px;
+  font-size:12px;font-weight:700;color:var(--ink);
+  background:var(--card);border:1px solid var(--border);
+  border-radius:999px;padding:4px 12px;
 }
-.kid-name{font-weight:800;font-size:14px;color:var(--ink)}
-.kid-job{font-size:11px;color:var(--muted);margin-top:2px}
-.carousel-arrows{display:flex;gap:8px;justify-content:center;margin-top:12px}
+.carousel-arrows{display:flex;gap:8px;justify-content:center;margin-top:8px}
 .c-arrow{
-  width:38px;height:38px;border-radius:50%;
+  width:40px;height:40px;border-radius:50%;
   border:1.5px solid var(--border);background:#fff;
   display:flex;align-items:center;justify-content:center;
   cursor:pointer;font-size:18px;color:var(--ink);
-  box-shadow:0 2px 8px rgba(0,0,0,.08);transition:background .15s;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);transition:background .15s,transform .15s;
 }
-.c-arrow:hover{background:var(--card)}
+.c-arrow:hover{background:var(--card);transform:scale(1.06)}
 
 /* ====== HOW IT WORKS ====== */
-.how-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:60px;align-items:center}
-.how-left-label{font-size:14px;font-weight:700;color:var(--muted);margin-bottom:16px;text-align:center}
-.ba-wrap{display:flex;align-items:center;gap:14px}
-.ba-side{flex:1;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.1);position:relative}
+.how-grid{display:grid;grid-template-columns:1fr 1.35fr;gap:60px;align-items:center}
+.how-left-label{font-size:14px;font-weight:800;color:var(--muted);margin-bottom:16px;text-align:center}
+.ba-wrap{display:flex;align-items:center;gap:12px}
+.ba-side{flex:1;border-radius:18px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.14);position:relative;background:#fff}
 .ba-badge{
-  position:absolute;top:10px;right:10px;z-index:2;
-  font-size:11px;font-weight:800;padding:4px 10px;
-  border-radius:6px;background:rgba(0,0,0,.6);color:#fff;
+  position:absolute;top:10px;inset-inline-start:10px;z-index:2;
+  font-size:11px;font-weight:800;padding:5px 12px;
+  border-radius:999px;background:rgba(0,0,0,.62);color:#fff;
+  backdrop-filter:blur(4px);
 }
-.ba-badge.after-b{background:var(--coral);right:auto;left:10px}
-.ba-photo{
-  aspect-ratio:3/4;width:100%;
-  display:flex;align-items:center;justify-content:center;font-size:48px;
-}
-.ba-photo.real{background:linear-gradient(135deg,#fde68a 0%,#fca5a5 100%)}
-.ba-photo.coloring{background:#fff;border:2px solid var(--border);flex-direction:column;gap:4px}
+.ba-badge.after-b{background:var(--coral)}
+.ba-photo{aspect-ratio:3/4;width:100%;display:flex;align-items:center;justify-content:center}
+.ba-photo img{width:100%;height:100%;object-fit:cover}
+.ba-photo.coloring{border:2px solid var(--border);flex-direction:column;gap:6px;padding:14px}
+.ba-photo.coloring svg{width:62%;height:auto}
+.ba-cap{font-size:11px;font-weight:700;color:var(--muted)}
 .ba-arrow-col{flex-shrink:0;text-align:center;font-size:22px;color:var(--muted)}
-.ba-arrow-label{display:block;font-size:11px;font-weight:700;color:var(--coral);margin-top:4px}
-.steps-list{display:flex;flex-direction:column;gap:20px}
-.step-row{display:flex;align-items:flex-start;gap:14px}
-.sn{flex-shrink:0;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;font-weight:800}
+.ba-arrow-label{display:block;font-size:11px;font-weight:800;color:var(--coral);margin-top:4px}
+.steps-list{display:flex;flex-direction:column;gap:18px}
+.step-row{
+  display:flex;align-items:flex-start;gap:14px;
+  background:#fff;border:1.5px solid var(--border);
+  border-radius:16px;padding:16px 18px;
+  transition:transform .15s,box-shadow .15s;
+}
+.step-row:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(0,0,0,.08)}
+.sn{flex-shrink:0;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:21px;color:#fff;font-weight:800}
 .sn1{background:linear-gradient(135deg,#a855f7,#8b5cf6)}
 .sn2{background:linear-gradient(135deg,#f59e0b,#f97316)}
 .sn3{background:linear-gradient(135deg,#10b981,#059669)}
@@ -284,50 +289,102 @@ img{max-width:100%;display:block}
 /* ====== GALLERY + REACTIONS ====== */
 .gallery-two{display:grid;grid-template-columns:1fr 1fr;gap:40px}
 .gallery-block h2{font-family:var(--display);font-size:24px;font-weight:800;margin-bottom:18px}
-.book-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.book-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .book-tile{
-  border-radius:14px;aspect-ratio:4/5;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-size:36px;gap:8px;box-shadow:0 4px 14px rgba(0,0,0,.1);
-  position:relative;overflow:hidden;
+  border-radius:18px;aspect-ratio:4/5;overflow:hidden;
+  position:relative;box-shadow:0 8px 22px rgba(0,0,0,.14);
+  transition:transform .2s,box-shadow .2s;
 }
-.book-tile-name{font-family:var(--display);font-size:18px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.25)}
-.react-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.react-tile{border-radius:14px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:52px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.book-tile:hover{transform:translateY(-5px) scale(1.015);box-shadow:0 18px 40px rgba(0,0,0,.2)}
+.book-tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.book-tile-veil{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 45%,rgba(26,26,46,.72) 100%);
+}
+.book-tile-meta{
+  position:absolute;bottom:0;right:0;left:0;padding:14px;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.book-tile-name{font-family:var(--display);font-size:17px;font-weight:800;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.4)}
+.book-tile-emoji{
+  flex-shrink:0;width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;
+  font-size:18px;box-shadow:0 4px 10px rgba(0,0,0,.25);
+}
+.react-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.react-tile{
+  border-radius:18px;aspect-ratio:1;overflow:hidden;position:relative;
+  box-shadow:0 8px 22px rgba(0,0,0,.12);
+  transition:transform .2s,box-shadow .2s;
+}
+.react-tile:hover{transform:scale(1.03);box-shadow:0 16px 36px rgba(0,0,0,.18)}
+.react-tile img{width:100%;height:100%;object-fit:cover}
+.react-emoji{
+  position:absolute;bottom:10px;inset-inline-end:10px;
+  width:40px;height:40px;border-radius:50%;
+  background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;
+  font-size:20px;box-shadow:0 6px 14px rgba(0,0,0,.25);
+}
+.react-tile:nth-child(odd){transform:rotate(1.2deg)}
+.react-tile:nth-child(even){transform:rotate(-1.2deg)}
+.react-tile:nth-child(odd):hover{transform:rotate(0) scale(1.03)}
+.react-tile:nth-child(even):hover{transform:rotate(0) scale(1.03)}
 
 /* ====== PROFESSIONS GRID ====== */
 .prof-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(88px,1fr));
+  grid-template-columns:repeat(auto-fill,minmax(92px,1fr));
   gap:10px;
 }
 .prof-card{
-  background:#fff;border:1.5px solid var(--border);border-radius:12px;
-  padding:14px 6px 10px;text-align:center;cursor:pointer;
-  transition:transform .15s,box-shadow .15s;
+  background:#fff;border:1.5px solid var(--border);border-radius:14px;
+  padding:16px 6px 12px;text-align:center;cursor:pointer;
+  transition:transform .15s,box-shadow .15s,border-color .15s;
 }
-.prof-card:hover{transform:translateY(-4px);box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.prof-card:hover{transform:translateY(-4px);box-shadow:0 10px 22px rgba(0,0,0,.1);border-color:#d8b4fe}
 .prof-emoji{font-size:34px;margin-bottom:6px;display:block}
 .prof-label{font-size:12px;font-weight:700;color:var(--ink)}
 .prof-more{background:linear-gradient(135deg,#f5f3ff,#fdf4ff);border-color:#e9d5ff}
 .prof-more .prof-label{color:var(--lavender)}
 
+/* ====== CTA BANNER ====== */
+.cta-banner{
+  position:relative;overflow:hidden;border-radius:28px;
+  min-height:340px;display:flex;align-items:center;justify-content:center;
+  text-align:center;padding:56px 24px;
+  box-shadow:0 24px 60px rgba(26,26,46,.2);
+}
+.cta-banner img.cta-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cta-banner::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(160deg,rgba(26,26,46,.82) 0%,rgba(124,58,237,.72) 60%,rgba(232,93,76,.68) 100%);
+}
+.cta-content{position:relative;z-index:1;color:#fff;max-width:620px}
+.cta-content h2{
+  font-family:var(--display);font-size:clamp(26px,4vw,40px);
+  font-weight:800;margin-bottom:14px;line-height:1.3;
+  text-shadow:0 2px 12px rgba(0,0,0,.3);
+}
+.cta-content p{font-size:16px;color:rgba(255,255,255,.88);margin-bottom:26px}
+.cta-mini{margin-top:16px;font-size:12.5px;color:rgba(255,255,255,.75)}
+
 /* ====== TESTIMONIALS ====== */
 .testi-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .testi-card{
   background:var(--card);border:1.5px solid var(--border);
-  border-radius:16px;padding:22px;
-  transition:box-shadow .2s;
+  border-radius:18px;padding:24px;
+  transition:box-shadow .2s,transform .2s;
 }
-.testi-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.09)}
+.testi-card:hover{box-shadow:0 12px 28px rgba(0,0,0,.09);transform:translateY(-3px)}
 .testi-q-icon{font-size:28px;color:var(--coral);margin-bottom:10px;display:block}
 .testi-body{font-size:14px;font-weight:600;color:var(--ink);line-height:1.65;margin-bottom:16px}
 .testi-foot{display:flex;align-items:center;gap:10px}
 .testi-ava{
-  width:42px;height:42px;border-radius:50%;
+  width:44px;height:44px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
   font-size:18px;color:#fff;font-weight:800;
   font-family:var(--display);flex-shrink:0;
+  box-shadow:0 4px 10px rgba(0,0,0,.15);
 }
 .testi-who strong{display:block;font-size:14px;font-weight:800}
 .testi-stars{color:#f59e0b;font-size:14px}
@@ -340,7 +397,7 @@ img{max-width:100%;display:block}
 }
 .trust-item{display:flex;align-items:center;gap:12px}
 .trust-ico{
-  width:44px;height:44px;border-radius:12px;flex-shrink:0;
+  width:46px;height:46px;border-radius:13px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;font-size:22px;
   background:#fff;border:1.5px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.06);
 }
@@ -458,22 +515,27 @@ img{max-width:100%;display:block}
 
 /* ====== RESPONSIVE ====== */
 @media(max-width:900px){
-  .hero-inner{grid-template-columns:1fr;text-align:center}
+  .hero-inner{grid-template-columns:1fr;text-align:center;gap:44px}
   .hero-text .hero-sub{max-width:100%}
-  .hero-cta{justify-content:center}
+  .hero-cta,.hero-note{justify-content:center}
   .hero-visual{order:-1}
+  .hero-photo-main{max-width:320px}
+  .hero-card-top{inset-inline-start:0}
+  .hero-card-bottom{inset-inline-end:0}
   .how-grid{grid-template-columns:1fr}
-  .ba-wrap{justify-content:center;max-width:380px;margin:0 auto}
+  .ba-wrap{justify-content:center;max-width:400px;margin:0 auto}
   .gallery-two{grid-template-columns:1fr}
   .testi-grid{grid-template-columns:1fr}
   .trust-inner{grid-template-columns:1fr 1fr}
+  .nav{gap:10px}
   .nav-links a:not(.btn){display:none}
+  .nav-links{justify-content:flex-end}
   .footer-inner{grid-template-columns:1fr 1fr}
   .footer-brand-col{grid-column:1/-1}
 }
 @media(max-width:560px){
   .sec{padding:48px 16px}
-  .hero-section{padding:48px 16px 60px}
+  .hero-section{padding:48px 16px 64px}
   .nav{padding:12px 16px}
   .trust-inner{grid-template-columns:1fr 1fr;gap:12px}
   .prof-grid{grid-template-columns:repeat(4,1fr)}
@@ -481,13 +543,14 @@ img{max-width:100%;display:block}
   .footer-inner{grid-template-columns:1fr;gap:28px}
   .footer-brand-col{grid-column:auto}
   .site-footer{padding:40px 20px 0}
+  .hero-float-card{display:none}
 }
 </style>
 </head>
 <body>
 
 <!-- ====== NAVBAR ====== -->
-<header class="nav">
+<header class="nav" id="site-nav">
   <a class="nav-brand" href="/">لونّ<span>ي</span></a>
   <nav class="nav-links" aria-label="القائمة">
     <a href="#idea">الفكرة</a>
@@ -507,24 +570,33 @@ img{max-width:100%;display:block}
 <section class="hero-section">
   <div class="hero-inner">
     <div class="hero-text">
-      <h1>أول مرة طفلك<br>يبقى <span class="hl">بطل</span> كتاب<br>التلوين بتاعه.</h1>
-      <p class="hero-sub">حوّل صورة طفلك إلى كتاب تلوين باسمه،<br>جاهز للطباعة في دقائق.</p>
+      <div class="hero-badge"><span class="dot"></span> 3 كتب مجانية كل شهر — بدون بطاقة</div>
+      <h1>خلّي طفلك<br>يبقى <span class="hl">بطل</span> كتاب<br>التلوين بتاعه.</h1>
+      <p class="hero-sub">ارفع صورة واضحة، اختار المهنة أو المغامرة،<br>واستلم كتاب PDF مخصص للطباعة في دقائق.</p>
       <div class="hero-cta">
-        <a class="btn btn-coral" href="/app">ابدأ الآن</a>
-        <a class="btn btn-outline" href="#results">شوف النتائج</a>
+        <a class="btn btn-coral" href="/app">اصنع كتاب طفلك الآن</a>
+        <a class="btn btn-outline" href="#results">شوف أمثلة</a>
+      </div>
+      <div class="hero-note">
+        <span>🖨️ <b>A4</b> جاهز للطباعة</span>
+        <span class="sep"></span>
+        <span>⚡ النتيجة في <b>دقائق</b></span>
+        <span class="sep"></span>
+        <span>🛡️ صور <b>مؤقتة وآمنة</b></span>
       </div>
     </div>
     <div class="hero-visual">
-      <span class="hero-deco" style="top:-18px;right:24px;font-size:34px;animation-delay:0s">⭐</span>
-      <span class="hero-deco" style="bottom:12px;right:-16px;font-size:24px;animation-delay:1.2s">💛</span>
-      <span class="hero-deco" style="top:50px;left:-14px;font-size:20px;animation-delay:2.4s">✨</span>
-      <span class="hero-deco" style="bottom:70px;left:24px;font-size:16px;animation-delay:.6s">🌟</span>
-      <div class="hero-book">
-        <div class="hero-book-stars">★★★★★</div>
-        <div class="hero-book-kicker">كتاب التلوين للبطل</div>
-        <div class="hero-book-name">يوسف</div>
-        <div class="hero-book-char">🧑‍🚀</div>
-        <div class="hero-book-badge">🚀 <span>رائد فضاء</span></div>
+      <span class="hero-deco" style="top:-10px;right:8%;font-size:32px;animation-delay:0s">⭐</span>
+      <span class="hero-deco" style="bottom:6%;right:2%;font-size:22px;animation-delay:1.2s">💛</span>
+      <span class="hero-deco" style="top:34%;left:-8px;font-size:20px;animation-delay:2.4s">✨</span>
+      <img class="hero-photo-main" src="{{ url_for('static', filename='img/hero_coloring.jpg') }}" alt="طفلة مبسوطة وهي تلوّن" fetchpriority="high">
+      <div class="hero-float-card hero-card-top">
+        <img src="{{ url_for('static', filename='img/kid2.jpg') }}" alt="طفل مع رسمة">
+        <span class="hero-card-chip">كتاب جاهز 🎉</span>
+      </div>
+      <div class="hero-float-card hero-card-bottom">
+        <img src="{{ url_for('static', filename='img/extra2.jpg') }}" alt="أب يقرأ كتابًا لطفله">
+        <div class="hero-card-cap">ذكرى تدوم ❤️</div>
       </div>
     </div>
   </div>
@@ -533,55 +605,49 @@ img{max-width:100%;display:block}
 <!-- ====== KIDS SOCIAL PROOF ====== -->
 <section class="sec" id="results">
   <div class="sec-inner">
-    <h2 class="sec-title reveal">شوف أطفال تانيين وكتبهم ❤️</h2>
+    <div class="sec-kicker reveal">أطفال حقيقيون</div>
+    <h2 class="sec-title reveal">أمثلة لأطفال وكتبهم ❤️</h2>
+    <p class="sec-sub reveal">كل كتاب بيتصمم بملامح طفلك واسمه على الغلاف — شوف شكل الأبطال الصغار.</p>
     <div class="kids-track" id="kids-track">
       <div class="kid-card">
-        <div class="kid-avatar" style="background:linear-gradient(135deg,#a855f7,#ec4899)">س</div>
-        <div class="kid-book-mini" style="background:linear-gradient(135deg,#fce7f3,#f5d0fe)">👩‍⚕️</div>
+        <img class="kid-ava" src="{{ url_for('static', filename='img/kid2.jpg') }}" alt="سارة" loading="lazy">
         <div class="kid-name">سارة</div>
         <div class="kid-job">👩‍⚕️ طبيبة</div>
       </div>
       <div class="kid-card">
-        <div class="kid-avatar" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6)">ي</div>
-        <div class="kid-book-mini" style="background:linear-gradient(135deg,#eff6ff,#f5f3ff)">🧑‍🚀</div>
+        <img class="kid-ava" src="{{ url_for('static', filename='img/before_kid.jpg') }}" alt="يوسف" loading="lazy">
         <div class="kid-name">يوسف</div>
         <div class="kid-job">🧑‍🚀 رائد فضاء</div>
       </div>
       <div class="kid-card">
-        <div class="kid-avatar" style="background:linear-gradient(135deg,#10b981,#3b82f6)">آ</div>
-        <div class="kid-book-mini" style="background:linear-gradient(135deg,#ecfdf5,#eff6ff)">👮</div>
+        <img class="kid-ava" src="{{ url_for('static', filename='img/kid6.jpg') }}" alt="آدم" loading="lazy">
         <div class="kid-name">آدم</div>
         <div class="kid-job">👮 شرطي</div>
       </div>
       <div class="kid-card">
-        <div class="kid-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">ك</div>
-        <div class="kid-book-mini" style="background:linear-gradient(135deg,#fffbeb,#fef2f2)">🧑‍🚒</div>
+        <img class="kid-ava" src="{{ url_for('static', filename='img/kid5.jpg') }}" alt="كريم" loading="lazy">
         <div class="kid-name">كريم</div>
         <div class="kid-job">🧑‍🚒 رجل إطفاء</div>
       </div>
       <div class="kid-card">
-        <div class="kid-avatar" style="background:linear-gradient(135deg,#06b6d4,#3b82f6)">ع</div>
-        <div class="kid-book-mini" style="background:linear-gradient(135deg,#ecfeff,#eff6ff)">✈️</div>
+        <img class="kid-ava" src="{{ url_for('static', filename='img/kid4.jpg') }}" alt="عمر" loading="lazy">
         <div class="kid-name">عمر</div>
         <div class="kid-job">✈️ طيار</div>
       </div>
       <div class="kid-card">
-        <div class="kid-avatar" style="background:linear-gradient(135deg,#ec4899,#f97316)">ل</div>
-        <div class="kid-book-mini" style="background:linear-gradient(135deg,#fdf4ff,#fff7ed)">👩‍🍳</div>
+        <img class="kid-ava" src="{{ url_for('static', filename='img/extra3.jpg') }}" alt="ليان" loading="lazy">
         <div class="kid-name">ليان</div>
         <div class="kid-job">👩‍🍳 شيف</div>
       </div>
       <div class="kid-card">
-        <div class="kid-avatar" style="background:linear-gradient(135deg,#8b5cf6,#06b6d4)">ن</div>
-        <div class="kid-book-mini" style="background:linear-gradient(135deg,#f5f3ff,#ecfeff)">🧑‍💻</div>
+        <img class="kid-ava" src="{{ url_for('static', filename='img/extra1.jpg') }}" alt="نور" loading="lazy">
         <div class="kid-name">نور</div>
-        <div class="kid-job">🧑‍💻 مبرمج</div>
+        <div class="kid-job">🧑‍💻 مهندس</div>
       </div>
       <div class="kid-card">
-        <div class="kid-avatar" style="background:linear-gradient(135deg,#059669,#10b981)">م</div>
-        <div class="kid-book-mini" style="background:linear-gradient(135deg,#ecfdf5,#f0fdf4)">🏋️</div>
+        <img class="kid-ava" src="{{ url_for('static', filename='img/extra4.jpg') }}" alt="مريم" loading="lazy">
         <div class="kid-name">مريم</div>
-        <div class="kid-job">🏋️ بطلة رياضة</div>
+        <div class="kid-job">⚽ بطلة كرة</div>
       </div>
     </div>
     <div class="carousel-arrows">
@@ -594,7 +660,8 @@ img{max-width:100%;display:block}
 <!-- ====== HOW IT WORKS ====== -->
 <section class="sec sec-bg" id="how">
   <div class="sec-inner">
-    <h2 class="sec-title reveal">ثلاث خطوات بسيطة ✨</h2>
+    <div class="sec-kicker reveal">خطوة بخطوة</div>
+    <h2 class="sec-title reveal">خطوات بسيطة لكتاب جاهز ✨</h2>
     <div class="how-grid reveal">
       <!-- Before / After -->
       <div>
@@ -602,23 +669,25 @@ img{max-width:100%;display:block}
         <div class="ba-wrap">
           <div class="ba-side">
             <div class="ba-badge">قبل</div>
-            <div class="ba-photo real">😊</div>
+            <div class="ba-photo">
+              <img src="{{ url_for('static', filename='img/before_kid.jpg') }}" alt="صورة طفل قبل التحويل" loading="lazy">
+            </div>
           </div>
           <div class="ba-arrow-col">
-            →
+            ←
             <span class="ba-arrow-label">سحر ✨</span>
           </div>
           <div class="ba-side">
             <div class="ba-badge after-b">بعد</div>
             <div class="ba-photo coloring">
-              <svg viewBox="0 0 110 150" width="70" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg viewBox="0 0 110 150" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="55" cy="48" r="28" stroke="#1a1a2e" stroke-width="2.5"/>
                 <path d="M30 90h50v42H30z" stroke="#1a1a2e" stroke-width="2.5"/>
                 <path d="M18 108h18M74 108h18" stroke="#1a1a2e" stroke-width="2.5" stroke-linecap="round"/>
                 <path d="M44 42h5M61 42h5" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round"/>
                 <path d="M48 58c3 5 11 5 14 0" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              <span style="font-size:11px;font-weight:700;color:var(--muted)">عمر — طيار</span>
+              <span class="ba-cap">يوسف — رائد فضاء</span>
             </div>
           </div>
         </div>
@@ -629,35 +698,35 @@ img{max-width:100%;display:block}
           <div class="sn sn1">🖼️</div>
           <div class="step-content">
             <h3>ارفع صورة طفلك</h3>
-            <p>صورة واضحة للوجه. تقدر ترفع أكتر من صورة للدقة.</p>
+            <p>صورة واضحة للوجه. تقدر ترفع لحد 4 صور لنتيجة أدق.</p>
           </div>
         </div>
         <div class="step-row">
           <div class="sn sn2">🎨</div>
           <div class="step-content">
-            <h3>اختار المهنة والشخصية</h3>
-            <p>أكتر من 20 فكرة مختلفة — طبيب، طيار، شيف، وأكتر.</p>
+            <h3>اختار المهنة أو المغامرة</h3>
+            <p>أفكار جاهزة زي طبيب، طيار، شيف، رائد فضاء — أو اكتب فكرتك بنفسك.</p>
           </div>
         </div>
         <div class="step-row">
           <div class="sn sn3">🤖</div>
           <div class="step-content">
-            <h3>الذكاء الاصطناعي يعمل بمجل السحر</h3>
-            <p>تصميم كتاب مميز بملامح طفلك الحقيقية تلقائياً.</p>
+            <h3>الذكاء الاصطناعي يعمل كالسحر</h3>
+            <p>صفحات تلوين مميزة تحافظ على ملامح طفلك قدر الإمكان.</p>
           </div>
         </div>
         <div class="step-row">
           <div class="sn sn4">📄</div>
           <div class="step-content">
             <h3>حمّل الكتاب PDF</h3>
-            <p>جاهز للطباعة فوراً على ورق A4 عادي.</p>
+            <p>جاهز للطباعة فورًا على ورق A4 عادي، مع غلاف باسم طفلك.</p>
           </div>
         </div>
         <div class="step-row">
           <div class="sn sn5">🖨️</div>
           <div class="step-content">
             <h3>اطبع واستمتع</h3>
-            <p>كتاب طفلك جاهز! هدية وذكرى تدوم.</p>
+            <p>كتاب طفلك جاهز! نشاط ممتع وهدية شخصية تفضل ذكرى.</p>
           </div>
         </div>
       </div>
@@ -672,27 +741,59 @@ img{max-width:100%;display:block}
       <div class="gallery-block reveal">
         <h2>كتاب حقيقي... ذكرى تدوم ❤️</h2>
         <div class="book-grid">
-          <div class="book-tile" style="background:linear-gradient(145deg,#a855f7,#ec4899)">
-            <span>🧑‍⚕️</span><span class="book-tile-name">ليان</span>
+          <div class="book-tile">
+            <img src="{{ url_for('static', filename='img/kid2.jpg') }}" alt="كتاب ليان" loading="lazy">
+            <div class="book-tile-veil"></div>
+            <div class="book-tile-meta">
+              <span class="book-tile-name">ليان</span>
+              <span class="book-tile-emoji">🧑‍⚕️</span>
+            </div>
           </div>
-          <div class="book-tile" style="background:linear-gradient(145deg,#3b82f6,#8b5cf6)">
-            <span>🧑‍🚀</span><span class="book-tile-name">يوسف</span>
+          <div class="book-tile">
+            <img src="{{ url_for('static', filename='img/hero_coloring.jpg') }}" alt="كتاب يوسف" loading="lazy">
+            <div class="book-tile-veil"></div>
+            <div class="book-tile-meta">
+              <span class="book-tile-name">يوسف</span>
+              <span class="book-tile-emoji">🧑‍🚀</span>
+            </div>
           </div>
-          <div class="book-tile" style="background:linear-gradient(145deg,#f59e0b,#f97316)">
-            <span>👮</span><span class="book-tile-name">آدم</span>
+          <div class="book-tile">
+            <img src="{{ url_for('static', filename='img/paint2.jpg') }}" alt="كتاب آدم" loading="lazy">
+            <div class="book-tile-veil"></div>
+            <div class="book-tile-meta">
+              <span class="book-tile-name">آدم</span>
+              <span class="book-tile-emoji">👮</span>
+            </div>
           </div>
-          <div class="book-tile" style="background:linear-gradient(145deg,#10b981,#059669)">
-            <span>👩‍🍳</span><span class="book-tile-name">نور</span>
+          <div class="book-tile">
+            <img src="{{ url_for('static', filename='img/extra2.jpg') }}" alt="كتاب نور" loading="lazy">
+            <div class="book-tile-veil"></div>
+            <div class="book-tile-meta">
+              <span class="book-tile-name">نور</span>
+              <span class="book-tile-emoji">👩‍🍳</span>
+            </div>
           </div>
         </div>
       </div>
       <div class="gallery-block reveal">
         <h2>ردود فعل الأطفال ❤️</h2>
         <div class="react-grid">
-          <div class="react-tile" style="background:linear-gradient(135deg,#fde68a,#fca5a5)">😍</div>
-          <div class="react-tile" style="background:linear-gradient(135deg,#bbf7d0,#bfdbfe)">🤩</div>
-          <div class="react-tile" style="background:linear-gradient(135deg,#f5d0fe,#c7d2fe)">🥳</div>
-          <div class="react-tile" style="background:linear-gradient(135deg,#fed7aa,#fde68a)">😄</div>
+          <div class="react-tile">
+            <img src="{{ url_for('static', filename='img/extra4.jpg') }}" alt="طفل سعيد" loading="lazy">
+            <span class="react-emoji">😍</span>
+          </div>
+          <div class="react-tile">
+            <img src="{{ url_for('static', filename='img/kid5.jpg') }}" alt="أطفال يضحكون" loading="lazy">
+            <span class="react-emoji">🤩</span>
+          </div>
+          <div class="react-tile">
+            <img src="{{ url_for('static', filename='img/kid6.jpg') }}" alt="طفل فخور" loading="lazy">
+            <span class="react-emoji">🥳</span>
+          </div>
+          <div class="react-tile">
+            <img src="{{ url_for('static', filename='img/before_kid.jpg') }}" alt="طفل يضحك" loading="lazy">
+            <span class="react-emoji">😄</span>
+          </div>
         </div>
       </div>
     </div>
@@ -702,7 +803,9 @@ img{max-width:100%;display:block}
 <!-- ====== PROFESSIONS ====== -->
 <section class="sec sec-bg">
   <div class="sec-inner">
+    <div class="sec-kicker reveal">أفكار جاهزة</div>
     <h2 class="sec-title reveal">✨ أفكار المهن والشخصيات</h2>
+    <p class="sec-sub reveal">اختار من الأفكار الجاهزة، أو اكتب موقفك المخصص بالعربي وهنترجمه وننفذه.</p>
     <div class="prof-grid reveal">
       <div class="prof-card"><span class="prof-emoji">👩‍⚕️</span><span class="prof-label">طبيب</span></div>
       <div class="prof-card"><span class="prof-emoji">🧑‍🚀</span><span class="prof-label">رائد فضاء</span></div>
@@ -714,20 +817,36 @@ img{max-width:100%;display:block}
       <div class="prof-card"><span class="prof-emoji">🎨</span><span class="prof-label">فنان</span></div>
       <div class="prof-card"><span class="prof-emoji">👩‍🏫</span><span class="prof-label">معلم</span></div>
       <div class="prof-card"><span class="prof-emoji">⚽</span><span class="prof-label">لاعب كرة</span></div>
-      <div class="prof-card"><span class="prof-emoji">🎭</span><span class="prof-label">ممثل</span></div>
+      <div class="prof-card"><span class="prof-emoji">🔬</span><span class="prof-label">عالم</span></div>
       <div class="prof-card prof-more"><span class="prof-emoji">➕</span><span class="prof-label">والمزيد...</span></div>
     </div>
   </div>
 </section>
 
-<!-- ====== TESTIMONIALS ====== -->
+<!-- ====== CTA BANNER ====== -->
 <section class="sec">
   <div class="sec-inner">
+    <div class="cta-banner reveal">
+      <img class="cta-bg" src="{{ url_for('static', filename='img/kid7.jpg') }}" alt="" loading="lazy">
+      <div class="cta-content">
+        <h2>جاهز تشوف وش طفلك<br>وهو بطل كتابه؟ 🎈</h2>
+        <p>ابدأ الآن مجانًا — أول 3 كتب كل شهر علينا.</p>
+        <a class="btn btn-white" href="/app">ابدأ صنع الكتاب</a>
+        <div class="cta-mini">بدون بطاقة ائتمانية · PDF جاهز للطباعة · صور مؤقتة وآمنة</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== TESTIMONIALS ====== -->
+<section class="sec sec-bg">
+  <div class="sec-inner">
+    <div class="sec-kicker reveal">آراء الأهالي</div>
     <h2 class="sec-title reveal">ماذا يقول الأهالي ❤️</h2>
     <div class="testi-grid">
       <div class="testi-card reveal">
         <span class="testi-q-icon">❝</span>
-        <p class="testi-body">فكرة جميلة جداً وكتاب بجودة عالية، هدية مختلفة فعلاً! بنتي مش بتسيبه من يدها.</p>
+        <p class="testi-body">فكرة جميلة جدًا وكتاب بجودة عالية، هدية مختلفة فعلاً! بنتي مش بتسيبه من إيدها.</p>
         <div class="testi-foot">
           <div class="testi-ava" style="background:linear-gradient(135deg,#a855f7,#ec4899)">أ</div>
           <div class="testi-who">
@@ -738,7 +857,7 @@ img{max-width:100%;display:block}
       </div>
       <div class="testi-card reveal">
         <span class="testi-q-icon">❝</span>
-        <p class="testi-body">ابني فرح جداً لما شاف نفسه في الكتاب وبيلوّن كل يوم! الجودة ممتازة والخطوات سهلة.</p>
+        <p class="testi-body">ابني فرح جدًا لما شاف نفسه في الكتاب وبيلوّن كل يوم! الجودة ممتازة والخطوات سهلة.</p>
         <div class="testi-foot">
           <div class="testi-ava" style="background:linear-gradient(135deg,#3b82f6,#10b981)">أ</div>
           <div class="testi-who">
@@ -749,7 +868,7 @@ img{max-width:100%;display:block}
       </div>
       <div class="testi-card reveal">
         <span class="testi-q-icon">❝</span>
-        <p class="testi-body">أحسن هدية قدمتها لبنتي في عيدها. الصور واضحة وجميلة والاسم على الغلاف كان مميزاً!</p>
+        <p class="testi-body">أحسن هدية قدمتها لبنتي في عيدها. الصور واضحة وجميلة والاسم على الغلاف كان مميزًا!</p>
         <div class="testi-foot">
           <div class="testi-ava" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">م</div>
           <div class="testi-who">
@@ -760,7 +879,7 @@ img{max-width:100%;display:block}
       </div>
       <div class="testi-card reveal">
         <span class="testi-q-icon">❝</span>
-        <p class="testi-body">سهّل عليّ التصميم وطلع كتاب احترافي في دقائق. شكراً لونّي على هذه الفكرة الرائعة!</p>
+        <p class="testi-body">سهّل عليّ التصميم وطلع كتاب احترافي في دقائق. شكرًا لونّي على هذه الفكرة الرائعة!</p>
         <div class="testi-foot">
           <div class="testi-ava" style="background:linear-gradient(135deg,#06b6d4,#8b5cf6)">ن</div>
           <div class="testi-who">
@@ -786,8 +905,8 @@ img{max-width:100%;display:block}
     <div class="trust-item">
       <div class="trust-ico" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5)">🛡️</div>
       <div class="trust-info">
-        <strong>أمن الأطفال</strong>
-        <span>بدون أي بيانات</span>
+        <strong>أمان الأطفال</strong>
+        <span>جلسات وصور مؤقتة</span>
       </div>
     </div>
     <div class="trust-item">
@@ -812,7 +931,7 @@ img{max-width:100%;display:block}
   <div class="footer-inner">
     <div class="footer-brand-col">
       <a class="footer-logo" href="/">لونّ<span>ي</span></a>
-      <p class="footer-tagline">حوّل صورة طفلك إلى كتاب تلوين باسمه،<br>جاهز للطباعة في دقائق.</p>
+      <p class="footer-tagline">حوّل صورة طفلك إلى كتاب تلوين مخصص باسمه،<br>جاهز للطباعة PDF في دقائق.</p>
       <div class="footer-social">
         <a href="https://www.facebook.com/Lawenyapp" target="_blank" rel="noopener noreferrer" class="btn-social-fb" aria-label="فيسبوك">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
@@ -831,7 +950,7 @@ img{max-width:100%;display:block}
     <div class="footer-links-col">
       <h4>تواصل</h4>
       <a href="https://www.facebook.com/Lawenyapp" target="_blank" rel="noopener noreferrer">📱 فيسبوك</a>
-      <a href="/app">ابدأ مجاناً</a>
+      <a href="/app">ابدأ مجانًا</a>
     </div>
   </div>
   <div class="footer-bottom">
@@ -877,6 +996,12 @@ img{max-width:100%;display:block}
 </div>
 
 <script>
+/* Navbar scroll state */
+const siteNav = document.getElementById('site-nav');
+const syncNavState = () => siteNav.classList.toggle('is-scrolled', window.scrollY > 10);
+syncNavState();
+window.addEventListener('scroll', syncNavState, { passive: true });
+
 /* Intersection Observer for reveal animations */
 const io = new IntersectionObserver((entries) => {
   entries.forEach(e => {
@@ -887,8 +1012,8 @@ document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
 /* Kids Carousel */
 const kidsTrack = document.getElementById('kids-track');
-document.getElementById('kids-next').onclick = () => kidsTrack.scrollBy({ left: -180, behavior: 'smooth' });
-document.getElementById('kids-prev').onclick = () => kidsTrack.scrollBy({ left: 180, behavior: 'smooth' });
+document.getElementById('kids-next').onclick = () => kidsTrack.scrollBy({ left: -200, behavior: 'smooth' });
+document.getElementById('kids-prev').onclick = () => kidsTrack.scrollBy({ left: 200, behavior: 'smooth' });
 
 /* -------- Landing Auth -------- */
 let lndUser = null;
@@ -986,7 +1111,7 @@ if (urlParams.get('login') === '1') {
     if (authErr === 'google_off') lndError.textContent = 'تسجيل الدخول عبر Google غير مفعّل (لم يتم إضافة المفاتيح).';
     else if (authErr === 'google_unverified') lndError.textContent = 'الإيميل غير موثق في Google.';
     else lndError.textContent = 'فشل تسجيل الدخول عبر Google. حاول مرة أخرى.';
-    
+
     // Clean up URL
     window.history.replaceState({}, document.title, window.location.pathname);
   }
