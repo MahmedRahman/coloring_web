@@ -2060,6 +2060,9 @@ let _obTimerIv = null;
 let _obTimerStart = 0;
 let _obTimerLabel = '';
 let _obTimerRunningFor = '';
+// Per-page coloring generation status: scene_id -> 'running' | 'done' | 'error'
+let _obPageJobs = {};
+const OB_PAGE_PARALLEL = 3; // concurrent independent coloring page jobs
 
 
 const OB_STEPS = [
@@ -4101,11 +4104,18 @@ function obRenderWizardUI() {
     }
     planned.forEach(sid => {
       const done = _obState.donePages.includes(sid);
+      const job = _obPageJobs[sid];
       const src = done ? obPageSrc(sid) : '';
-      rows.push(`<div class="ob-check-row ${done ? 'done' : 'todo'}">
+      let mark = done ? 'محفوظ' : 'بانتظار';
+      let rowCls = done ? 'done' : 'todo';
+      if (job === 'running') { mark = '⏳ جاري...'; rowCls = 'todo'; }
+      else if (job === 'error' && !done) { mark = 'فشل — أعد'; }
+      else if (done) mark = timeMark(sid, 'محفوظ ✓');
+      else mark = timeMark(sid, mark);
+      rows.push(`<div class="ob-check-row ${rowCls}">
         ${src ? `<img class="thumb" src="${src}" alt="" onclick="openLightbox('${src}')">` : '<span style="width:44px"></span>'}
-        <span style="flex:1">${done ? '✓' : '○'} ${escHtml(sceneTitle(sid))}</span>
-        <span class="mark">${timeMark(sid, done ? 'محفوظ' : 'بانتظار')}</span>
+        <span style="flex:1">${done ? '✓' : (job === 'running' ? '…' : '○')} ${escHtml(sceneTitle(sid))}</span>
+        <span class="mark">${mark}</span>
       </div>`);
     });
     if (_obState.hasEnding) {
@@ -4143,12 +4153,21 @@ function obRenderWizardUI() {
   } else if (cur === 'pages') {
     cta = flags.pages
       ? 'صفحات التلوين كاملة — انتقل للنهاية'
-      : (doneN ? `كمّل الصفحات (${doneN}/${planned.length || '?'})` : 'ولّد صفحات التلوين (الجزء الأوسط من الكتاب)');
+      : (doneN
+        ? `كمّل الناقص: ${missN} صفحة (كل صفحة لوحدها وبتحفظ فورًا)`
+        : `ولّد صفحات التلوين — حتى ${OB_PAGE_PARALLEL} في نفس الوقت، كل واحدة بتحفظ لوحدها`);
     actions = `
-      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('pages')">${flags.pages ? '↻ إعادة توليد الصفحات' : '3. توليد صفحات التلوين'}</button>
+      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('pages')">${flags.pages ? 'كل الصفحات جاهزة ✓ — التالي' : (doneN ? `توليد الناقص (${missN})` : '3. توليد صفحات التلوين')}</button>
       ${flags.pages ? `<button type="button" class="btn btn-ghost" onclick="obGoStep('ending')">التالي: صفحة النهاية →</button>` : ''}
-      ${doneN && !flags.pages ? `<button type="button" class="btn btn-ghost" onclick="obRunStep('pages',{force:true})">↻ إعادة كل الصفحات</button>` : ''}
+      ${doneN ? `<button type="button" class="btn btn-ghost" onclick="if(confirm('هتعيد توليد كل الصفحات؟ الصفحات الجاهزة تفضل لحد ما الجديدة تخلص'))obRunStep('pages',{force:true})">↻ إعادة الكل</button>` : ''}
     `;
+    if (flags.pages) {
+      // Override primary to go next rather than re-run empty
+      actions = `
+        <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obGoStep('ending')">التالي: صفحة النهاية →</button>
+        <button type="button" class="btn btn-ghost" onclick="if(confirm('هتعيد توليد كل الصفحات؟'))obRunStep('pages',{force:true})">↻ إعادة كل الصفحات</button>
+      `;
+    }
   } else if (cur === 'ending') {
     cta = flags.ending
       ? 'صفحة النهاية جاهزة — احفظ PDF'
@@ -4344,6 +4363,7 @@ async function obGenerateCover(name, pageCount, force) {
       child_name: name,
       page_count: pageCount,
       force: !!force,
+      order_id: _obOrder && _obOrder.id,
     }, {
       onTick: (d) => {
         const el = Math.round(d.elapsed_sec || 0);
@@ -4357,6 +4377,10 @@ async function obGenerateCover(name, pageCount, force) {
       page.duration_sec = secs;
       if (!page.preview_url && _obSessionId) {
         page.preview_url = `/admin/api/quick-book/preview/${_obSessionId}/cover`;
+      }
+      // permanent order URL after server-side save
+      if (_obOrder && _obOrder.id) {
+        _obImgCache.cover = `/admin/special-orders/${_obOrder.id}/book-page/cover?t=${Date.now()}`;
       }
     }
     return page;
@@ -4374,6 +4398,7 @@ async function obGenerateEnding(name, force) {
       session_id: _obSessionId,
       child_name: name,
       force: !!force,
+      order_id: _obOrder && _obOrder.id,
     }, {
       onTick: (d) => {
         const el = Math.round(d.elapsed_sec || 0);
@@ -4388,6 +4413,9 @@ async function obGenerateEnding(name, force) {
       if (!page.preview_url && _obSessionId) {
         page.preview_url = `/admin/api/quick-book/preview/${_obSessionId}/ending`;
       }
+      if (_obOrder && _obOrder.id) {
+        _obImgCache.ending = `/admin/special-orders/${_obOrder.id}/book-page/ending?t=${Date.now()}`;
+      }
     }
     return page;
   } catch (e) {
@@ -4396,64 +4424,105 @@ async function obGenerateEnding(name, force) {
   }
 }
 
-async function obGeneratePages(scenes, force) {
-  // One page at a time so each image gets an accurate live timer
-  const allPages = [];
-  for (let i = 0; i < scenes.length; i++) {
-    const sid = scenes[i];
-    const title = sceneTitle(sid);
-    const pct = 10 + Math.round((i / Math.max(scenes.length, 1)) * 80);
-    obSetProgress(pct, `توليد «${title}» (${i + 1}/${scenes.length})...`);
-    obStartLiveTimer(`توليد «${title}» (${i + 1}/${scenes.length})`, sid);
-    try {
-      const gData = await qbPostAsync('/admin/api/quick-book/generate', {
-        session_id: _obSessionId,
-        scenes: [sid],
-        force: !!force,
-      }, {
-        onTick: (d) => {
-          const el = Math.round(d.elapsed_sec || 0);
-          obSetProgress(pct, `توليد «${title}» (${i + 1}/${scenes.length}) · ${el} ث`);
-        },
-      });
-      const secs = obStopLiveTimer(true);
-      const batch = gData.pages || [];
-      batch.forEach(p => {
-        if (!p.error) {
-          p.duration_sec = secs;
-          obRecordTiming(p.scene_id || sid, secs);
-          obCachePage(p);
-          const src = pagePreviewSrc(p, _obSessionId) || obPageSrc(p.scene_id || sid);
-          if (src) {
-            obShowLastGenerated(
-              p.scene_id,
-              p.title || title,
-              src,
-              secs,
-            );
-          }
-        }
-      });
-      allPages.push(...batch);
-    } catch (e) {
-      obStopLiveTimer(true);
-      allPages.push({ scene_id: sid, error: e.message || 'فشل' });
-      continue;
-    }
+/** One independent coloring-page request: finish → show → permanently saved on order. */
+async function obGenerateOnePage(sid, force) {
+  const title = sceneTitle(sid);
+  _obPageJobs[sid] = 'running';
+  if (document.getElementById('ob-step-checklist')) obRenderWizardUI();
 
-    // Persist after each image so progress never lost
-    const okIds = allPages.filter(p => !p.error).map(p => p.scene_id);
-    const planned = _obLastScenes.length ? _obLastScenes : scenes;
-    const doneUnion = [...new Set([...(_obState.donePages || []), ...okIds])];
-    _obState.donePages = doneUnion;
-    _obState.missingPages = planned.filter(s => !doneUnion.includes(s));
+  const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  try {
+    const gData = await qbPostAsync('/admin/api/quick-book/generate', {
+      session_id: _obSessionId,
+      scenes: [sid],
+      force: !!force,
+      order_id: _obOrder && _obOrder.id,
+    });
+    const secs = Math.round(((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0) / 100) / 10;
+    const batch = gData.pages || [];
+    const page = batch.find(p => !p.error) || batch[0] || null;
+    if (!page || page.error) {
+      throw new Error((page && page.error) || gData.error || `فشل «${title}»`);
+    }
+    page.duration_sec = secs;
+    obRecordTiming(page.scene_id || sid, secs);
+    // Prefer permanent order URL (server already synced)
+    if (_obOrder && _obOrder.id) {
+      const perm = `/admin/special-orders/${_obOrder.id}/book-page/${page.scene_id || sid}?t=${Date.now()}`;
+      _obImgCache[page.scene_id || sid] = perm;
+      page.preview_url = perm;
+    } else {
+      obCachePage(page);
+    }
+    const src = pagePreviewSrc(page, _obSessionId) || obPageSrc(page.scene_id || sid);
+    if (src) {
+      obShowLastGenerated(page.scene_id || sid, page.title || title, src, secs);
+    }
+    // Merge into state without wiping other pages
+    if (!_obState.donePages.includes(page.scene_id || sid)) {
+      _obState.donePages = [..._obState.donePages, page.scene_id || sid];
+    }
+    const planned = _obLastScenes.length ? _obLastScenes : (obSelectedIds() || []);
+    _obState.missingPages = planned.filter(s => !_obState.donePages.includes(s));
+    _obPageJobs[sid] = 'done';
     try {
       await obPersistProgress({ step: 'pages', scenes: planned });
-    } catch (_) { /* keep going — image already generated */ }
+    } catch (_) { /* already on order disk from server */ }
     obRefreshPreviewsFromState();
-    obRenderTimeLog();
     if (document.getElementById('ob-step-checklist')) obRenderWizardUI();
+    return page;
+  } catch (e) {
+    _obPageJobs[sid] = 'error';
+    if (document.getElementById('ob-step-checklist')) obRenderWizardUI();
+    return { scene_id: sid, error: e.message || 'فشل' };
   }
+}
+
+async function obGeneratePages(scenes, force) {
+  // Independent parallel jobs (up to OB_PAGE_PARALLEL).
+  // One failure never cancels others or wipes completed pages.
+  const list = [...scenes];
+  const allPages = [];
+  let idx = 0;
+  let finished = 0;
+  const total = list.length;
+
+  obSetProgress(8, `توليد صفحات التلوين — حتى ${Math.min(OB_PAGE_PARALLEL, total)} في نفس الوقت...`);
+  obStartLiveTimer(`صفحات التلوين (${total})`, 'pages');
+
+  async function worker() {
+    while (idx < list.length) {
+      const i = idx++;
+      const sid = list[i];
+      const title = sceneTitle(sid);
+      const runningN = Object.values(_obPageJobs).filter(s => s === 'running').length;
+      obSetProgress(
+        10 + Math.round((finished / Math.max(total, 1)) * 85),
+        `جاري «${title}» · منجز ${finished}/${total} · شغال ${runningN || 1}`,
+      );
+      const result = await obGenerateOnePage(sid, force);
+      finished++;
+      allPages.push(result);
+      const okCount = allPages.filter(p => !p.error).length;
+      const failCount = allPages.filter(p => p.error).length;
+      const clock = document.getElementById('ob-timer-sub');
+      if (clock) {
+        clock.textContent = `منجز ${okCount} · فشل ${failCount} · باقي ${total - finished}`;
+      }
+    }
+  }
+
+  const nWorkers = Math.min(OB_PAGE_PARALLEL, list.length);
+  await Promise.all(Array.from({ length: nWorkers }, () => worker()));
+
+  const elapsed = obStopLiveTimer(true);
+  const okCount = allPages.filter(p => !p.error).length;
+  obSetProgress(
+    100,
+    okCount === total
+      ? `تم ${okCount} صفحة ✓ (${obFormatDuration(elapsed)})`
+      : `تم ${okCount}/${total} · باقي الفشل ممكن تعيد توليده`,
+  );
   return allPages;
 }
 
@@ -4539,25 +4608,30 @@ async function obRunStep(step, opts = {}) {
         _obStep = 'ending';
         obRefreshPreviewsFromState();
       } else {
-        obSetProgress(10, `توليد ${todo.length} صفحة ناقصة...`);
+        // Clear job markers for targets only (keep completed pages in state)
+        todo.forEach(s => { delete _obPageJobs[s]; });
+        obSetProgress(5, `توليد ${todo.length} صفحة · طلبات منفصلة (حتى ${OB_PAGE_PARALLEL} متوازي)...`);
         const allPages = await obGeneratePages(todo, force);
         const failed = allPages.filter(p => p.error);
         const okPages = allPages.filter(p => !p.error);
-        if (!okPages.length) throw new Error(failed[0]?.error || 'فشل توليد الصفحات');
-        if (failed.length) showToast(`تم ${okPages.length} — فشل ${failed.length}`, 'err');
-        okPages.forEach(p => obCachePage(p));
-        const last = okPages[okPages.length - 1];
-        if (last) {
-          obShowLastGenerated(last.scene_id, last.title || sceneTitle(last.scene_id),
-            pagePreviewSrc(last, _obSessionId) || obPageSrc(last.scene_id),
-            last.duration_sec != null ? last.duration_sec : _obTimings[last.scene_id]);
+        // Never throw away success just because some failed
+        if (!okPages.length && !(_obState.donePages || []).length) {
+          throw new Error(failed[0]?.error || 'فشل توليد الصفحات');
         }
-        const done = new Set([..._obState.donePages, ...okPages.map(p => p.scene_id)]);
+        if (failed.length && okPages.length) {
+          showToast(`تم ${okPages.length} صفحة وحُفظت · فشل ${failed.length} (أعدهم لوحدهم)`, 'err');
+        } else if (failed.length && !okPages.length) {
+          showToast(`فشل ${failed.length} — الصور السابقة لسه محفوظة`, 'err');
+        } else {
+          showToast(`تم ${okPages.length} صفحة وحُفظت على الطلب ✓`, 'ok');
+        }
+        // Merge only — never reset donePages to empty
+        const done = new Set([...( _obState.donePages || []), ...okPages.map(p => p.scene_id)]);
         _obState.donePages = planned.filter(s => done.has(s));
         _obState.missingPages = planned.filter(s => !done.has(s));
         try {
           await obPersistProgress({ step: 'pages', scenes: planned });
-        } catch (_) { /* images already on disk */ }
+        } catch (_) { /* disk already has pages */ }
         if (!_obState.missingPages.length) {
           _obStep = 'ending';
           if (msg) {
@@ -4565,11 +4639,10 @@ async function obRunStep(step, opts = {}) {
             msg.className = 'qb-msg ok';
           }
         } else if (msg) {
-          msg.textContent = `محفوظ ظاهر: ${_obState.donePages.length}/${planned.length}. لسه ناقص ${_obState.missingPages.length}.`;
+          msg.textContent = `محفوظ: ${_obState.donePages.length}/${planned.length}. ناقص ${_obState.missingPages.length} — اضغط توليد الناقص.`;
           msg.className = 'qb-msg ok';
         }
-        showToast('تم حفظ الصور على الطلب وتظهر في المعاينة ✓', 'ok');
-        obSetProgress(100, 'تم حفظ الصفحات ✓');
+        obSetProgress(100, `محفوظ ${_obState.donePages.length}/${planned.length}`);
         obRefreshPreviewsFromState();
       }
     }

@@ -1237,9 +1237,7 @@ async def generate_cover_page_async(
     """Generate the premium full-color front cover."""
     out = cover_page_path(d)
     created = False
-    if force and out.exists():
-        out.unlink()
-    if not out.exists():
+    if force or not out.exists():
         refs = ensure_multi_refs(d)
         if not refs:
             raise RuntimeError("مفيش صورة مرجع لغلاف البداية.")
@@ -1252,7 +1250,7 @@ async def generate_cover_page_async(
             )
         else:
             img_bytes = await call_model_async(prompt, refs, client)
-        Image.open(io.BytesIO(img_bytes)).convert("RGB").save(out, "JPEG", quality=93)
+        _atomic_jpeg_bytes(out, img_bytes, quality=93)
         created = True
     b64 = base64.b64encode(out.read_bytes()).decode()
     return {
@@ -1278,9 +1276,7 @@ async def generate_ending_page_async(
     """Generate the premium full-color book ending page (last page)."""
     out = ending_page_path(d)
     created = False
-    if force and out.exists():
-        out.unlink()
-    if not out.exists():
+    if force or not out.exists():
         refs = ensure_multi_refs(d)
         if not refs:
             raise RuntimeError("مفيش صورة مرجع لصفحة النهاية.")
@@ -1293,7 +1289,7 @@ async def generate_ending_page_async(
             )
         else:
             img_bytes = await call_model_async(prompt, refs, client)
-        Image.open(io.BytesIO(img_bytes)).convert("RGB").save(out, "JPEG", quality=93)
+        _atomic_jpeg_bytes(out, img_bytes, quality=93)
         created = True
     b64 = base64.b64encode(out.read_bytes()).decode()
     return {
@@ -1567,9 +1563,8 @@ async def generate_one_kie_async(
     scene_id = scene["id"]
     out = page_path(d, scene_id)
     created = False
-    if force and out.exists():
-        out.unlink()
-    if not out.exists():
+    # Never delete the old page before the new one succeeds
+    if force or not out.exists():
         refs = ensure_multi_refs(d)
         prompt = build_prompt(
             scene["scene"],
@@ -1578,7 +1573,6 @@ async def generate_one_kie_async(
             detail=style.get("detail", "normal"),
             art_style=style.get("art_style", "cartoon"),
         )
-        # Stronger identity preservation for GPT Image 2
         prompt = (
             f"{prompt}. "
             "This is image-to-image: keep the exact same child face, hair, age and identity "
@@ -1592,7 +1586,7 @@ async def generate_one_kie_async(
             img_bytes, _ = await generate_image_to_image(
                 prompt, ref_path, client, input_url=ref_url
             )
-            Image.open(io.BytesIO(img_bytes)).convert("RGB").save(out, "JPEG", quality=92)
+            _atomic_jpeg_bytes(out, img_bytes, quality=92)
 
         if sem is not None:
             async with sem:
@@ -2567,6 +2561,10 @@ def admin_quick_book_generate():
         include_b64 = bool(data.get("include_image") or data.get("include_b64"))
     else:
         include_b64 = not use_async
+    try:
+        order_id = int(data["order_id"]) if data.get("order_id") is not None else None
+    except (TypeError, ValueError):
+        order_id = None
     style = {
         "variant": data.get("variant") or DEFAULT_VARIANT,
         "line_weight": data.get("line_weight") or "normal",
@@ -2640,6 +2638,9 @@ def admin_quick_book_generate():
                     )
                 conn.commit()
                 conn.close()
+        # Permanent save on special order — each page survives disconnects/refreshes
+        if order_id and any(not p.get("error") for p in pages):
+            _persist_generated_to_order(order_id, session_id)
         return {
             "ok": True,
             "provider": "kie",
@@ -2648,6 +2649,7 @@ def admin_quick_book_generate():
             "ok_count": len(ok_ids),
             "failed": [p for p in pages if p.get("error")],
             "session_id": session_id,
+            "order_id": order_id,
         }
 
     if use_async:
@@ -2679,6 +2681,10 @@ def admin_quick_book_cover():
         include_b64 = bool(data.get("include_image") or data.get("include_b64"))
     else:
         include_b64 = not use_async
+    try:
+        order_id = int(data["order_id"]) if data.get("order_id") is not None else None
+    except (TypeError, ValueError):
+        order_id = None
     try:
         page_count = int(data.get("page_count") or data.get("pages") or 0)
     except (TypeError, ValueError):
@@ -2724,11 +2730,14 @@ def admin_quick_book_cover():
                 )
 
         page = run_async(_run())
+        if order_id:
+            _persist_generated_to_order(order_id, session_id)
         return {
             "ok": True,
             "page": _page_for_client(page, session_id, include_b64=include_b64),
             "provider": "kie",
             "session_id": session_id,
+            "order_id": order_id,
         }
 
     if use_async:
@@ -2760,6 +2769,10 @@ def admin_quick_book_ending():
         include_b64 = bool(data.get("include_image") or data.get("include_b64"))
     else:
         include_b64 = not use_async
+    try:
+        order_id = int(data["order_id"]) if data.get("order_id") is not None else None
+    except (TypeError, ValueError):
+        order_id = None
     if not session_id.isalnum() or len(session_id) > 40:
         return jsonify({"error": "session غير صالح."}), 400
     d = SESSIONS_DIR / session_id
@@ -2800,11 +2813,14 @@ def admin_quick_book_ending():
                 )
 
         page = run_async(_run())
+        if order_id:
+            _persist_generated_to_order(order_id, session_id)
         return {
             "ok": True,
             "page": _page_for_client(page, session_id, include_b64=include_b64),
             "provider": "kie",
             "session_id": session_id,
+            "order_id": order_id,
         }
 
     if use_async:
@@ -3184,6 +3200,107 @@ def _order_book_dir(order_id: int) -> Path:
     d = _order_photo_dir(order_id) / "book"
     d.mkdir(parents=True, exist_ok=True)
     return d
+
+
+def _atomic_jpeg_bytes(path: Path, img_bytes: bytes, quality: int = 92) -> None:
+    """Write JPEG atomically so a failed regen never deletes the previous good file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.stem}.writing.jpg")
+    try:
+        Image.open(io.BytesIO(img_bytes)).convert("RGB").save(tmp, "JPEG", quality=quality)
+        tmp.replace(path)
+    finally:
+        try:
+            if tmp.exists():
+                tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _persist_generated_to_order(order_id: Optional[int], session_id: str) -> None:
+    """Copy session pages into the order permanently and refresh progress JSON."""
+    if not order_id or not session_id:
+        return
+    try:
+        oid = int(order_id)
+    except (TypeError, ValueError):
+        return
+    try:
+        _sync_session_pages_to_order(oid, session_id)
+        _refresh_order_book_progress(oid, session_id)
+    except Exception:
+        # Never fail the generation response because of order bookkeeping
+        pass
+
+
+def _refresh_order_book_progress(order_id: int, session_id: Optional[str] = None) -> None:
+    """Recompute order book_progress from disk without relying on the browser."""
+    with _db_lock:
+        conn = db_connect()
+        row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+        if not row:
+            conn.close()
+            return
+        existing: dict = {}
+        raw = row["book_progress"] if "book_progress" in row.keys() else None
+        if raw:
+            try:
+                existing = json.loads(raw) if isinstance(raw, str) else (raw or {})
+                if not isinstance(existing, dict):
+                    existing = {}
+            except (json.JSONDecodeError, TypeError):
+                existing = {}
+        planned = existing.get("scenes") or []
+        if not isinstance(planned, list):
+            planned = []
+        col_raw = row["book_scenes"] if "book_scenes" in row.keys() else None
+        if not planned and col_raw:
+            try:
+                loaded = json.loads(col_raw) if isinstance(col_raw, str) else col_raw
+                if isinstance(loaded, list):
+                    planned = [s for s in loaded if isinstance(s, str)]
+            except (json.JSONDecodeError, TypeError):
+                planned = []
+        clean = [s for s in planned if isinstance(s, str) and SCENE_ID_RE.match(s)
+                 and s not in (COVER_SCENE_ID, ENDING_SCENE_ID)]
+        sid = session_id or (row["book_session_id"] if "book_session_id" in row.keys() else None)
+        snap = _session_book_snapshot(sid, clean, order_id=order_id)
+        now = datetime.now(timezone.utc).isoformat()
+        progress = {
+            **existing,
+            "scenes": clean or existing.get("scenes") or [],
+            "has_cover": snap["has_cover"],
+            "has_ending": snap["has_ending"],
+            "done_pages": snap["done_planned"] if clean else snap["generated_scenes"],
+            "missing_pages": snap["missing_pages"],
+            "updated_at": now,
+            "step": _infer_book_step(
+                {
+                    **existing,
+                    "scenes": clean or existing.get("scenes") or [],
+                    "has_cover": snap["has_cover"],
+                    "has_ending": snap["has_ending"],
+                    "done_pages": snap["done_planned"] if clean else snap["generated_scenes"],
+                    "missing_pages": snap["missing_pages"],
+                },
+                snap,
+                bool(row["pdf_filename"] if "pdf_filename" in row.keys() else None),
+            ),
+        }
+        pc = progress.get("page_count")
+        if pc is None and clean:
+            pc = len(clean)
+        conn.execute(
+            """
+            UPDATE special_orders
+            SET book_progress = ?, book_page_count = COALESCE(?, book_page_count),
+                book_updated_at = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (json.dumps(progress, ensure_ascii=False), pc, now, now, order_id),
+        )
+        conn.commit()
+        conn.close()
 
 
 def _sync_session_pages_to_order(order_id: int, session_id: Optional[str]) -> list:
