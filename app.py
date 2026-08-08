@@ -295,41 +295,39 @@ def init_db():
             """
         )
         # Migrate older DBs that lack user_id / book_credits
-        cols = {r[1] for r in conn.execute("PRAGMA table_info(books)").fetchall()}
-        if "user_id" not in cols:
-            conn.execute("ALTER TABLE books ADD COLUMN user_id INTEGER")
-        user_cols = {r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
-        if "book_credits" not in user_cols:
-            conn.execute("ALTER TABLE users ADD COLUMN book_credits INTEGER DEFAULT 0")
-        if "google_id" not in user_cols:
-            conn.execute("ALTER TABLE users ADD COLUMN google_id TEXT")
-        if "auth_provider" not in user_cols:
-            conn.execute("ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT 'email'")
+        def _add_col(table: str, column: str, decl: str):
+            """Add column if missing; ignore races / already-exists errors."""
+            cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+            if column in cols:
+                return
+            try:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {decl}")
+            except sqlite3.OperationalError as exc:
+                if "duplicate column" not in str(exc).lower():
+                    raise
+
+        _add_col("books", "user_id", "user_id INTEGER")
+        _add_col("users", "book_credits", "book_credits INTEGER DEFAULT 0")
+        _add_col("users", "google_id", "google_id TEXT")
+        _add_col("users", "auth_provider", "auth_provider TEXT DEFAULT 'email'")
         # Unique index for google_id (ignore NULLs / duplicates safely)
         conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) "
             "WHERE google_id IS NOT NULL"
         )
-        # Migrate: add pdf_filename to special_orders if missing
-        so_cols = {r[1] for r in conn.execute("PRAGMA table_info(special_orders)").fetchall()}
-        if "pdf_filename" not in so_cols:
-            conn.execute("ALTER TABLE special_orders ADD COLUMN pdf_filename TEXT")
-        if "assigned_to" not in so_cols:
-            conn.execute("ALTER TABLE special_orders ADD COLUMN assigned_to TEXT")
-        if "share_token" not in so_cols:
-            conn.execute("ALTER TABLE special_orders ADD COLUMN share_token TEXT")
-        if "share_expires_at" not in so_cols:
-            conn.execute("ALTER TABLE special_orders ADD COLUMN share_expires_at TEXT")
-        if "book_session_id" not in so_cols:
-            conn.execute("ALTER TABLE special_orders ADD COLUMN book_session_id TEXT")
-        if "book_scenes" not in so_cols:
-            conn.execute("ALTER TABLE special_orders ADD COLUMN book_scenes TEXT")
-        if "book_page_count" not in so_cols:
-            conn.execute("ALTER TABLE special_orders ADD COLUMN book_page_count INTEGER")
-        if "book_updated_at" not in so_cols:
-            conn.execute("ALTER TABLE special_orders ADD COLUMN book_updated_at TEXT")
-        if "book_progress" not in so_cols:
-            conn.execute("ALTER TABLE special_orders ADD COLUMN book_progress TEXT")
+        # Migrate special_orders columns
+        for col, decl in (
+            ("pdf_filename", "pdf_filename TEXT"),
+            ("assigned_to", "assigned_to TEXT"),
+            ("share_token", "share_token TEXT"),
+            ("share_expires_at", "share_expires_at TEXT"),
+            ("book_session_id", "book_session_id TEXT"),
+            ("book_scenes", "book_scenes TEXT"),
+            ("book_page_count", "book_page_count INTEGER"),
+            ("book_updated_at", "book_updated_at TEXT"),
+            ("book_progress", "book_progress TEXT"),
+        ):
+            _add_col("special_orders", col, decl)
         conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_special_orders_share_token "
             "ON special_orders(share_token) WHERE share_token IS NOT NULL"

@@ -1856,6 +1856,30 @@ function obStepIndex(id) {
   return i < 0 ? 0 : i;
 }
 
+/** Parse JSON safely — avoid "Unexpected token <" when server returns HTML. */
+async function parseJsonResponse(res) {
+  const text = await res.text();
+  const trimmed = (text || '').trim();
+  if (!trimmed) return {};
+  try {
+    return JSON.parse(trimmed);
+  } catch (e) {
+    if (res.status === 401 || /دخول|login/i.test(trimmed)) {
+      throw new Error('انتهت جلسة الأدمن — سجّل دخول تاني.');
+    }
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      throw new Error('السيرفر مش جاهز دلوقتي. استنى ثانية وحدّث الصفحة.');
+    }
+    if (res.status >= 500) {
+      throw new Error('خطأ في السيرفر. حدّث الصفحة وجرّب تاني.');
+    }
+    if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
+      throw new Error('السيرفر رجّع صفحة بدل JSON (ممكن لسه بيفتح). حدّث الصفحة وجرّب.');
+    }
+    throw new Error('فشل قراءة رد السيرفر. حدّث الصفحة.');
+  }
+}
+
 const ALL_SCENES = [
   {% for s in scenes %}
   { id: {{ s.id | tojson }}, title: {{ s.title | tojson }}, emoji: {{ s.emoji | tojson }} },
@@ -3551,7 +3575,7 @@ async function obEnsureSession({ forceNew = false, photo = null } = {}) {
         photo: photo || _obPhoto || undefined,
       }),
     });
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (!res.ok) throw new Error(data.error || 'فشل بدء الجلسة');
     obApplyStatusPayload(data);
     if (msg && data.resumed) {
@@ -3589,7 +3613,7 @@ async function obPersistProgress(extra = {}) {
       photo: _obPhoto,
     }),
   });
-  const data = await res.json();
+  const data = await parseJsonResponse(res);
   if (!res.ok) throw new Error(data.error || 'فشل حفظ التقدم');
   obApplyStatusPayload(data);
   return data;
@@ -3639,7 +3663,7 @@ async function obSaveToOrder(scenes, name) {
       child_name: name || obChildName(),
     }),
   });
-  const sData = await sRes.json();
+  const sData = await parseJsonResponse(sRes);
   if (!sRes.ok) throw new Error(sData.error || 'فشل حفظ الكتاب على الطلب');
   obApplyStatusPayload(sData);
   _obLastScenes = [...clean];
@@ -3673,7 +3697,7 @@ async function obGenerateCover(name, pageCount, force) {
       force: !!force,
     }),
   });
-  const cData = await cRes.json();
+  const cData = await parseJsonResponse(cRes);
   if (!cRes.ok) throw new Error(cData.error || 'فشل غلاف البداية');
   return cData.page || null;
 }
@@ -3688,7 +3712,7 @@ async function obGenerateEnding(name, force) {
       force: !!force,
     }),
   });
-  const eData = await eRes.json();
+  const eData = await parseJsonResponse(eRes);
   if (!eRes.ok) throw new Error(eData.error || 'فشل غلاف النهاية');
   return eData.page || null;
 }
@@ -3704,7 +3728,7 @@ async function obGeneratePages(scenes, force) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: _obSessionId, scenes: chunks[i], force: !!force }),
     });
-    const gData = await gRes.json();
+    const gData = await parseJsonResponse(gRes);
     if (!gRes.ok) throw new Error(gData.error || 'فشل التوليد');
     allPages.push(...(gData.pages || []));
     // Persist after each batch so progress never lost
@@ -3893,7 +3917,7 @@ async function obContinueWizard() {
       await obEnsureSession({ forceNew: false });
     } else if (_obOrder) {
       const res = await fetch(`/admin/api/special-orders/${_obOrder.id}/book/status`);
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (res.ok) {
         obApplyStatusPayload(data);
         obRenderWizardUI();
