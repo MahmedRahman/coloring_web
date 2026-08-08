@@ -1032,6 +1032,123 @@ def make_cover_page(child_name: str) -> Image.Image:
     return img
 
 
+ENDING_SCENE_ID = "ending"
+
+
+def build_ending_prompt(child_name: str = "") -> str:
+    """Full-color premium final page (not line-art coloring)."""
+    name = (child_name or "").strip()[:40]
+    name_bit = (
+        f'The child is named "{name}". Show the exact same child from the reference photo — '
+        f"same face, hairstyle, age, skin tone and identity. "
+        if name
+        else "Show the exact same child from the reference photo — same face, hairstyle, age, and identity. "
+    )
+    return (
+        "Create the final page of a premium children's personalized coloring book. "
+        "Vertical A4 portrait full-bleed composition (2480×3508 style), print-ready, 300 DPI. "
+        f"{name_bit}"
+        "Use EXACTLY the same visual identity as a premium front cover: "
+        "same cream paper texture, same warm golden background, same colorful torn paper borders, "
+        "same playful doodles (hearts, stars, sparkles, circles), same premium children's illustration style, "
+        "same color palette, same lighting, same children's brand identity. "
+        "Top center Arabic text clearly readable: "
+        '"تهانينا!" and below it "لقد انتهيت من". '
+        'Large title: "رحلة التلوين". '
+        "Below on a purple paint stroke the Arabic text: "
+        '"كل رسمة لونتها... تصبح ذكرى جميلة تبقى معك ♡". '
+        "Center illustration: the same child sitting happily behind an open coloring book "
+        "filled with colorful drawings. Large rainbow behind the child. "
+        "Paint brushes, crayons, paint jars, palette, art supplies around the table. "
+        "Bottom Arabic text clearly readable: "
+        '"استمر في الإبداع... فكل صفحة جديدة تنتظرك لتلونها! 💖". '
+        'Bottom center: round "لوني" logo. '
+        "Keep the layout clean and spacious. Cute premium children's illustration. "
+        "Storybook quality. Disney/Pixar style. High-end printing quality. Ultra detailed. "
+        "Full-page edge-to-edge, no white borders, no letterboxing. "
+        "No watermark. No extra unrelated objects. Full color illustration (not black-and-white line art)."
+    )
+
+
+def ending_page_path(d: Path) -> Path:
+    return d / f"page_{ENDING_SCENE_ID}.jpg"
+
+
+async def generate_ending_page_async(
+    d: Path,
+    client: httpx.AsyncClient,
+    *,
+    child_name: str = "",
+    force: bool = False,
+    use_kie: bool = False,
+    ref_url: Optional[str] = None,
+) -> dict:
+    """Generate the premium full-color book ending page (last page)."""
+    out = ending_page_path(d)
+    created = False
+    if force and out.exists():
+        out.unlink()
+    if not out.exists():
+        refs = ensure_multi_refs(d)
+        if not refs:
+            raise RuntimeError("مفيش صورة مرجع لصفحة النهاية.")
+        prompt = build_ending_prompt(child_name)
+        if use_kie:
+            if not kie_configured():
+                raise RuntimeError("KIE_API_KEY مش مضبوط لصفحة النهاية.")
+            img_bytes, _ = await generate_image_to_image(
+                prompt, refs[0], client, input_url=ref_url
+            )
+        else:
+            img_bytes = await call_model_async(prompt, refs, client)
+        Image.open(io.BytesIO(img_bytes)).convert("RGB").save(out, "JPEG", quality=93)
+        created = True
+    b64 = base64.b64encode(out.read_bytes()).decode()
+    return {
+        "scene_id": ENDING_SCENE_ID,
+        "title": "صفحة النهاية",
+        "title_en": "Ending",
+        "emoji": "🎉",
+        "image_b64": b64,
+        "created": created,
+        "provider": "kie" if use_kie else "cloudflare",
+    }
+
+
+def load_ending_image(d: Path) -> Optional[Image.Image]:
+    p = ending_page_path(d)
+    if p.exists():
+        return Image.open(p).convert("RGB")
+    return None
+
+
+def assemble_book_images(
+    d: Path,
+    order: List[str],
+    child_name: str,
+    *,
+    include_ending: bool = True,
+) -> List[Image.Image]:
+    """Cover + coloring pages (+ optional ending) for PDF."""
+    pages: List[Image.Image] = []
+    for sid in order:
+        sid = (sid or "").strip()
+        if not sid or sid == ENDING_SCENE_ID or not SCENE_ID_RE.match(sid):
+            continue
+        p = page_path(d, sid)
+        if p.exists():
+            pages.append(Image.open(p).convert("RGB"))
+    if not pages:
+        return []
+    cover = make_cover_page(child_name)
+    all_imgs = [cover] + pages
+    if include_ending:
+        ending = load_ending_image(d)
+        if ending is not None:
+            all_imgs.append(ending)
+    return all_imgs
+
+
 def friendly_error(exc: Exception) -> str:
     if isinstance(exc, (httpx.TimeoutException, asyncio.TimeoutError, TimeoutError)):
         return "انتهى وقت الانتظار. السيرفر متأخر — جرّب تاني."
@@ -1724,21 +1841,25 @@ def build_pdf(session_id: str):
     d = session_dir(session_id)
     order = request.args.get("order", "").split(",")
     child_name = (request.args.get("name") or "").strip()[:40]
-    pages = []
-    used_ids = []
-    for sid in order:
-        sid = sid.strip()
-        if not sid or not SCENE_ID_RE.match(sid):
-            continue
-        p = page_path(d, sid)
-        if p.exists():
-            pages.append(Image.open(p).convert("RGB"))
-            used_ids.append(sid)
-    if not pages:
+
+    # Ensure ending page exists (Cloudflare / Flux)
+    if ACCOUNT_ID and API_TOKEN and not ending_page_path(d).exists():
+        try:
+            async def _ending():
+                timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    return await generate_ending_page_async(
+                        d, client, child_name=child_name, force=False, use_kie=False
+                    )
+            run_async(_ending())
+        except Exception:
+            # PDF still works without ending if generation fails
+            pass
+
+    all_pages = assemble_book_images(d, order, child_name, include_ending=True)
+    if len(all_pages) < 2:  # cover + at least 1 interior
         abort(400, "No pages generated yet")
 
-    cover = make_cover_page(child_name)
-    all_pages = [cover] + pages
     pdf_path = d / "coloring_book.pdf"
     write_pdf_with_margins(all_pages, pdf_path)
     return send_file(pdf_path, as_attachment=True, download_name="coloring_book.pdf")
@@ -1756,20 +1877,13 @@ def share_book(session_id: str):
     if not order:
         return jsonify({"error": "مفيش صفحات للمشاركة."}), 400
 
-    pages = []
-    for sid in order:
-        if not isinstance(sid, str) or not SCENE_ID_RE.match(sid):
-            continue
-        p = page_path(d, sid)
-        if p.exists():
-            pages.append(Image.open(p).convert("RGB"))
-    if not pages:
+    all_pages = assemble_book_images(d, order, child_name, include_ending=True)
+    if len(all_pages) < 2:
         return jsonify({"error": "مفيش صفحات جاهزة."}), 400
 
-    cover = make_cover_page(child_name)
     token = secrets.token_hex(16)
     pdf_path = SHARES_DIR / f"{token}.pdf"
-    write_pdf_with_margins([cover] + pages, pdf_path)
+    write_pdf_with_margins(all_pages, pdf_path)
     expires = datetime.now(timezone.utc) + timedelta(hours=24)
     meta = {"token": token, "expires_at": expires.isoformat(), "session_id": session_id}
     (SHARES_DIR / f"{token}.json").write_text(json.dumps(meta), encoding="utf-8")
@@ -2306,6 +2420,65 @@ def admin_quick_book_generate():
     })
 
 
+@app.route("/admin/api/quick-book/ending", methods=["POST"])
+@admin_required
+def admin_quick_book_ending():
+    """Generate premium full-color final page via Kie GPT Image 2."""
+    if not kie_configured():
+        return jsonify({
+            "error": "مفتاح Kie.ai مش مضبوط. أضف KIE_API_KEY في ملف .env وأعد تشغيل السيرفر.",
+        }), 500
+
+    data = request.get_json(silent=True) or {}
+    session_id = (data.get("session_id") or "").strip()
+    child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
+    force = bool(data.get("force"))
+    if not session_id.isalnum() or len(session_id) > 40:
+        return jsonify({"error": "session غير صالح."}), 400
+    d = SESSIONS_DIR / session_id
+    if not d.exists():
+        return jsonify({"error": "الجلسة مش موجودة. ارفع الصورة تاني."}), 404
+
+    refs = ensure_multi_refs(d)
+    if not refs:
+        return jsonify({"error": "مفيش صورة مرجع. ارفع صورة الطفل تاني."}), 400
+
+    async def _run():
+        timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            ref_url = None
+            cached = d / "kie_ref_url.txt"
+            if cached.exists():
+                try:
+                    ref_url = cached.read_text(encoding="utf-8").strip() or None
+                except OSError:
+                    ref_url = None
+            if not ref_url:
+                ref_url = await kie_upload_image(
+                    refs[0], client,
+                    upload_path="coloring-book",
+                    file_name=f"{session_id}.png",
+                )
+                try:
+                    cached.write_text(ref_url, encoding="utf-8")
+                except OSError:
+                    pass
+            return await generate_ending_page_async(
+                d, client,
+                child_name=child_name,
+                force=force,
+                use_kie=True,
+                ref_url=ref_url,
+            )
+
+    try:
+        page = run_async(_run())
+    except Exception as e:
+        return jsonify({"error": friendly_error(e)}), 500
+
+    return jsonify({"ok": True, "page": page, "provider": "kie"})
+
+
 @app.route("/admin/api/quick-book/pdf/<session_id>")
 @admin_required
 def admin_quick_book_pdf(session_id: str):
@@ -2318,20 +2491,13 @@ def admin_quick_book_pdf(session_id: str):
 
     order = request.args.get("order", "").split(",")
     child_name = (request.args.get("name") or "").strip()[:40]
-    pages = []
-    for sid in order:
-        sid = sid.strip()
-        if not sid or not SCENE_ID_RE.match(sid):
-            continue
-        p = page_path(d, sid)
-        if p.exists():
-            pages.append(Image.open(p).convert("RGB"))
-    if not pages:
+
+    all_pages = assemble_book_images(d, order, child_name, include_ending=True)
+    if len(all_pages) < 2:
         return jsonify({"error": "مفيش صفحات جاهزة. ولّد الكتاب الأول."}), 400
 
-    cover = make_cover_page(child_name)
     pdf_path = d / "coloring_book.pdf"
-    write_pdf_with_margins([cover] + pages, pdf_path)
+    write_pdf_with_margins(all_pages, pdf_path)
     safe_name = re.sub(r"[^\w\u0600-\u06FF\-]+", "_", child_name or "coloring_book")[:40]
     download_name = f"{safe_name or 'coloring_book'}.pdf"
     return send_file(pdf_path, as_attachment=True, download_name=download_name)

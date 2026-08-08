@@ -1416,7 +1416,7 @@
 
         <div class="qb-card">
           <h3>5. إنشاء الكتاب</h3>
-          <p class="hint">التوليد عبر <strong>Kie.ai → GPT Image 2</strong> (صورة→صورة). كل صفحة تقريبًا دقيقة — كتاب 8 صفحات ياخد حوالي 3–6 دقايق.</p>
+          <p class="hint">التوليد عبر <strong>Kie.ai → GPT Image 2</strong>. بعد صفحات التلوين بتتولّد <strong>صفحة النهاية</strong> الملونة (تهانينا / رحلة التلوين) تلقائيًا.</p>
           <div class="qb-actions">
             <button type="button" class="btn btn-primary" id="qb-run-btn" onclick="qbCreateBook()">إنشاء PDF بـ GPT Image 2</button>
             <div class="qb-result" id="qb-result">
@@ -1873,18 +1873,45 @@ async function qbCreateBook() {
       showToast(`تم ${okPages.length} صفحة — فشل ${failed.length}`, 'err');
     }
 
+    // Premium ending page (full color)
+    qbSetProgress(88, 'توليد صفحة النهاية (تهانينا!)...');
+    let endingPage = null;
+    try {
+      const eRes = await fetch('/admin/api/quick-book/ending', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: _qbSessionId,
+          child_name: name,
+          force: false,
+        }),
+      });
+      const eData = await eRes.json();
+      if (!eRes.ok) throw new Error(eData.error || 'فشل صفحة النهاية');
+      endingPage = eData.page || null;
+    } catch (endErr) {
+      showToast('صفحة النهاية فشلت — هيكمل PDF من غيرها', 'err');
+    }
+
     // Keep order as selected
     const okSet = new Set(okPages.map(p => p.scene_id));
     const order = scenes.filter(id => okSet.has(id));
 
     // previews
     const previews = document.getElementById('qb-previews');
-    previews.innerHTML = okPages.map(p => `
+    const previewParts = okPages.map(p => `
       <div class="qb-prev-page" title="${escHtml(p.title || p.scene_id)}">
         <img src="data:image/jpeg;base64,${p.image_b64}" alt="${escHtml(p.title || '')}">
-      </div>`).join('');
+      </div>`);
+    if (endingPage && endingPage.image_b64) {
+      previewParts.push(`
+        <div class="qb-prev-page" title="صفحة النهاية">
+          <img src="data:image/jpeg;base64,${endingPage.image_b64}" alt="نهاية">
+        </div>`);
+    }
+    previews.innerHTML = previewParts.join('');
 
-    qbSetProgress(92, 'جاري تجهيز PDF...');
+    qbSetProgress(96, 'جاري تجهيز PDF (غلاف + صفحات + نهاية)...');
     const pdfUrl = `/admin/api/quick-book/pdf/${_qbSessionId}?order=${encodeURIComponent(order.join(','))}&name=${encodeURIComponent(name)}`;
     const a = document.getElementById('qb-download');
     a.href = pdfUrl;
@@ -1892,7 +1919,8 @@ async function qbCreateBook() {
     document.getElementById('qb-result').classList.add('show');
 
     qbSetProgress(100, 'الكتاب جاهز ✓');
-    msg.textContent = `تم إنشاء كتاب ${order.length} صفحة لـ «${name}»`;
+    const endNote = endingPage ? ' + صفحة النهاية' : '';
+    msg.textContent = `تم إنشاء كتاب ${order.length} صفحة${endNote} لـ «${name}»`;
     msg.className = 'qb-msg ok';
     showToast('الكتاب جاهز — تقدر تحمل PDF', 'ok');
   } catch (e) {
