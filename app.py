@@ -129,8 +129,9 @@ ART_STYLE = {
     "realistic": "semi-realistic proportions and facial features",
 }
 
-# Jobs / professions for coloring pages (kept key "scene" for the English prompt text)
-SCENES = [
+# Scene packs = book types. Each pack is one product in the admin book picker.
+# "scene" is the English prompt fragment that completes "the child is ..." (see build_prompt).
+JOBS_SCENES = [
     {"id": "doctor", "emoji": "🩺", "title": "طبيب", "title_en": "Doctor",
      "grad": ["#bfdbfe", "#a7f3d0"],
      "scene": "dressed as a friendly doctor wearing a white coat and stethoscope in a simple clinic"},
@@ -168,6 +169,312 @@ SCENES = [
      "grad": ["#fde68a", "#86efac"],
      "scene": "dressed as a farmer with a straw hat holding a watering can near simple crops"},
 ]
+
+HEROES_SCENES = [
+    {"id": "hero_superhero", "emoji": "🦸", "title": "بطل خارق", "title_en": "Superhero",
+     "grad": ["#bfdbfe", "#fecaca"],
+     "scene": "dressed as a cheerful superhero with a cape and chest emblem, standing in a heroic pose on a simple rooftop"},
+    {"id": "hero_knight", "emoji": "🛡️", "title": "فارس", "title_en": "Knight",
+     "grad": ["#e2e8f0", "#c7d2fe"],
+     "scene": "dressed as a brave little knight in simple armor holding a shield and wooden sword in front of a small castle"},
+    {"id": "hero_pirate", "emoji": "🏴‍☠️", "title": "قرصان", "title_en": "Pirate",
+     "grad": ["#bae6fd", "#fde68a"],
+     "scene": "dressed as a friendly pirate captain with a tricorn hat and eye patch standing on a wooden ship deck with a treasure chest"},
+    {"id": "hero_wizard", "emoji": "🧙", "title": "ساحر", "title_en": "Wizard",
+     "grad": ["#ddd6fe", "#c7d2fe"],
+     "scene": "dressed as a little wizard in a pointed hat and robe holding a glowing wand beside a magic book and potion bottles"},
+    {"id": "hero_ninja", "emoji": "🥷", "title": "نينجا", "title_en": "Ninja",
+     "grad": ["#cbd5e1", "#a5b4fc"],
+     "scene": "dressed as a playful ninja in a simple training outfit jumping between bamboo trees at a dojo"},
+    {"id": "hero_dragon", "emoji": "🐉", "title": "مع تنين", "title_en": "Dragon friend",
+     "grad": ["#bbf7d0", "#fde68a"],
+     "scene": "riding on the back of a cute friendly cartoon dragon flying above simple clouds and hills"},
+    {"id": "hero_explorer", "emoji": "🧭", "title": "مستكشف", "title_en": "Explorer",
+     "grad": ["#fde68a", "#bbf7d0"],
+     "scene": "dressed as a jungle explorer with a safari hat, backpack and compass walking on a simple jungle path"},
+    {"id": "hero_robot", "emoji": "🤖", "title": "مع روبوت", "title_en": "Robot buddy",
+     "grad": ["#a5f3fc", "#c7d2fe"],
+     "scene": "standing next to a tall friendly cartoon robot with round eyes in a simple workshop with gears and tools"},
+    {"id": "hero_detective", "emoji": "🕵️", "title": "محقق", "title_en": "Detective",
+     "grad": ["#e2e8f0", "#fed7aa"],
+     "scene": "dressed as a young detective in a coat and cap holding a large magnifying glass following footprints on the ground"},
+    {"id": "hero_spaceranger", "emoji": "🛸", "title": "حارس الفضاء", "title_en": "Space ranger",
+     "grad": ["#312e81", "#6d28d9"],
+     "scene": "dressed as a space ranger in a futuristic suit standing beside a small flying saucer with planets and stars around"},
+    {"id": "hero_racer", "emoji": "🏎️", "title": "سائق سباق", "title_en": "Race driver",
+     "grad": ["#fecaca", "#fde68a"],
+     "scene": "dressed as a race car driver with a helmet standing beside a cartoon race car on a simple race track"},
+    {"id": "hero_treasure", "emoji": "💎", "title": "صائد كنوز", "title_en": "Treasure hunter",
+     "grad": ["#fde68a", "#fbcfe8"],
+     "scene": "opening a big treasure chest full of coins and gems inside a simple cave with a torch on the wall"},
+]
+
+ANIMALS_SCENES = [
+    {"id": "ani_lion", "emoji": "🦁", "title": "مع أسد", "title_en": "Lion",
+     "grad": ["#fde68a", "#fed7aa"],
+     "scene": "sitting next to a friendly cartoon lion with a big fluffy mane on a simple savanna with grass and a tree"},
+    {"id": "ani_dolphin", "emoji": "🐬", "title": "تحت الماء", "title_en": "Underwater",
+     "grad": ["#bae6fd", "#a5f3fc"],
+     "scene": "swimming underwater with a smiling dolphin, simple fish, coral and bubbles around"},
+    {"id": "ani_dino", "emoji": "🦕", "title": "مع ديناصور", "title_en": "Dinosaur",
+     "grad": ["#bbf7d0", "#86efac"],
+     "scene": "playing with a big friendly cartoon dinosaur in a simple prehistoric landscape with ferns and a volcano far away"},
+    {"id": "ani_safari", "emoji": "🐘", "title": "رحلة سفاري", "title_en": "Safari",
+     "grad": ["#fde68a", "#bbf7d0"],
+     "scene": "on a safari adventure standing beside a cartoon elephant and a giraffe with simple acacia trees behind"},
+    {"id": "ani_farm", "emoji": "🐄", "title": "في المزرعة", "title_en": "Farm animals",
+     "grad": ["#86efac", "#fde68a"],
+     "scene": "feeding cartoon farm animals — a cow, a sheep and chickens — in front of a simple barn and fence"},
+    {"id": "ani_cat", "emoji": "🐱", "title": "مع قطة", "title_en": "Kitten",
+     "grad": ["#fbcfe8", "#fed7aa"],
+     "scene": "cuddling a fluffy cartoon kitten while sitting on a cushion with a ball of yarn nearby"},
+    {"id": "ani_puppy", "emoji": "🐶", "title": "مع كلب", "title_en": "Puppy",
+     "grad": ["#fed7aa", "#fde68a"],
+     "scene": "playing fetch with a happy cartoon puppy in a simple park with a ball and a bone"},
+    {"id": "ani_horse", "emoji": "🐴", "title": "يركب حصان", "title_en": "Horse riding",
+     "grad": ["#fde68a", "#d9f99d"],
+     "scene": "riding a gentle cartoon horse across a simple meadow with a wooden fence and small flowers"},
+    {"id": "ani_birds", "emoji": "🦜", "title": "مع الطيور", "title_en": "Birds",
+     "grad": ["#a5f3fc", "#bbf7d0"],
+     "scene": "holding out a hand while colorful cartoon parrots and small birds land on the arm near a big leafy tree"},
+    {"id": "ani_penguin", "emoji": "🐧", "title": "مع البطاريق", "title_en": "Penguins",
+     "grad": ["#bae6fd", "#e2e8f0"],
+     "scene": "wearing a warm winter coat and scarf playing with cute cartoon penguins on simple ice and snow"},
+    {"id": "ani_bunny", "emoji": "🐰", "title": "مع أرنب", "title_en": "Bunny",
+     "grad": ["#fbcfe8", "#ddd6fe"],
+     "scene": "holding a soft cartoon bunny with long ears in a simple garden with carrots and daisies"},
+    {"id": "ani_zoo", "emoji": "🦒", "title": "حديقة الحيوان", "title_en": "At the zoo",
+     "grad": ["#bbf7d0", "#fed7aa"],
+     "scene": "visiting the zoo, waving at a tall cartoon giraffe and a monkey behind a simple fence with a balloon in hand"},
+]
+
+SPORTS_SCENES = [
+    {"id": "sp_football", "emoji": "⚽", "title": "كرة قدم", "title_en": "Football",
+     "grad": ["#bbf7d0", "#86efac"],
+     "scene": "wearing a football kit kicking a ball toward a goal on a simple pitch"},
+    {"id": "sp_swimming", "emoji": "🏊", "title": "سباحة", "title_en": "Swimming",
+     "grad": ["#bae6fd", "#a5f3fc"],
+     "scene": "wearing swimming goggles and a swimsuit swimming in a simple pool lane with water splashes"},
+    {"id": "sp_karate", "emoji": "🥋", "title": "كاراتيه", "title_en": "Karate",
+     "grad": ["#e2e8f0", "#fecaca"],
+     "scene": "wearing a karate gi with a belt doing a karate stance in a simple dojo with mats"},
+    {"id": "sp_gym", "emoji": "🤸", "title": "جمباز", "title_en": "Gymnastics",
+     "grad": ["#fbcfe8", "#ddd6fe"],
+     "scene": "wearing a gymnastics leotard balancing on a beam with a ribbon in a simple gym hall"},
+    {"id": "sp_bike", "emoji": "🚲", "title": "دراجة", "title_en": "Cycling",
+     "grad": ["#fde68a", "#bbf7d0"],
+     "scene": "wearing a bicycle helmet riding a bike on a simple park path with trees along the side"},
+    {"id": "sp_basket", "emoji": "🏀", "title": "كرة سلة", "title_en": "Basketball",
+     "grad": ["#fed7aa", "#fecaca"],
+     "scene": "wearing a basketball jersey jumping to shoot a ball into a hoop on a simple court"},
+    {"id": "sp_tennis", "emoji": "🎾", "title": "تنس", "title_en": "Tennis",
+     "grad": ["#d9f99d", "#bbf7d0"],
+     "scene": "holding a tennis racket about to hit a ball on a simple tennis court with a net"},
+    {"id": "sp_run", "emoji": "🏃", "title": "جري", "title_en": "Running",
+     "grad": ["#a5f3fc", "#bbf7d0"],
+     "scene": "wearing running clothes sprinting on a simple athletics track toward a finish line ribbon"},
+    {"id": "sp_chess", "emoji": "♟️", "title": "شطرنج", "title_en": "Chess",
+     "grad": ["#e2e8f0", "#c7d2fe"],
+     "scene": "sitting at a table thinking hard while moving a big chess piece on a chess board"},
+    {"id": "sp_skate", "emoji": "🛹", "title": "سكيت", "title_en": "Skateboarding",
+     "grad": ["#fed7aa", "#c7d2fe"],
+     "scene": "wearing a helmet and pads riding a skateboard on a simple skate ramp"},
+    {"id": "sp_box", "emoji": "🥊", "title": "ملاكمة", "title_en": "Boxing",
+     "grad": ["#fecaca", "#fde68a"],
+     "scene": "wearing big boxing gloves punching a training bag in a simple gym"},
+    {"id": "sp_medal", "emoji": "🏅", "title": "منصة التتويج", "title_en": "Champion",
+     "grad": ["#fde68a", "#fbcfe8"],
+     "scene": "standing on the first place podium holding a big trophy with a medal around the neck and confetti around"},
+]
+
+GIRLS_SCENES = [
+    {"id": "gl_ballerina", "emoji": "🩰", "title": "باليرينا", "title_en": "Ballerina",
+     "grad": ["#fbcfe8", "#ddd6fe"],
+     "scene": "dressed as a ballerina in a tutu and ballet shoes dancing on a simple stage with curtains"},
+    {"id": "gl_princess", "emoji": "👑", "title": "أميرة", "title_en": "Princess",
+     "grad": ["#fbcfe8", "#fde68a"],
+     "scene": "dressed as a princess in a long gown and crown standing in front of a simple castle with a small carriage"},
+    {"id": "gl_fairy", "emoji": "🧚", "title": "جنية", "title_en": "Fairy",
+     "grad": ["#ddd6fe", "#a5f3fc"],
+     "scene": "dressed as a little fairy with delicate wings holding a sparkling wand among big flowers and butterflies"},
+    {"id": "gl_vet", "emoji": "🐩", "title": "طبيبة بيطرية", "title_en": "Vet",
+     "grad": ["#bbf7d0", "#bae6fd"],
+     "scene": "dressed as a vet in a white coat gently examining a small cartoon puppy on a clinic table"},
+    {"id": "gl_fashion", "emoji": "👗", "title": "مصممة أزياء", "title_en": "Fashion designer",
+     "grad": ["#fbcfe8", "#fed7aa"],
+     "scene": "dressed as a fashion designer sketching a dress on a board next to a mannequin and rolls of fabric"},
+    {"id": "gl_baker", "emoji": "🧁", "title": "حلوانية", "title_en": "Baker",
+     "grad": ["#fed7aa", "#fbcfe8"],
+     "scene": "wearing an apron decorating a tall cupcake tower in a simple bakery kitchen"},
+    {"id": "gl_florist", "emoji": "💐", "title": "بائعة زهور", "title_en": "Florist",
+     "grad": ["#bbf7d0", "#fbcfe8"],
+     "scene": "arranging a big bouquet of flowers at a simple flower shop stand with buckets of blooms"},
+    {"id": "gl_singer", "emoji": "🎤", "title": "مغنية", "title_en": "Singer",
+     "grad": ["#ddd6fe", "#fbcfe8"],
+     "scene": "singing into a microphone on a simple stage with musical notes and stage lights around"},
+    {"id": "gl_mermaid", "emoji": "🧜", "title": "حورية البحر", "title_en": "Mermaid",
+     "grad": ["#a5f3fc", "#bae6fd"],
+     "scene": "as a mermaid with a decorated tail sitting on a rock underwater with shells, seaweed and small fish"},
+    {"id": "gl_teaparty", "emoji": "🫖", "title": "حفلة شاي", "title_en": "Tea party",
+     "grad": ["#fed7aa", "#fbcfe8"],
+     "scene": "hosting a tea party with teddy bears and dolls around a small table with a teapot and cups"},
+    {"id": "gl_unicorn", "emoji": "🦄", "title": "مع يونيكورن", "title_en": "Unicorn",
+     "grad": ["#fbcfe8", "#ddd6fe"],
+     "scene": "hugging a cute cartoon unicorn with a flowing mane under a rainbow with clouds and stars"},
+    {"id": "gl_garden", "emoji": "🌷", "title": "حديقة الورد", "title_en": "Flower garden",
+     "grad": ["#bbf7d0", "#fbcfe8"],
+     "scene": "watering tall flowers with a watering can in a simple garden with butterflies and a small fence"},
+]
+
+EGYPT_SCENES = [
+    {"id": "eg_pharaoh", "emoji": "🏺", "title": "فرعون", "title_en": "Pharaoh",
+     "grad": ["#fde68a", "#fed7aa"],
+     "scene": "dressed as a young ancient Egyptian pharaoh with a nemes headdress and collar, standing between simple hieroglyph columns"},
+    {"id": "eg_pyramids", "emoji": "🐫", "title": "عند الأهرامات", "title_en": "At the pyramids",
+     "grad": ["#fde68a", "#fed7aa"],
+     "scene": "riding a friendly cartoon camel in front of the great pyramids and the Sphinx in the desert"},
+    {"id": "eg_ramadan", "emoji": "🏮", "title": "فانوس رمضان", "title_en": "Ramadan lantern",
+     "grad": ["#c7d2fe", "#fde68a"],
+     "scene": "holding a big decorated Ramadan lantern (fanous) under a crescent moon and hanging lanterns and stars"},
+    {"id": "eg_eid", "emoji": "🎁", "title": "العيد", "title_en": "Eid",
+     "grad": ["#fbcfe8", "#fde68a"],
+     "scene": "wearing new Eid clothes holding gifts and balloons with festive decorations and sweets on a table"},
+    {"id": "eg_horseman", "emoji": "🐎", "title": "خيّال عربي", "title_en": "Arabian rider",
+     "grad": ["#fed7aa", "#fde68a"],
+     "scene": "riding a proud Arabian horse while wearing traditional Arab dress with a flowing headscarf in an open desert"},
+    {"id": "eg_nile", "emoji": "⛵", "title": "مركب في النيل", "title_en": "Nile felucca",
+     "grad": ["#bae6fd", "#bbf7d0"],
+     "scene": "sailing a small felucca boat with a triangular sail on the Nile with palm trees along the bank"},
+    {"id": "eg_market", "emoji": "🧺", "title": "في السوق", "title_en": "Old market",
+     "grad": ["#fed7aa", "#fde68a"],
+     "scene": "walking through a traditional old market alley with hanging lanterns, spice baskets and pottery stalls"},
+    {"id": "eg_alex", "emoji": "🌊", "title": "بحر الإسكندرية", "title_en": "Alexandria shore",
+     "grad": ["#bae6fd", "#a5f3fc"],
+     "scene": "standing on a seaside corniche wall with waves, seagulls and a tall lighthouse behind"},
+    {"id": "eg_mosque", "emoji": "🕌", "title": "عند المسجد", "title_en": "By the mosque",
+     "grad": ["#c7d2fe", "#bbf7d0"],
+     "scene": "standing in front of a simple mosque with a dome and minaret under a crescent moon"},
+    {"id": "eg_farm_egy", "emoji": "🌾", "title": "فلاح مصري", "title_en": "Egyptian farmer",
+     "grad": ["#fde68a", "#86efac"],
+     "scene": "dressed in a traditional galabeya carrying a basket in a green field with palm trees and a water wheel"},
+    {"id": "eg_desert", "emoji": "🏜️", "title": "في الصحرا", "title_en": "Desert camp",
+     "grad": ["#fde68a", "#fed7aa"],
+     "scene": "sitting by a small campfire in front of a bedouin tent in the desert with sand dunes and stars above"},
+    {"id": "eg_family", "emoji": "🫖", "title": "قعدة العيلة", "title_en": "Family gathering",
+     "grad": ["#fed7aa", "#fbcfe8"],
+     "scene": "sitting on a floor cushion around a low table with tea glasses and dates in a warm traditional room"},
+]
+
+DAILY_SCENES = [
+    {"id": "day_school", "emoji": "🎒", "title": "أول يوم مدرسة", "title_en": "First school day",
+     "grad": ["#c7d2fe", "#fde68a"],
+     "scene": "wearing a backpack waving happily in front of a simple school building on the first day"},
+    {"id": "day_brush", "emoji": "🪥", "title": "بيغسل سنانه", "title_en": "Brushing teeth",
+     "grad": ["#a5f3fc", "#bbf7d0"],
+     "scene": "brushing teeth in front of a bathroom mirror with a toothbrush and toothpaste, foam and bubbles around"},
+    {"id": "day_sleep", "emoji": "🛏️", "title": "وقت النوم", "title_en": "Bedtime",
+     "grad": ["#ddd6fe", "#c7d2fe"],
+     "scene": "lying in bed hugging a teddy bear with a moon and stars visible through the window"},
+    {"id": "day_help", "emoji": "🧹", "title": "بيساعد ماما", "title_en": "Helping at home",
+     "grad": ["#bbf7d0", "#fed7aa"],
+     "scene": "helping tidy the room, holding a broom and putting toys into a toy box"},
+    {"id": "day_eat", "emoji": "🥗", "title": "بياكل صحي", "title_en": "Healthy eating",
+     "grad": ["#d9f99d", "#bbf7d0"],
+     "scene": "sitting at a table happily eating a plate of fruit and vegetables with a glass of milk"},
+    {"id": "day_wash", "emoji": "🧼", "title": "بيغسل إيديه", "title_en": "Washing hands",
+     "grad": ["#bae6fd", "#a5f3fc"],
+     "scene": "washing hands at a sink with soap bubbles and a towel hanging nearby"},
+    {"id": "day_read", "emoji": "📖", "title": "بيقرأ قصة", "title_en": "Reading",
+     "grad": ["#c7d2fe", "#fbcfe8"],
+     "scene": "sitting in a cozy reading corner holding an open story book with a stack of books beside"},
+    {"id": "day_toys", "emoji": "🧸", "title": "بيرتب لعبه", "title_en": "Tidying toys",
+     "grad": ["#fed7aa", "#fbcfe8"],
+     "scene": "placing toys neatly on a shelf with a teddy bear, blocks and a toy car"},
+    {"id": "day_doctor", "emoji": "🩹", "title": "عند الدكتور", "title_en": "Doctor visit",
+     "grad": ["#bfdbfe", "#bbf7d0"],
+     "scene": "sitting bravely on a clinic bed while a friendly doctor checks with a stethoscope"},
+    {"id": "day_park", "emoji": "🛝", "title": "في الملاهي", "title_en": "Playground",
+     "grad": ["#bbf7d0", "#fde68a"],
+     "scene": "sliding down a playground slide with a swing and a sandbox nearby in a simple park"},
+    {"id": "day_pray", "emoji": "🤲", "title": "بيصلي", "title_en": "Praying",
+     "grad": ["#c7d2fe", "#bbf7d0"],
+     "scene": "kneeling on a small prayer rug with hands raised in a calm quiet room"},
+    {"id": "day_rain", "emoji": "☔", "title": "يوم مطر", "title_en": "Rainy day",
+     "grad": ["#bae6fd", "#c7d2fe"],
+     "scene": "wearing a raincoat and boots holding an umbrella and jumping in a puddle on a rainy street"},
+]
+
+OCCASIONS_SCENES = [
+    {"id": "oc_birthday", "emoji": "🎂", "title": "عيد ميلاد", "title_en": "Birthday",
+     "grad": ["#fbcfe8", "#fde68a"],
+     "scene": "wearing a party hat blowing candles on a big birthday cake with balloons and streamers around"},
+    {"id": "oc_newborn", "emoji": "👶", "title": "مولود جديد", "title_en": "New baby",
+     "grad": ["#fbcfe8", "#bae6fd"],
+     "scene": "gently holding a swaddled newborn baby while sitting in a cozy chair with a soft blanket"},
+    {"id": "oc_graduation", "emoji": "🎓", "title": "تخرّج", "title_en": "Graduation",
+     "grad": ["#c7d2fe", "#fde68a"],
+     "scene": "wearing a graduation cap and gown holding a rolled diploma with confetti falling around"},
+    {"id": "oc_travel", "emoji": "✈️", "title": "أول سفر", "title_en": "First trip",
+     "grad": ["#bae6fd", "#ddd6fe"],
+     "scene": "pulling a small suitcase at an airport gate with a plane visible through the big window"},
+    {"id": "oc_newhome", "emoji": "🏡", "title": "بيت جديد", "title_en": "New home",
+     "grad": ["#bbf7d0", "#fed7aa"],
+     "scene": "carrying a moving box into a new house with a garden, a door and a welcome mat"},
+    {"id": "oc_wedding", "emoji": "💐", "title": "فرح العيلة", "title_en": "Family wedding",
+     "grad": ["#fbcfe8", "#ddd6fe"],
+     "scene": "dressed up smartly holding a small flower basket at a family celebration with decorations and lights"},
+    {"id": "oc_tooth", "emoji": "🦷", "title": "أول سنة وقعت", "title_en": "Lost tooth",
+     "grad": ["#a5f3fc", "#fbcfe8"],
+     "scene": "smiling widely showing a missing front tooth while holding a small tooth pillow"},
+    {"id": "oc_summer", "emoji": "☀️", "title": "إجازة الصيف", "title_en": "Summer holiday",
+     "grad": ["#fde68a", "#bae6fd"],
+     "scene": "building a sandcastle on a sunny beach with a bucket, spade, beach ball and small waves"},
+    {"id": "oc_winter", "emoji": "❄️", "title": "الشتا", "title_en": "Winter day",
+     "grad": ["#bae6fd", "#e2e8f0"],
+     "scene": "wearing a hat, scarf and mittens building a snowman with snowflakes falling around"},
+    {"id": "oc_friends", "emoji": "🤝", "title": "مع الأصحاب", "title_en": "With friends",
+     "grad": ["#bbf7d0", "#fde68a"],
+     "scene": "playing happily with two cartoon friends in a park, holding hands and laughing together"},
+    {"id": "oc_picnic", "emoji": "🧺", "title": "بيكنيك", "title_en": "Picnic",
+     "grad": ["#d9f99d", "#fde68a"],
+     "scene": "sitting on a picnic blanket with a basket of food under a big tree with birds flying above"},
+    {"id": "oc_gift", "emoji": "🎁", "title": "هدية مفاجأة", "title_en": "Surprise gift",
+     "grad": ["#fbcfe8", "#fed7aa"],
+     "scene": "opening a big wrapped gift box with a ribbon, looking surprised and delighted, confetti around"},
+]
+
+# Each pack is a separate book type in the admin book picker.
+SCENE_PACKS = [
+    {"id": "jobs", "emoji": "🩺", "title": "كتاب المهن",
+     "desc": "الطفل في 12 مهنة — دكتور، مهندس، طيار…",
+     "scenes": JOBS_SCENES},
+    {"id": "heroes", "emoji": "🦸", "title": "كتاب الأبطال والخيال",
+     "desc": "سوبر هيرو، فارس، قرصان، ساحر، تنين…",
+     "scenes": HEROES_SCENES},
+    {"id": "animals", "emoji": "🦁", "title": "كتاب الحيوانات",
+     "desc": "أسد، دولفين، ديناصور، سفاري، مزرعة…",
+     "scenes": ANIMALS_SCENES},
+    {"id": "sports", "emoji": "⚽", "title": "كتاب الرياضة",
+     "desc": "كورة، سباحة، كاراتيه، جمباز، بطولة…",
+     "scenes": SPORTS_SCENES},
+    {"id": "girls", "emoji": "👑", "title": "كتاب عالم البنات",
+     "desc": "باليرينا، أميرة، جنية، يونيكورن…",
+     "scenes": GIRLS_SCENES},
+    {"id": "egypt", "emoji": "🐫", "title": "كتاب مصر والتراث",
+     "desc": "فرعون، الأهرامات، فانوس رمضان، النيل…",
+     "scenes": EGYPT_SCENES},
+    {"id": "daily", "emoji": "🪥", "title": "كتاب يوميات الطفل",
+     "desc": "المدرسة، النوم، النضافة، المساعدة…",
+     "scenes": DAILY_SCENES},
+    {"id": "occasions", "emoji": "🎂", "title": "كتاب المناسبات",
+     "desc": "عيد ميلاد، تخرّج، سفر، صيف، شتا…",
+     "scenes": OCCASIONS_SCENES},
+]
+
+# Public tool (/app) keeps showing the professions pack only.
+SCENES = JOBS_SCENES
+# Every scene across all packs — used for id lookup and the admin picker.
+ALL_SCENES = [s for pack in SCENE_PACKS for s in pack["scenes"]]
 
 FONT_CANDIDATES = [
     "/System/Library/Fonts/SFArabic.ttf",
@@ -502,7 +809,7 @@ def admin_required(view):
 
 
 def scene_title(scene_id: str) -> str:
-    for s in SCENES:
+    for s in ALL_SCENES:
         if s["id"] == scene_id:
             return f'{s["emoji"]} {s["title"]}'
     if scene_id.startswith("custom_"):
@@ -1428,7 +1735,7 @@ def validate_portrait_image(img: Image.Image) -> Optional[str]:
 
 
 def scene_by_id(scene_id: str, d: Optional[Path] = None):
-    for s in SCENES:
+    for s in ALL_SCENES:
         if s["id"] == scene_id:
             return s
     if d and CUSTOM_ID_RE.match(scene_id):
@@ -2498,7 +2805,9 @@ def admin_logout():
 @admin_required
 def admin_dashboard():
     stats = collect_admin_stats()
-    return render_template("admin.html", stats=stats, scenes=SCENES)
+    return render_template(
+        "admin.html", stats=stats, scenes=ALL_SCENES, scene_packs=SCENE_PACKS
+    )
 
 
 @app.route("/admin/api/quick-book/upload", methods=["POST"])

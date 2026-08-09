@@ -1194,6 +1194,20 @@
   .qb-page-opt.active {
     border-color: rgba(56,189,248,0.55); background: var(--primary-dim); color: var(--primary);
   }
+  .qb-packs {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
+  }
+  .qb-pack {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 12px; border-radius: 999px; border: 1.5px solid var(--border-2);
+    background: var(--bg-2); cursor: pointer; transition: all .15s;
+    font-size: 13px; font-weight: 700; color: var(--muted);
+  }
+  .qb-pack:hover { border-color: rgba(56,189,248,0.35); }
+  .qb-pack.active {
+    border-color: rgba(56,189,248,0.6); background: var(--primary-dim); color: var(--primary);
+  }
+  .qb-pack .emoji { font-size: 16px; line-height: 1; }
   .qb-jobs {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
   }
@@ -1809,8 +1823,17 @@
         </div>
 
         <div class="qb-card">
-          <h3>4. اختيار الوظائف</h3>
-          <p class="hint">اختار عدد الوظائف = عدد الصفحات بالظبط</p>
+          <h3>4. نوع الكتاب والمواقف</h3>
+          <p class="hint">اختار نوع الكتاب، وبعدين عدد المواقف = عدد الصفحات بالظبط</p>
+          <div class="qb-packs" id="qb-packs">
+            {% for p in scene_packs %}
+            <button type="button" class="qb-pack {% if loop.first %}active{% endif %}"
+                    data-pack="{{ p.id }}" onclick="qbSetPack('{{ p.id }}')">
+              <span class="emoji">{{ p.emoji }}</span>
+              <span class="title">{{ p.title }}</span>
+            </button>
+            {% endfor %}
+          </div>
           <div class="qb-job-toolbar">
             <span class="qb-sel-count" id="qb-sel-count">مختار 0 / 8</span>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -1819,7 +1842,7 @@
             </div>
           </div>
           <div class="qb-jobs" id="qb-jobs">
-            {% for s in scenes %}
+            {% for s in scene_packs[0].scenes %}
             <div class="qb-job" data-id="{{ s.id }}" data-title="{{ s.title }}" onclick="qbToggleJob(this)">
               <span class="emoji">{{ s.emoji }}</span>
               <span class="title">{{ s.title }}</span>
@@ -2044,6 +2067,7 @@ let _obPhoto = null;
 let _obPageCount = 8;
 let _obBusy = false;
 let _obView = 'detail'; // detail | products | coloring
+let _obPackId = 'jobs';  // selected book type (scene pack)
 let _obLastScenes = []; // planned / generated scene ids
 let _obStep = 'setup'; // setup|cover|pages|ending|pdf|done
 let _obState = {
@@ -2189,6 +2213,32 @@ const ALL_SCENES = [
   {% endfor %}
 ];
 
+// Book types — each pack is one product in the book picker
+const SCENE_PACKS = [
+  {% for p in scene_packs %}
+  {
+    id: {{ p.id | tojson }}, title: {{ p.title | tojson }},
+    emoji: {{ p.emoji | tojson }}, desc: {{ p.desc | tojson }},
+    scenes: [
+      {% for s in p.scenes %}
+      { id: {{ s.id | tojson }}, title: {{ s.title | tojson }}, emoji: {{ s.emoji | tojson }} },
+      {% endfor %}
+    ],
+  },
+  {% endfor %}
+];
+
+function packById(id) {
+  return SCENE_PACKS.find(p => p.id === id) || SCENE_PACKS[0];
+}
+
+/** Which pack do these scene ids belong to? Used when resuming a saved book. */
+function packForScenes(ids) {
+  if (!ids || !ids.length) return null;
+  const first = ids[0];
+  return SCENE_PACKS.find(p => p.scenes.some(s => s.id === first)) || null;
+}
+
 const sectionMeta = {
   overview:        { title: 'نظرة عامة',       sub: 'متابعة الأداء والمستخدمين والكتب' },
   'quick-book':    { title: 'إنشاء كتاب سريع', sub: 'Kie.ai GPT Image 2 — صورة + اسم + وظائف → PDF' },
@@ -2297,6 +2347,7 @@ function showToast(msg, type = '') {
 
 /* ════════════════ Quick Book ════════════════ */
 let _qbPageCount = 8;
+let _qbPackId = 'jobs';
 let _qbFile = null;
 let _qbSessionId = null;
 let _qbBusy = false;
@@ -2358,6 +2409,22 @@ function qbSelectAuto() {
 function qbClearJobs() {
   document.querySelectorAll('.qb-job').forEach(el => el.classList.remove('selected'));
   qbUpdateSelCount();
+}
+
+function qbSetPack(packId) {
+  const pack = packById(packId);
+  _qbPackId = pack.id;
+  document.querySelectorAll('#qb-packs .qb-pack').forEach(b => {
+    b.classList.toggle('active', b.dataset.pack === pack.id);
+  });
+  const grid = document.getElementById('qb-jobs');
+  if (!grid) return;
+  grid.innerHTML = pack.scenes.map(s => `
+    <div class="qb-job" data-id="${escHtml(s.id)}" data-title="${escHtml(s.title)}" onclick="qbToggleJob(this)">
+      <span class="emoji">${s.emoji || ''}</span>
+      <span class="title">${escHtml(s.title)}</span>
+    </div>`).join('');
+  qbSelectAuto();
 }
 
 function qbOnPhoto(input) {
@@ -3338,15 +3405,18 @@ function renderBookProductPicker(o) {
     </div>
     <div class="so-detail-card full">
       <h3 class="so-detail-section-title">نوع الكتاب</h3>
+      <p class="hint" style="margin:-4px 0 12px">كل نوع = باقة مواقف مختلفة. نفس الخطوات: صورة + اسم → غلاف + صفحات تلوين + نهاية → PDF على الطلب.</p>
       <div class="ob-products">
-        <button type="button" class="ob-product primary" onclick="startOrderColoringBook(${o.id})">
-          <span class="emoji">🎨</span>
-          <div class="name">كتاب تلوين</div>
-          <div class="desc">صورة الطفل + الاسم → صفحات تلوين + غلاف + PDF محفوظ على الطلب</div>
-        </button>
+        ${SCENE_PACKS.map((p, i) => `
+        <button type="button" class="ob-product ${i === 0 ? 'primary' : ''}"
+                onclick="startOrderColoringBook(${o.id}, '${escHtml(p.id)}')">
+          <span class="emoji">${p.emoji}</span>
+          <div class="name">${escHtml(p.title)}</div>
+          <div class="desc">${escHtml(p.desc)}</div>
+        </button>`).join('')}
         <button type="button" class="ob-product" disabled title="قريبًا">
           <span class="emoji">📖</span>
-          <div class="name">كتاب قصة</div>
+          <div class="name">كتاب قصة ملوّن</div>
           <div class="desc">قريبًا</div>
         </button>
       </div>
@@ -3620,7 +3690,7 @@ function obBuildOrderedPreview(coverPage, okPages, endingPage) {
   return items;
 }
 
-async function startOrderColoringBook(orderId) {
+async function startOrderColoringBook(orderId, packId) {
   const o = _obOrder && _obOrder.id === orderId
     ? _obOrder
     : _soAll.find(x => x.id === orderId);
@@ -3632,6 +3702,7 @@ async function startOrderColoringBook(orderId) {
     showToast('ارفع صورة للطفل على الطلب الأول', 'err');
     return;
   }
+  _obPackId = packById(packId).id;
   _obView = 'coloring';
   _obPhoto = o.photos[0];
   _obSessionId = null;
@@ -3650,9 +3721,15 @@ function renderOrderColoringBook(o) {
   const root = document.getElementById('so-detail-root');
   if (!root || !o) return;
 
+  // Resuming a saved book? Follow the pack its scenes came from.
+  const savedForPack = o.book_scenes_list || (o.book_progress_data && o.book_progress_data.scenes) || [];
+  const resumedPack = packForScenes(savedForPack);
+  if (resumedPack) _obPackId = resumedPack.id;
+  const pack = packById(_obPackId);
+
   const titleEl = document.getElementById('page-title');
   const subEl = document.getElementById('page-sub');
-  if (titleEl) titleEl.textContent = 'كتاب تلوين · طلب #' + o.id;
+  if (titleEl) titleEl.textContent = pack.title + ' · طلب #' + o.id;
   if (subEl) subEl.textContent = 'خطوات واضحة — احفظ أي خطوة وكمّل لاحقًا';
   if (location.hash !== '#order/' + o.id + '/book') {
     history.pushState(null, '', '#order/' + o.id + '/book');
@@ -3670,7 +3747,7 @@ function renderOrderColoringBook(o) {
         </button>`).join('')
     : '<p class="muted">مفيش صور — ارجع وارفعي صورة على الطلب.</p>';
 
-  const jobsHTML = ALL_SCENES.map(s => `
+  const jobsHTML = pack.scenes.map(s => `
     <div class="qb-job" data-id="${escHtml(s.id)}" data-title="${escHtml(s.title)}" onclick="obToggleJob(this)">
       <span class="emoji">${s.emoji || ''}</span>
       <span class="title">${escHtml(s.title)}</span>
@@ -3715,8 +3792,8 @@ function renderOrderColoringBook(o) {
       </div>
 
       <div class="qb-card">
-        <h3>4. اختيار الوظائف</h3>
-        <p class="hint">اختار عدد الوظائف = عدد الصفحات بالظبط</p>
+        <h3>4. اختيار المواقف — ${escHtml(pack.emoji + ' ' + pack.title)}</h3>
+        <p class="hint">اختار عدد المواقف = عدد الصفحات بالظبط · لتغيير نوع الكتاب ارجع لأنواع الكتب</p>
         <div class="qb-job-toolbar">
           <span class="qb-sel-count" id="ob-sel-count">مختار 0 / 8</span>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
