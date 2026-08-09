@@ -2067,7 +2067,8 @@ let _obPhoto = null;
 let _obPageCount = 8;
 let _obBusy = false;
 let _obView = 'detail'; // detail | products | coloring
-let _obPackId = 'jobs';  // selected book type (scene pack)
+let _obPackId = 'jobs';       // selected book type (scene pack)
+let _obPackExplicit = false;  // true when the admin just picked a type from the picker
 let _obLastScenes = []; // planned / generated scene ids
 let _obStep = 'setup'; // setup|cover|pages|ending|pdf|done
 let _obState = {
@@ -2591,6 +2592,7 @@ async function qbCreateBook() {
         session_id: _qbSessionId,
         scenes: chunks[i],
         force: false,
+        pack_id: _qbPackId,
       }, {
         onTick: (d) => qbSetProgress(base, `دفعة ${i + 1}/${chunks.length} · ${Math.round(d.elapsed_sec || 0)} ث`),
       });
@@ -2625,6 +2627,7 @@ async function qbCreateBook() {
         child_name: name,
         page_count: order.length || _qbPageCount,
         force: false,
+        pack_id: _qbPackId,
       }, {
         onTick: (d) => qbSetProgress(78, `غلاف البداية · ${Math.round(d.elapsed_sec || 0)} ث`),
       });
@@ -2646,6 +2649,7 @@ async function qbCreateBook() {
         session_id: _qbSessionId,
         child_name: name,
         force: false,
+        pack_id: _qbPackId,
       }, {
         onTick: (d) => qbSetProgress(88, `صفحة النهاية · ${Math.round(d.elapsed_sec || 0)} ث`),
       });
@@ -3382,6 +3386,7 @@ function openBookFlow(orderId) {
 
 function renderBookProductPicker(o) {
   _obView = 'products';
+  _obPackExplicit = false;  // back at the picker — nothing chosen yet this round
   const root = document.getElementById('so-detail-root');
   if (!root || !o) return;
   const titleEl = document.getElementById('page-title');
@@ -3703,6 +3708,21 @@ async function startOrderColoringBook(orderId, packId) {
     return;
   }
   _obPackId = packById(packId).id;
+  _obPackExplicit = true;   // this choice wins over whatever book is already saved
+
+  // The order's session caches cover/pages/ending on disk. If the saved book belongs to a
+  // different type, resuming it would hand back the old book's cover — start a fresh one.
+  const saved = o.book_scenes_list || (o.book_progress_data && o.book_progress_data.scenes) || [];
+  const savedPack = packForScenes(saved);
+  const switchingType = !!savedPack && savedPack.id !== _obPackId;
+  if (switchingType) {
+    const ok = confirm(
+      `الطلب ده عليه «${savedPack.title}» محفوظ.\n` +
+      `هتبدأ «${packById(_obPackId).title}» من الأول — الغلاف والصفحات القديمة هتتستبدل.\n\nتكمل؟`
+    );
+    if (!ok) return;
+  }
+
   _obView = 'coloring';
   _obPhoto = o.photos[0];
   _obSessionId = null;
@@ -3712,7 +3732,7 @@ async function startOrderColoringBook(orderId, packId) {
   _obImgCache = {};
   _obLastGenerated = null;
   renderOrderColoringBook(o);
-  await obEnsureSession({ forceNew: false });
+  await obEnsureSession({ forceNew: switchingType });
 }
 
 function renderOrderColoringBook(o) {
@@ -3721,11 +3741,17 @@ function renderOrderColoringBook(o) {
   const root = document.getElementById('so-detail-root');
   if (!root || !o) return;
 
-  // Resuming a saved book? Follow the pack its scenes came from.
+  // Infer the pack from a saved book ONLY when the admin didn't just pick one —
+  // otherwise an order that already has a jobs book would drag every other type back to jobs.
   const savedForPack = o.book_scenes_list || (o.book_progress_data && o.book_progress_data.scenes) || [];
-  const resumedPack = packForScenes(savedForPack);
-  if (resumedPack) _obPackId = resumedPack.id;
+  if (!_obPackExplicit) {
+    const resumedPack = packForScenes(savedForPack);
+    if (resumedPack) _obPackId = resumedPack.id;
+  }
   const pack = packById(_obPackId);
+  // A saved selection only applies to the pack it came from.
+  const savedPackMatches = !savedForPack.length
+    || pack.scenes.some(s => s.id === savedForPack[0]);
 
   const titleEl = document.getElementById('page-title');
   const subEl = document.getElementById('page-sub');
@@ -3876,7 +3902,7 @@ function renderOrderColoringBook(o) {
 
   _obPageCount = o.book_page_count && [1, 8, 12].includes(o.book_page_count) ? o.book_page_count : 8;
   obSetPageCount(_obPageCount, null);
-  const savedScenes = o.book_scenes_list || (o.book_progress_data && o.book_progress_data.scenes) || [];
+  const savedScenes = savedPackMatches ? savedForPack : [];
   if (savedScenes.length) {
     if ([1, 8, 12].includes(savedScenes.length)) {
       _obPageCount = savedScenes.length;
@@ -3885,6 +3911,8 @@ function renderOrderColoringBook(o) {
     obSelectScenes(savedScenes);
     _obLastScenes = [...savedScenes];
   } else {
+    // Different book type than the saved one — start this type fresh.
+    _obLastScenes = [];
     obSelectAuto();
   }
   if (o.book_progress_data && o.book_progress_data.child_name) {
@@ -4440,6 +4468,7 @@ async function obGenerateCover(name, pageCount, force) {
       child_name: name,
       page_count: pageCount,
       force: !!force,
+      pack_id: _obPackId,
       order_id: _obOrder && _obOrder.id,
     }, {
       onTick: (d) => {
@@ -4475,6 +4504,7 @@ async function obGenerateEnding(name, force) {
       session_id: _obSessionId,
       child_name: name,
       force: !!force,
+      pack_id: _obPackId,
       order_id: _obOrder && _obOrder.id,
     }, {
       onTick: (d) => {
@@ -4513,6 +4543,7 @@ async function obGenerateOnePage(sid, force) {
       session_id: _obSessionId,
       scenes: [sid],
       force: !!force,
+      pack_id: _obPackId,
       order_id: _obOrder && _obOrder.id,
     });
     const secs = Math.round(((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0) / 100) / 10;

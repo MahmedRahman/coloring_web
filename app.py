@@ -444,32 +444,135 @@ OCCASIONS_SCENES = [
 ]
 
 # Each pack is a separate book type in the admin book picker.
+# Theme keys drive the whole book, not just the scene list:
+#   book_title / tagline / ending_line — Arabic text burned into cover + ending
+#   cover_scene / ending_scene         — English illustration brief for those two pages
+#   mood / palette                     — style fragments so pages of one book match
 SCENE_PACKS = [
     {"id": "jobs", "emoji": "🩺", "title": "كتاب المهن",
      "desc": "الطفل في 12 مهنة — دكتور، مهندس، طيار…",
+     "book_title": "كتاب المهن",
+     "tagline": "لون معايا كل المهن!",
+     "ending_line": "رحلة المهن",
+     "cover_scene": "inside a bright magical art studio full of paintings, brushes, sunlight and "
+                    "colorful canvases, with small icons of a stethoscope, a hard hat and a paint "
+                    "palette floating around",
+     "ending_scene": "sitting happily behind an open coloring book surrounded by little symbols of "
+                     "every profession — a stethoscope, a chef hat, a rocket and a paintbrush",
+     "mood": "friendly professional setting, one clear tool of the job in hand",
+     "palette": ["#7c3aed", "#38bdf8"],
      "scenes": JOBS_SCENES},
+
     {"id": "heroes", "emoji": "🦸", "title": "كتاب الأبطال والخيال",
      "desc": "سوبر هيرو، فارس، قرصان، ساحر، تنين…",
+     "book_title": "كتاب الأبطال",
+     "tagline": "لون مغامرتك يا بطل!",
+     "ending_line": "رحلة الأبطال",
+     "cover_scene": "standing heroically on a cliff at sunset wearing a flowing cape, with a castle, "
+                    "a friendly dragon and glowing magic sparks in the background",
+     "ending_scene": "sitting on a treasure chest holding a shield and a magic wand, with a cape, a "
+                     "small dragon and a starry sky behind",
+     "mood": "bold heroic action pose, dynamic energy lines, adventurous atmosphere",
+     "palette": ["#dc2626", "#1d4ed8"],
      "scenes": HEROES_SCENES},
+
     {"id": "animals", "emoji": "🦁", "title": "كتاب الحيوانات",
      "desc": "أسد، دولفين، ديناصور، سفاري، مزرعة…",
+     "book_title": "كتاب الحيوانات",
+     "tagline": "لون أصحابك الحيوانات!",
+     "ending_line": "رحلة الحيوانات",
+     "cover_scene": "hugging a friendly cartoon lion cub in a lush jungle clearing with a giraffe, a "
+                    "parrot and a dolphin peeking from a pond, big leaves and vines framing the scene",
+     "ending_scene": "surrounded by all the animal friends from the book — a lion, a puppy, a bunny, a "
+                     "penguin and a parrot — waving goodbye in a green meadow",
+     "mood": "warm friendly animals with big round eyes, gentle nature background",
+     "palette": ["#16a34a", "#f59e0b"],
      "scenes": ANIMALS_SCENES},
+
     {"id": "sports", "emoji": "⚽", "title": "كتاب الرياضة",
      "desc": "كورة، سباحة، كاراتيه، جمباز، بطولة…",
+     "book_title": "كتاب الأبطال الرياضيين",
+     "tagline": "لون وابدأ التمرين!",
+     "ending_line": "رحلة البطولة",
+     "cover_scene": "standing proudly in sportswear inside a stadium with cheering crowd silhouettes, "
+                    "holding a football, with a medal, a trophy and a running track behind",
+     "ending_scene": "standing on the first place podium holding a golden trophy with a medal, "
+                     "confetti falling and a stadium scoreboard behind",
+     "mood": "energetic sporty motion, motion lines, stadium or court setting",
+     "palette": ["#0891b2", "#22c55e"],
      "scenes": SPORTS_SCENES},
+
     {"id": "girls", "emoji": "👑", "title": "كتاب عالم البنات",
      "desc": "باليرينا، أميرة، جنية، يونيكورن…",
+     "book_title": "كتاب عالمي الجميل",
+     "tagline": "لون عالمك الوردي!",
+     "ending_line": "رحلة الأحلام",
+     "cover_scene": "wearing a princess gown and a small crown in an enchanted garden with a unicorn, "
+                    "butterflies, a rainbow and floating flower petals",
+     "ending_scene": "sitting on a flower swing with a unicorn and a fairy friend under a rainbow, "
+                     "petals and sparkles floating around",
+     "mood": "soft dreamy fairytale atmosphere, flowers sparkles and ribbons in the scene",
+     "palette": ["#ec4899", "#a855f7"],
      "scenes": GIRLS_SCENES},
+
     {"id": "egypt", "emoji": "🐫", "title": "كتاب مصر والتراث",
      "desc": "فرعون، الأهرامات، فانوس رمضان، النيل…",
+     "book_title": "كتاب مصر الجميلة",
+     "tagline": "لون بلدك يا حبيبي!",
+     "ending_line": "رحلة مصر",
+     "cover_scene": "wearing a pharaoh nemes headdress standing in front of the great pyramids and the "
+                    "Sphinx at golden sunset, with a felucca sail on the Nile and a Ramadan lantern "
+                    "glowing at the side",
+     "ending_scene": "sitting on a woven mat holding a Ramadan lantern with the pyramids, palm trees "
+                     "and a Nile sunset behind, warm golden light",
+     "mood": "warm golden Egyptian light, traditional Arabic patterns and ornaments in the background",
+     "palette": ["#d97706", "#0e7490"],
      "scenes": EGYPT_SCENES},
+
     {"id": "daily", "emoji": "🪥", "title": "كتاب يوميات الطفل",
      "desc": "المدرسة، النوم، النضافة، المساعدة…",
+     "book_title": "كتاب يومي",
+     "tagline": "لون يومك خطوة بخطوة!",
+     "ending_line": "رحلة يومي",
+     "cover_scene": "standing in a cozy sunny bedroom with a backpack, a toothbrush, a story book and a "
+                    "teddy bear arranged around, a wall clock showing a friendly morning",
+     "ending_scene": "tucked in bed hugging a teddy bear with a warm lamp, a story book and a moon and "
+                     "stars through the window",
+     "mood": "calm cozy everyday home setting, soft reassuring atmosphere",
+     "palette": ["#0ea5e9", "#84cc16"],
      "scenes": DAILY_SCENES},
+
     {"id": "occasions", "emoji": "🎂", "title": "كتاب المناسبات",
      "desc": "عيد ميلاد، تخرّج، سفر، صيف، شتا…",
+     "book_title": "كتاب المناسبات",
+     "tagline": "لون أحلى لحظاتك!",
+     "ending_line": "رحلة الذكريات",
+     "cover_scene": "wearing a party hat behind a big birthday cake with candles, balloons, gift boxes "
+                    "and colorful streamers filling the scene, confetti in the air",
+     "ending_scene": "surrounded by memories of the book — balloons, a graduation cap, a suitcase and a "
+                     "gift box — holding a photo album with confetti falling",
+     "mood": "festive celebration atmosphere, balloons confetti and decorations in the scene",
+     "palette": ["#f43f5e", "#f59e0b"],
      "scenes": OCCASIONS_SCENES},
 ]
+
+DEFAULT_PACK_ID = "jobs"
+
+
+def pack_by_id(pack_id: Optional[str]) -> dict:
+    """Resolve a pack id to its theme; falls back to the professions pack."""
+    for p in SCENE_PACKS:
+        if p["id"] == pack_id:
+            return p
+    return SCENE_PACKS[0]
+
+
+def pack_for_scene(scene_id: str) -> dict:
+    """Which book does this scene belong to? Used when the client sends no pack id."""
+    for p in SCENE_PACKS:
+        if any(s["id"] == scene_id for s in p["scenes"]):
+            return p
+    return SCENE_PACKS[0]
 
 # Public tool (/app) keeps showing the professions pack only.
 SCENES = JOBS_SCENES
@@ -1388,6 +1491,7 @@ def build_prompt(
     line_weight: str = "normal",
     detail: str = "normal",
     art_style: str = "cartoon",
+    pack_id: Optional[str] = None,
 ) -> str:
     style = PROMPT_VARIANTS.get(variant, PROMPT_VARIANTS[DEFAULT_VARIANT])
     extras = ", ".join([
@@ -1395,7 +1499,10 @@ def build_prompt(
         DETAIL_LEVEL.get(detail, DETAIL_LEVEL["normal"]),
         ART_STYLE.get(art_style, ART_STYLE["cartoon"]),
     ])
-    return f"{style}, {extras}, the child is {scene_text}"
+    # Pack mood keeps every page of one book looking like the same book.
+    mood = pack_by_id(pack_id)["mood"] if pack_id else ""
+    tail = f", {mood}" if mood else ""
+    return f"{style}, {extras}, the child is {scene_text}{tail}"
 
 
 def arabic_text(text: str) -> str:
@@ -1457,8 +1564,11 @@ ENDING_SCENE_ID = "ending"
 COVER_SCENE_ID = "cover"
 
 
-def build_cover_prompt(child_name: str = "", page_count: int = 0) -> str:
-    """Premium full-color personalized front cover (not line-art)."""
+def build_cover_prompt(
+    child_name: str = "", page_count: int = 0, pack_id: Optional[str] = None
+) -> str:
+    """Premium full-color personalized front cover (not line-art), themed per book type."""
+    pack = pack_by_id(pack_id)
     name = (child_name or "").strip()[:40] or "طفلي"
     pages = int(page_count) if page_count and int(page_count) > 0 else 0
     pages_label = f"{pages} صفحة تلوين" if pages else "صفحات تلوين"
@@ -1473,23 +1583,24 @@ def build_cover_prompt(child_name: str = "", page_count: int = 0) -> str:
         "Cute premium children's brand identity. Spacious clean layout. High-end children's book design. "
         "Soft lighting. Vibrant but elegant colors. "
         "Typography layout with clear readable playful Arabic text: "
-        'Top: "كتاب التلوين". '
+        f'Top: "{pack["book_title"]}". '
         f'Below: "خاص بـ {name}". '
         'Below: "كتاب تلوين للأطفال". '
         f'Below: "{pages_label}". '
         'Right side: Round badge/logo area for "لوني". '
         "Center: Large brush-paint frame containing the personalized child illustration. "
-        "The child is smiling, facing forward, holding colorful crayons and a rainbow paintbrush "
-        "inside a magical art studio full of paintings, brushes, sunlight, colorful canvases and warm atmosphere. "
-        'Bottom: Pink brush stroke banner with Arabic text "لون معايا كل المهن!". '
+        "The child is smiling, facing forward, "
+        f'{pack["cover_scene"]}. '
+        f'Bottom: Pink brush stroke banner with Arabic text "{pack["tagline"]}". '
         "Playful Arabic typography. Highly detailed. Premium children's book cover. "
         "Disney/Pixar quality. Ultra clean. Full-page edge-to-edge, no white borders, no letterboxing. "
         "No watermark. No extra text. Full color illustration (not black-and-white line art)."
     )
 
 
-def build_ending_prompt(child_name: str = "") -> str:
-    """Full-color premium final page (not line-art coloring)."""
+def build_ending_prompt(child_name: str = "", pack_id: Optional[str] = None) -> str:
+    """Full-color premium final page (not line-art coloring), themed per book type."""
+    pack = pack_by_id(pack_id)
     name = (child_name or "").strip()[:40]
     name_bit = (
         f'The child is named "{name}". Show the exact same child from the reference photo — '
@@ -1507,12 +1618,12 @@ def build_ending_prompt(child_name: str = "") -> str:
         "same color palette, same lighting, same children's brand identity. "
         "Top center Arabic text clearly readable: "
         '"تهانينا!" and below it "لقد انتهيت من". '
-        'Large title: "رحلة التلوين". '
+        f'Large title: "{pack["ending_line"]}". '
         "Below on a purple paint stroke the Arabic text: "
         '"كل رسمة لونتها... تصبح ذكرى جميلة تبقى معك ♡". '
-        "Center illustration: the same child sitting happily behind an open coloring book "
-        "filled with colorful drawings. Large rainbow behind the child. "
-        "Paint brushes, crayons, paint jars, palette, art supplies around the table. "
+        f'Center illustration: the same child {pack["ending_scene"]}. '
+        "Large rainbow behind the child. "
+        "Paint brushes, crayons, paint jars, palette, art supplies around the scene. "
         "Bottom Arabic text clearly readable: "
         '"استمر في الإبداع... فكل صفحة جديدة تنتظرك لتلونها! 💖". '
         'Bottom center: round "لوني" logo. '
@@ -1540,15 +1651,16 @@ async def generate_cover_page_async(
     force: bool = False,
     use_kie: bool = False,
     ref_url: Optional[str] = None,
+    pack_id: Optional[str] = None,
 ) -> dict:
-    """Generate the premium full-color front cover."""
+    """Generate the premium full-color front cover, themed for the chosen book type."""
     out = cover_page_path(d)
     created = False
     if force or not out.exists():
         refs = ensure_multi_refs(d)
         if not refs:
             raise RuntimeError("مفيش صورة مرجع لغلاف البداية.")
-        prompt = build_cover_prompt(child_name, page_count=page_count)
+        prompt = build_cover_prompt(child_name, page_count=page_count, pack_id=pack_id)
         if use_kie:
             if not kie_configured():
                 raise RuntimeError("KIE_API_KEY مش مضبوط لغلاف البداية.")
@@ -1579,15 +1691,16 @@ async def generate_ending_page_async(
     force: bool = False,
     use_kie: bool = False,
     ref_url: Optional[str] = None,
+    pack_id: Optional[str] = None,
 ) -> dict:
-    """Generate the premium full-color book ending page (last page)."""
+    """Generate the premium full-color ending page, themed for the chosen book type."""
     out = ending_page_path(d)
     created = False
     if force or not out.exists():
         refs = ensure_multi_refs(d)
         if not refs:
             raise RuntimeError("مفيش صورة مرجع لصفحة النهاية.")
-        prompt = build_ending_prompt(child_name)
+        prompt = build_ending_prompt(child_name, pack_id=pack_id)
         if use_kie:
             if not kie_configured():
                 raise RuntimeError("KIE_API_KEY مش مضبوط لصفحة النهاية.")
@@ -1841,6 +1954,7 @@ async def generate_one_async(
             line_weight=style.get("line_weight", "normal"),
             detail=style.get("detail", "normal"),
             art_style=style.get("art_style", "cartoon"),
+            pack_id=pack_for_scene(scene_id)["id"],
         )
         img_bytes = await call_model_async(prompt, refs, client)
         Image.open(io.BytesIO(img_bytes)).convert("RGB").save(out, "JPEG", quality=90)
@@ -1879,6 +1993,7 @@ async def generate_one_kie_async(
             line_weight=style.get("line_weight", "normal"),
             detail=style.get("detail", "normal"),
             art_style=style.get("art_style", "cartoon"),
+            pack_id=pack_for_scene(scene_id)["id"],
         )
         prompt = (
             f"{prompt}. "
@@ -2984,6 +3099,7 @@ def admin_quick_book_cover():
     data = request.get_json(silent=True) or {}
     session_id = (data.get("session_id") or "").strip()
     child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
+    pack_id = pack_by_id((data.get("pack_id") or "").strip())["id"]
     force = bool(data.get("force"))
     use_async = bool(data.get("async") or data.get("background"))
     if "include_image" in data or "include_b64" in data:
@@ -3036,6 +3152,7 @@ def admin_quick_book_cover():
                     force=force,
                     use_kie=True,
                     ref_url=ref_url,
+                    pack_id=pack_id,
                 )
 
         page = run_async(_run())
@@ -3072,6 +3189,7 @@ def admin_quick_book_ending():
     data = request.get_json(silent=True) or {}
     session_id = (data.get("session_id") or "").strip()
     child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
+    pack_id = pack_by_id((data.get("pack_id") or "").strip())["id"]
     force = bool(data.get("force"))
     use_async = bool(data.get("async") or data.get("background"))
     if "include_image" in data or "include_b64" in data:
@@ -3119,6 +3237,7 @@ def admin_quick_book_ending():
                     force=force,
                     use_kie=True,
                     ref_url=ref_url,
+                    pack_id=pack_id,
                 )
 
         page = run_async(_run())
