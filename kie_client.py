@@ -1,4 +1,4 @@
-"""Kie.ai client — GPT Image 2 for admin quick-book generation."""
+"""Kie.ai client — GPT Image 2 / Nano Banana for admin quick-book generation."""
 
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ KIE_UPLOAD_URL = (
 )
 # gpt-image-2 image-to-image — uses the child's photo as reference
 KIE_I2I_MODEL = os.environ.get("KIE_I2I_MODEL") or "gpt-image-2-image-to-image"
+# Google Nano Banana via Kie (image-to-image)
+KIE_NANOBANANA_MODEL = os.environ.get("KIE_NANOBANANA_MODEL") or "google/nano-banana"
 # A4-ish portrait pages
 KIE_ASPECT_RATIO = os.environ.get("KIE_ASPECT_RATIO") or "3:4"  # closest to A4 among enum
 KIE_RESOLUTION = os.environ.get("KIE_RESOLUTION") or "1K"
@@ -28,6 +30,21 @@ KIE_POLL_TIMEOUT = float(os.environ.get("KIE_POLL_TIMEOUT") or "300")
 
 def kie_configured() -> bool:
     return bool(KIE_API_KEY)
+
+
+def model_for_provider(provider: Optional[str] = None) -> str:
+    """Map UI provider id → Kie model slug."""
+    p = (provider or "chatgpt").strip().lower()
+    if p in ("nanobanana", "nano", "nano-banana", "nano_banana"):
+        return KIE_NANOBANANA_MODEL
+    return KIE_I2I_MODEL
+
+
+def normalize_provider(provider: Optional[str] = None) -> str:
+    p = (provider or "chatgpt").strip().lower()
+    if p in ("nanobanana", "nano", "nano-banana", "nano_banana"):
+        return "nanobanana"
+    return "chatgpt"
 
 
 def _auth_headers() -> dict:
@@ -87,22 +104,48 @@ async def upload_image(
     return str(url)
 
 
+def _build_i2i_input(
+    model: str,
+    prompt: str,
+    input_urls: list[str],
+    *,
+    aspect_ratio: str,
+    resolution: str,
+) -> dict[str, Any]:
+    """Schema varies slightly between gpt-image-2 and google/nano-banana."""
+    m = (model or "").lower()
+    if "nano-banana" in m or m.startswith("google/"):
+        # Nano Banana family — common Kie schema
+        return {
+            "prompt": prompt,
+            "image_urls": input_urls,
+            "output_format": "jpeg",
+            "image_size": aspect_ratio,
+        }
+    return {
+        "prompt": prompt,
+        "input_urls": input_urls,
+        "aspect_ratio": aspect_ratio,
+        "resolution": resolution,
+    }
+
+
 async def create_i2i_task(
     prompt: str,
     input_urls: list[str],
     client: httpx.AsyncClient,
     *,
+    model: Optional[str] = None,
     aspect_ratio: str = KIE_ASPECT_RATIO,
     resolution: str = KIE_RESOLUTION,
 ) -> str:
+    model_id = model or KIE_I2I_MODEL
     body: dict[str, Any] = {
-        "model": KIE_I2I_MODEL,
-        "input": {
-            "prompt": prompt,
-            "input_urls": input_urls,
-            "aspect_ratio": aspect_ratio,
-            "resolution": resolution,
-        },
+        "model": model_id,
+        "input": _build_i2i_input(
+            model_id, prompt, input_urls,
+            aspect_ratio=aspect_ratio, resolution=resolution,
+        ),
     }
     resp = await client.post(
         f"{KIE_API_BASE}/jobs/createTask",
@@ -190,6 +233,7 @@ async def generate_image_to_image(
     client: httpx.AsyncClient,
     *,
     input_url: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> tuple[bytes, str]:
     """
     Full pipeline: upload (if needed) → create task → poll → download bytes.
@@ -202,7 +246,7 @@ async def generate_image_to_image(
     if not url:
         url = await upload_image(image_path, client)
 
-    task_id = await create_i2i_task(prompt, [url], client)
+    task_id = await create_i2i_task(prompt, [url], client, model=model)
     task_data = await poll_task(task_id, client)
     result_url = extract_result_url(task_data)
     img_bytes = await download_image_bytes(result_url, client)

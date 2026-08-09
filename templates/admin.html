@@ -709,6 +709,54 @@
   .ob-product:disabled, .ob-product[disabled] {
     opacity: .45; cursor: not-allowed; transform: none;
   }
+  .ob-product.selected {
+    border-color: var(--primary);
+    background: rgba(56,189,248,0.1);
+    box-shadow: 0 0 0 2px rgba(56,189,248,0.2);
+  }
+  .ob-cost-box {
+    margin-top: 10px; padding: 14px 16px; border-radius: 12px;
+    background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.3);
+    font-size: 13.5px; line-height: 1.55; color: var(--text);
+  }
+  .ob-cost-box .big { font-size: 18px; font-weight: 800; color: var(--text); }
+  .ob-cost-box .muted { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .ob-slots {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px; margin-top: 12px;
+  }
+  .ob-slot {
+    border: 1px solid var(--border); border-radius: 12px;
+    background: rgba(6,11,20,0.45); overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .ob-slot.running { border-color: rgba(56,189,248,0.5); }
+  .ob-slot.done { border-color: rgba(52,211,153,0.45); }
+  .ob-slot.error { border-color: rgba(248,113,113,0.45); }
+  .ob-slot .slot-head {
+    padding: 8px 10px; font-size: 12px; font-weight: 700; color: var(--text);
+    border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 6px;
+  }
+  .ob-slot .slot-status { font-size: 11px; font-weight: 600; color: var(--muted); }
+  .ob-slot.running .slot-status { color: var(--primary); }
+  .ob-slot.done .slot-status { color: var(--ok); }
+  .ob-slot.error .slot-status { color: #f87171; }
+  .ob-slot .slot-body {
+    aspect-ratio: 3/4; background: #0b1220; display: grid; place-items: center;
+    min-height: 140px; position: relative;
+  }
+  .ob-slot .slot-body img {
+    width: 100%; height: 100%; object-fit: contain; cursor: zoom-in; background: #fff;
+  }
+  .ob-slot .slot-placeholder { color: var(--muted); font-size: 12px; text-align: center; padding: 12px; }
+  .ob-slot .slot-actions { padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .ob-slot .slot-cost { font-size: 11px; color: var(--muted); text-align: center; }
+  .ob-batch-bar {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+    margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+    background: rgba(56,189,248,0.08); border: 1px solid var(--border-2);
+  }
+  .ob-batch-bar .stats { font-size: 13.5px; font-weight: 700; color: var(--text); }
   .ob-photo-pick {
     display: flex; flex-wrap: wrap; gap: 10px;
   }
@@ -2072,6 +2120,9 @@ let _obPackExplicit = false;  // true when the admin just picked a type from the
 let _obBookId = null;         // special_order_books.id — each child can have many books
 let _obPdfUrl = null;
 let _obPdfFilename = null;
+let _obProvider = 'chatgpt';   // chatgpt | nanobanana
+let _obCoverMode = 'both';     // none | cover | ending | both
+let _obSlots = [];             // [{ id, kind, scene_id, title, status }]
 let _obLastScenes = []; // planned / generated scene ids
 let _obStep = 'setup'; // setup|cover|pages|ending|pdf|done
 let _obState = {
@@ -2091,6 +2142,8 @@ let _obTimerRunningFor = '';
 // Per-page coloring generation status: scene_id -> 'running' | 'done' | 'error'
 let _obPageJobs = {};
 const OB_PAGE_PARALLEL = 3; // concurrent independent coloring page jobs
+// Approx Kie 1K rates (server-injected, overridable)
+const COST_RATES = {{ (cost_rates if cost_rates is defined else {"chatgpt": 0.03, "nanobanana": 0.04, "usd_to_egp": 50}) | tojson }};
 
 
 const OB_STEPS = [
@@ -3760,6 +3813,7 @@ function obSetProgress(pct, text) {
   const t = document.getElementById('ob-progress-text');
   if (!wrap) return;
   wrap.classList.add('show');
+  wrap.style.display = '';
   if (fill) fill.style.width = Math.max(0, Math.min(100, pct)) + '%';
   if (text && t) t.textContent = text;
 }
@@ -4000,7 +4054,7 @@ function renderOrderColoringBook(o) {
     : '<p class="muted">مفيش صور — ارجع وارفعي صورة على الطلب.</p>';
 
   const jobsHTML = pack.scenes.map(s => `
-    <div class="qb-job" data-id="${escHtml(s.id)}" data-title="${escHtml(s.title)}" onclick="obToggleJob(this)">
+    <div class="qb-job" data-id="${escHtml(s.id)}" data-title="${escHtml(s.title)}" onclick="obToggleJob(this); obEstimateCost()">
       <span class="emoji">${s.emoji || ''}</span>
       <span class="title">${escHtml(s.title)}</span>
     </div>`).join('');
@@ -4009,121 +4063,120 @@ function renderOrderColoringBook(o) {
   const savedPdf = pdfHref
     ? `<a class="btn btn-sm btn-success" id="ob-saved-pdf" href="${escHtml(pdfHref)}" target="_blank">تحميل PDF المحفوظ</a>`
     : `<a class="btn btn-sm btn-success" id="ob-saved-pdf" href="#" target="_blank" style="display:none">تحميل PDF المحفوظ</a>`;
+  const cg = Number(COST_RATES.chatgpt || 0.03).toFixed(2);
+  const nb = Number(COST_RATES.nanobanana || 0.04).toFixed(2);
 
   root.innerHTML = `
     <button type="button" class="so-detail-back" onclick="openOrderDetailPage(${o.id}, { openBook:true })">← رجوع لقائمة كتب الطفل</button>
 
     <div class="qb-wrap" style="margin-top:8px">
       <div class="qb-card">
-        <h3>1. صورة الطفل (من الطلب)</h3>
-        <p class="hint">اتاخدت تلقائي من صور الطلب — تقدر تغيّر الصورة المختارة</p>
+        <h3>1. صورة + اسم الطفل</h3>
+        <p class="hint">من بيانات الطلب — تقدر تغيّرهم قبل التوليد</p>
         <div class="ob-photo-pick" id="ob-photo-pick">${photoPick}</div>
-      </div>
-
-      <div class="qb-card">
-        <h3>2. اسم الطفل</h3>
-        <p class="hint">من بيانات الطلب — تقدر تعدّله قبل التوليد</p>
-        <div class="qb-field">
+        <div class="qb-field" style="margin-top:12px">
           <label for="ob-name">الاسم</label>
           <input type="text" id="ob-name" maxlength="40" value="${escHtml(o.child_name || '')}" autocomplete="off">
         </div>
       </div>
 
       <div class="qb-card">
-        <h3>3. عدد الصفحات</h3>
-        <div class="qb-page-opts" id="ob-page-opts">
-          <button type="button" class="qb-page-opt" data-pages="1" onclick="obSetPageCount(1, this)">
-            1 صفحة <small>للتجربة</small>
+        <h3>2. مزوّد التوليد</h3>
+        <p class="hint">كلاهما عبر Kie.ai — السعر تقريبي لصورة 1K</p>
+        <div class="ob-products" id="ob-provider-picks">
+          <button type="button" class="ob-product ${_obProvider === 'chatgpt' ? 'selected primary' : ''}"
+                  onclick="obSetProvider('chatgpt')">
+            <span class="emoji">🤖</span>
+            <div class="name">ChatGPT</div>
+            <div class="desc">GPT Image 2 · ≈ $${cg} / صورة</div>
           </button>
-          <button type="button" class="qb-page-opt active" data-pages="8" onclick="obSetPageCount(8, this)">
-            8 صفحات <small>كتاب قياسي</small>
-          </button>
-          <button type="button" class="qb-page-opt" data-pages="12" onclick="obSetPageCount(12, this)">
-            12 صفحة <small>كل الوظائف</small>
+          <button type="button" class="ob-product ${_obProvider === 'nanobanana' ? 'selected primary' : ''}"
+                  onclick="obSetProvider('nanobanana')">
+            <span class="emoji">🍌</span>
+            <div class="name">Nano Banana</div>
+            <div class="desc">Google via Kie · ≈ $${nb} / صورة</div>
           </button>
         </div>
       </div>
 
       <div class="qb-card">
-        <h3>4. اختيار المواقف — ${escHtml(pack.emoji + ' ' + pack.title)}</h3>
-        <p class="hint">اختار عدد المواقف = عدد الصفحات بالظبط · لتغيير نوع الكتاب ارجع لأنواع الكتب</p>
-        <div class="qb-job-toolbar">
+        <h3>3. الأغلفة</h3>
+        <p class="hint">تحدد غلاف البداية و/أو النهاية في الكتاب والـ PDF</p>
+        <div class="ob-products" id="ob-cover-picks">
+          ${[
+            {id:'none', name:'بدون أغلفة', desc:'صفحات تلوين فقط'},
+            {id:'cover', name:'غلاف بداية فقط', desc:'غلاف ملون في الأول'},
+            {id:'ending', name:'غلاف نهاية فقط', desc:'صفحة نهاية في الآخر'},
+            {id:'both', name:'الاتنين', desc:'بداية + نهاية'},
+          ].map(c => `
+            <button type="button" class="ob-product ${_obCoverMode === c.id ? 'selected' : ''}"
+                    onclick="obSetCoverMode('${c.id}')">
+              <div class="name">${c.name}</div>
+              <div class="desc">${c.desc}</div>
+            </button>`).join('')}
+        </div>
+      </div>
+
+      <div class="qb-card">
+        <h3>4. عدد الصفحات والمواقف — ${escHtml(pack.emoji + ' ' + pack.title)}</h3>
+        <div class="qb-page-opts" id="ob-page-opts">
+          <button type="button" class="qb-page-opt" data-pages="1" onclick="obSetPageCount(1, this); obEstimateCost()">
+            1 صفحة <small>للتجربة</small>
+          </button>
+          <button type="button" class="qb-page-opt active" data-pages="8" onclick="obSetPageCount(8, this); obEstimateCost()">
+            8 صفحات <small>كتاب قياسي</small>
+          </button>
+          <button type="button" class="qb-page-opt" data-pages="12" onclick="obSetPageCount(12, this); obEstimateCost()">
+            12 صفحة <small>كل المواقف</small>
+          </button>
+        </div>
+        <div class="qb-job-toolbar" style="margin-top:12px">
           <span class="qb-sel-count" id="ob-sel-count">مختار 0 / 8</span>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button type="button" class="btn btn-sm btn-ghost" onclick="obSelectAuto()">اختيار تلقائي</button>
-            <button type="button" class="btn btn-sm btn-ghost" onclick="obClearJobs()">مسح الاختيار</button>
+            <button type="button" class="btn btn-sm btn-ghost" onclick="obSelectAuto(); obEstimateCost()">اختيار تلقائي</button>
+            <button type="button" class="btn btn-sm btn-ghost" onclick="obClearJobs(); obEstimateCost()">مسح</button>
           </div>
         </div>
         <div class="qb-jobs ob-jobs" id="ob-jobs">${jobsHTML}</div>
       </div>
 
       <div class="qb-card">
-        <h3>5. إنشاء الكتاب</h3>
-        <p class="hint" style="margin-bottom:12px">الكتاب بسيط: <strong>غلاف</strong> + <strong>صفحات تلوين</strong> + <strong>نهاية</strong> → يحفظوا PDF على الطلب.</p>
-
-        <div class="ob-wizard">
-          <div class="ob-book-recipe" aria-hidden="true">
-            <span class="piece"><span class="num">1</span> غلاف</span>
-            <span class="op">+</span>
-            <span class="piece"><span class="num">2</span> صفحات تلوين</span>
-            <span class="op">+</span>
-            <span class="piece"><span class="num">3</span> نهاية</span>
-            <span class="eq">=</span>
-            <span class="piece pdf"><span class="num">✓</span> PDF</span>
-          </div>
-
-          <div class="ob-now" id="ob-now">
-            <p class="ob-now-kicker" id="ob-now-kicker">أنت الآن هنا</p>
-            <p class="ob-now-title" id="ob-now-title">جاري تجهيز الحالة...</p>
-            <p class="ob-now-help" id="ob-now-help">كل خطوة بتتسجّل على الطلب — تقدر تقفل وترجع تكمل.</p>
-            <p class="ob-now-meta" id="ob-now-meta"></p>
-          </div>
-
-          <div class="ob-pipeline" id="ob-steps" title="اضغط للانتقال لمرحلة"></div>
-
-          <div class="ob-parts" id="ob-parts"></div>
-
-          <details class="ob-step-detail" id="ob-pages-detail">
-            <summary>تفاصيل صفحات التلوين (كل وظيفة)</summary>
-            <div class="ob-step-checklist" id="ob-step-checklist"></div>
-          </details>
-
-          <div class="ob-last-gen" id="ob-last-gen">
-            <p class="lg-title" id="ob-last-gen-title">آخر صورة تم توليدها</p>
-            <img id="ob-last-gen-img" alt="آخر توليد" onclick="openLightbox(this.src)">
-            <p class="lg-time" id="ob-last-gen-time" style="display:none"></p>
-            <p class="lg-note" id="ob-last-gen-note">تم الحفظ على الطلب ✓</p>
-          </div>
-
-          <div class="qb-progress" id="ob-progress">
-            <div class="qb-progress-text" id="ob-progress-text">جاري التوليد...</div>
-            <div class="qb-progress-bar"><div class="qb-progress-fill" id="ob-progress-fill"></div></div>
-          </div>
-          <div class="ob-timer-live" id="ob-timer-live">
-            <p class="tl-label" id="ob-timer-label">جاري التوليد</p>
-            <div class="tl-clock" id="ob-timer-clock">0:00</div>
-            <p class="tl-sub" id="ob-timer-sub">الوقت المستمر أثناء التوليد...</p>
-          </div>
-          <div class="ob-time-log" id="ob-time-log"></div>
-
-          <div class="ob-primary-cta">
-            <p class="cta-label" id="ob-cta-label">المطلوب دلوقتي</p>
-            <div class="qb-actions" id="ob-step-actions"></div>
+        <h3>5. تقدير التكلفة والتوليد</h3>
+        <div class="ob-cost-box" id="ob-cost-box">جارٍ الحساب...</div>
+        <div class="ob-batch-bar">
+          <div class="stats" id="ob-batch-stats">جاهز للتوليد</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-primary" id="ob-btn-generate" onclick="obStartBatchGenerate(false)">⚡ توليد</button>
+            <button type="button" class="btn btn-ghost" id="ob-btn-missing" onclick="obStartBatchGenerate(false)">توليد الناقص</button>
+            <button type="button" class="btn btn-ghost" onclick="obStartBatchGenerate(true)">إعادة توليد الكل</button>
+            <button type="button" class="btn btn-success" id="ob-btn-pdf" onclick="obBuildPdf()" style="display:none">📄 تحميل PDF</button>
           </div>
         </div>
-
+        <div class="qb-progress" id="ob-progress" style="margin-top:12px;display:none">
+          <div class="qb-progress-text" id="ob-progress-text">جاري التوليد...</div>
+          <div class="qb-progress-bar"><div class="qb-progress-fill" id="ob-progress-fill"></div></div>
+        </div>
+        <div class="ob-timer-live" id="ob-timer-live" style="display:none">
+          <p class="tl-label" id="ob-timer-label">جاري التوليد</p>
+          <div class="tl-clock" id="ob-timer-clock">0:00</div>
+          <p class="tl-sub" id="ob-timer-sub">...</p>
+        </div>
+        <div class="ob-slots" id="ob-slots"></div>
         <div class="qb-msg" id="ob-msg"></div>
-        <div class="qb-result" id="ob-result" style="margin-top:10px">
+        <div class="qb-result" id="ob-result" style="margin-top:10px;display:none">
           <a class="btn btn-success" id="ob-download" href="#" target="_blank">تحميل PDF</a>
           <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id}, { openBook:true })">رجوع لكتب الطفل</button>
-          <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id})">تفاصيل الطلب</button>
           ${savedPdf}
         </div>
-        <div class="qb-previews-head" id="ob-previews-head" style="display:none">
-          <p class="title">معاينة الكتاب (ترتيب الطباعة)</p>
-          <p class="hint">غلاف ← صفحات تلوين ← نهاية · اضغط للتكبير · «↻ إعادة» لتوليد صفحة واحدةحدة</p>
-        </div>
-        <div class="qb-previews" id="ob-previews"></div>
+        <div id="ob-last-gen" class="ob-last-gen" style="display:none"></div>
+        <div id="ob-now" style="display:none"></div>
+        <div id="ob-steps" style="display:none"></div>
+        <div id="ob-parts" style="display:none"></div>
+        <div id="ob-step-checklist" style="display:none"></div>
+        <div id="ob-step-actions" style="display:none"></div>
+        <div id="ob-previews" style="display:none"></div>
+        <div id="ob-previews-head" style="display:none"></div>
+        <div id="ob-time-log" style="display:none"></div>
       </div>
     </div>
   `;
@@ -4143,11 +4196,402 @@ function renderOrderColoringBook(o) {
     _obLastScenes = [];
     obSelectAuto();
   }
-  if (o.book_progress_data && o.book_progress_data.child_name) {
-    const nameEl = document.getElementById('ob-name');
-    if (nameEl && !nameEl.value) nameEl.value = o.book_progress_data.child_name;
+  if (o.book_progress_data) {
+    const pd = o.book_progress_data;
+    if (pd.child_name) {
+      const nameEl = document.getElementById('ob-name');
+      if (nameEl && !nameEl.value) nameEl.value = pd.child_name;
+    }
+    if (pd.provider) _obProvider = pd.provider === 'nanobanana' ? 'nanobanana' : 'chatgpt';
+    if (pd.cover_mode) _obCoverMode = pd.cover_mode;
   }
-  obRenderWizardUI();
+  // re-sync selected provider/cover UI classes
+  document.querySelectorAll('#ob-provider-picks .ob-product').forEach(el => {
+    const isNb = (el.textContent || '').includes('Nano');
+    const id = isNb ? 'nanobanana' : 'chatgpt';
+    el.classList.toggle('selected', id === _obProvider);
+    el.classList.toggle('primary', id === _obProvider);
+  });
+  document.querySelectorAll('#ob-cover-picks .ob-product').forEach((el, i) => {
+    const ids = ['none', 'cover', 'ending', 'both'];
+    el.classList.toggle('selected', ids[i] === _obCoverMode);
+  });
+  obRebuildSlotsFromState();
+  obEstimateCost();
+  obRenderSlots();
+  obUpdatePdfButton();
+}
+
+function obSetProvider(p) {
+  _obProvider = p === 'nanobanana' ? 'nanobanana' : 'chatgpt';
+  document.querySelectorAll('#ob-provider-picks .ob-product').forEach(el => {
+    const isNb = (el.textContent || '').includes('Nano');
+    const id = isNb ? 'nanobanana' : 'chatgpt';
+    el.classList.toggle('selected', id === _obProvider);
+    el.classList.toggle('primary', id === _obProvider);
+  });
+  obEstimateCost();
+}
+
+function obSetCoverMode(m) {
+  _obCoverMode = ['none','cover','ending','both'].includes(m) ? m : 'both';
+  document.querySelectorAll('#ob-cover-picks .ob-product').forEach((el, i) => {
+    const ids = ['none', 'cover', 'ending', 'both'];
+    el.classList.toggle('selected', ids[i] === _obCoverMode);
+  });
+  obRebuildSlotsFromState();
+  obEstimateCost();
+  obRenderSlots();
+  obUpdatePdfButton();
+}
+
+function obCoverFlags() {
+  const m = _obCoverMode || 'both';
+  return { wantCover: m === 'cover' || m === 'both', wantEnding: m === 'ending' || m === 'both' };
+}
+
+function obUnitUsd() {
+  const r = COST_RATES || {};
+  return Number(_obProvider === 'nanobanana' ? (r.nanobanana || 0.04) : (r.chatgpt || 0.03));
+}
+
+function obBuildQueue() {
+  const scenes = _obLastScenes.length ? _obLastScenes : obSelectedIds();
+  const { wantCover, wantEnding } = obCoverFlags();
+  const q = [];
+  if (wantCover) q.push({ id: 'cover', kind: 'cover', scene_id: 'cover', title: 'غلاف البداية' });
+  scenes.forEach(sid => q.push({ id: sid, kind: 'page', scene_id: sid, title: sceneTitle(sid) }));
+  if (wantEnding) q.push({ id: 'ending', kind: 'ending', scene_id: 'ending', title: 'غلاف النهاية' });
+  return q;
+}
+
+function obRebuildSlotsFromState() {
+  const q = obBuildQueue();
+  _obSlots = q.map(item => {
+    let status = 'pending';
+    if (item.kind === 'cover' && _obState.hasCover) status = 'done';
+    else if (item.kind === 'ending' && _obState.hasEnding) status = 'done';
+    else if (item.kind === 'page' && (_obState.donePages || []).includes(item.scene_id)) status = 'done';
+    if (_obPageJobs[item.scene_id] === 'running') status = 'running';
+    if (_obPageJobs[item.scene_id] === 'error') status = 'error';
+    return { ...item, status };
+  });
+}
+
+function obEstimateCost() {
+  const box = document.getElementById('ob-cost-box');
+  const scenes = obSelectedIds();
+  const { wantCover, wantEnding } = obCoverFlags();
+  const n = scenes.length + (wantCover ? 1 : 0) + (wantEnding ? 1 : 0);
+  const unit = obUnitUsd();
+  const usd = n * unit;
+  const egpRate = Number((COST_RATES && COST_RATES.usd_to_egp) || 50);
+  const egp = usd * egpRate;
+  const parts = [];
+  if (wantCover) parts.push('غلاف بداية');
+  if (scenes.length) parts.push(scenes.length + ' صفحة تلوين');
+  if (wantEnding) parts.push('غلاف نهاية');
+  const provLabel = _obProvider === 'nanobanana' ? 'Nano Banana' : 'ChatGPT';
+  if (!box) return { n, usd, unit };
+  box.innerHTML = `
+    <div>سيتولّد <strong>${n}</strong> صور (${parts.join(' + ') || '—'}) بمزوّد <strong>${provLabel}</strong></div>
+    <div class="big">تقدير التكلفة ≈ $${usd.toFixed(2)} (~ ${egp.toFixed(0)} ج.م)</div>
+    <div class="muted">تقريبي · $${unit.toFixed(2)} / صورة · قد يختلف حسب الدقة والرصيد</div>
+  `;
+  const btn = document.getElementById('ob-btn-generate');
+  if (btn && !_obBusy) btn.textContent = n ? `⚡ توليد (${n} صور · ≈ $${usd.toFixed(2)})` : '⚡ توليد';
+  return { n, usd, unit };
+}
+
+function obSlotStatusLabel(st) {
+  if (st === 'running') return 'جاري...';
+  if (st === 'done') return 'تم ✓';
+  if (st === 'error') return 'فشل';
+  return 'في الانتظار';
+}
+
+function obRenderSlots() {
+  const root = document.getElementById('ob-slots');
+  if (!root) return;
+  if (!_obSlots.length) {
+    root.innerHTML = '<p class="muted" style="grid-column:1/-1;margin:0">اختار صفحات واضغط توليد.</p>';
+    return;
+  }
+  const unit = obUnitUsd();
+  root.innerHTML = _obSlots.map(s => {
+    const src = s.status === 'done' ? obPageSrc(s.scene_id) : '';
+    const body = src
+      ? `<img src="${escHtml(src)}" alt="${escHtml(s.title)}" onclick="openLightbox(this.src)">`
+      : `<div class="slot-placeholder">${s.status === 'running' ? '⏳ جاري التوليد...' : (s.status === 'error' ? '⚠️ فشل' : '○ لم تُولَّد بعد')}</div>`;
+    return `
+      <div class="ob-slot ${s.status}" id="ob-slot-${escHtml(s.scene_id)}" data-scene="${escHtml(s.scene_id)}">
+        <div class="slot-head">
+          <span>${escHtml(s.title)}</span>
+          <span class="slot-status">${obSlotStatusLabel(s.status)}</span>
+        </div>
+        <div class="slot-body" id="ob-slot-body-${escHtml(s.scene_id)}">${body}</div>
+        <div class="slot-actions">
+          <button type="button" class="btn btn-sm btn-ghost"
+            onclick="obRegenerateSlot('${escHtml(s.scene_id)}')"
+            ${s.status === 'running' ? 'disabled' : ''}>↻ إعادة</button>
+          <div class="slot-cost">≈ $${unit.toFixed(2)}</div>
+        </div>
+      </div>`;
+  }).join('');
+  obUpdateBatchStats();
+}
+
+function obUpdateBatchStats() {
+  const el = document.getElementById('ob-batch-stats');
+  if (!el) return;
+  const total = _obSlots.length || 0;
+  const done = _obSlots.filter(s => s.status === 'done').length;
+  const running = _obSlots.filter(s => s.status === 'running').length;
+  const err = _obSlots.filter(s => s.status === 'error').length;
+  const pending = total - done - running - err;
+  const rem = (pending + running + err) * obUnitUsd();
+  el.textContent = total
+    ? `تم ${done} من ${total}` + (running ? ` · شغّال ${running}` : '') + (rem > 0 ? ` · المتبقي ≈ $${rem.toFixed(2)}` : '')
+    : 'جاهز للتوليد';
+  obUpdatePdfButton();
+}
+
+function obUpdatePdfButton() {
+  const btn = document.getElementById('ob-btn-pdf');
+  if (!btn) return;
+  const scenes = (_obLastScenes.length ? _obLastScenes : obSelectedIds()).length;
+  const { wantCover, wantEnding } = obCoverFlags();
+  const need = scenes + (wantCover ? 1 : 0) + (wantEnding ? 1 : 0);
+  const okCover = !wantCover || _obState.hasCover;
+  const okEnd = !wantEnding || _obState.hasEnding;
+  const donePages = (_obState.donePages || []).length;
+  const pagesOk = scenes > 0 && (_obLastScenes.length ? _obLastScenes : obSelectedIds()).every(s => (_obState.donePages || []).includes(s));
+  const allOk = need > 0 && okCover && okEnd && pagesOk;
+  btn.style.display = allOk || _obState.pdfReady ? '' : 'none';
+  if (allOk) {
+    const res = document.getElementById('ob-result');
+    if (res) { res.style.display = 'flex'; res.classList.add('show'); }
+  }
+}
+
+/** Immediate per-slot update when one image finishes — never waits for the batch. */
+function obOnSlotDone(sceneId, page) {
+  const slot = _obSlots.find(s => s.scene_id === sceneId);
+  if (slot) slot.status = 'done';
+  _obPageJobs[sceneId] = 'done';
+  if (sceneId === 'cover') _obState.hasCover = true;
+  else if (sceneId === 'ending') _obState.hasEnding = true;
+  else if (!_obState.donePages.includes(sceneId)) _obState.donePages.push(sceneId);
+  _obState.missingPages = (_obLastScenes || []).filter(s => !_obState.donePages.includes(s));
+
+  let src = '';
+  if (page) {
+    if (page.preview_url) src = page.preview_url + (page.preview_url.includes('?') ? '&' : '?') + 't=' + Date.now();
+    else if (page.image_b64) src = `data:image/jpeg;base64,${page.image_b64}`;
+  }
+  if (!src && _obOrder) src = obPermanentPageUrl(sceneId);
+  if (src) _obImgCache[sceneId] = src;
+
+  // In-place DOM update — don't wipe other slots
+  const el = document.getElementById('ob-slot-' + sceneId);
+  if (el) {
+    el.className = 'ob-slot done';
+    const st = el.querySelector('.slot-status');
+    if (st) st.textContent = 'تم ✓';
+    const body = document.getElementById('ob-slot-body-' + sceneId);
+    if (body && src) {
+      body.innerHTML = `<img src="${escHtml(src)}" alt="" onclick="openLightbox(this.src)">`;
+    }
+    const regen = el.querySelector('button');
+    if (regen) regen.disabled = false;
+  } else {
+    obRenderSlots();
+  }
+  const stillRunning = _obSlots.some(s => s.status === 'running');
+  _obBusy = stillRunning;
+  obUpdateBatchStats();
+  obEstimateCost();
+  showToast(`اتحفظت «${(slot && slot.title) || sceneId}» ✓`, 'ok');
+}
+
+function obOnSlotError(sceneId, msg) {
+  const slot = _obSlots.find(s => s.scene_id === sceneId);
+  if (slot) slot.status = 'error';
+  _obPageJobs[sceneId] = 'error';
+  const el = document.getElementById('ob-slot-' + sceneId);
+  if (el) {
+    el.className = 'ob-slot error';
+    const st = el.querySelector('.slot-status');
+    if (st) st.textContent = 'فشل';
+    const body = document.getElementById('ob-slot-body-' + sceneId);
+    if (body) body.innerHTML = `<div class="slot-placeholder">⚠️ ${escHtml(msg || 'فشل')}</div>`;
+    const regen = el.querySelector('button');
+    if (regen) regen.disabled = false;
+  }
+  _obBusy = _obSlots.some(s => s.status === 'running');
+  obUpdateBatchStats();
+}
+
+async function obStartBatchGenerate(forceAll) {
+  if (_obBusy) { showToast('فيه توليد شغّال…', 'err'); return; }
+  const name = obChildName();
+  if (!name) { showToast('اكتب اسم الطفل', 'err'); return; }
+  const scenes = obSelectedIds();
+  if (scenes.length !== _obPageCount) {
+    showToast(`اختار ${_obPageCount} مواقف بالظبط`, 'err');
+    return;
+  }
+  if (!_obBookId) { showToast('مفيش كتاب محدد', 'err'); return; }
+
+  _obBusy = true;
+  _obLastScenes = [...scenes];
+  try {
+    if (!_obSessionId) {
+      const st = await obEnsureSession({ forceNew: false });
+      if (!st) throw new Error('فشل الجلسة');
+    }
+    await obPersistProgress({ step: 'setup', scenes, child_name: name });
+    obRebuildSlotsFromState();
+    if (forceAll) {
+      _obSlots.forEach(s => { s.status = 'pending'; _obPageJobs[s.scene_id] = null; });
+      _obState = { hasCover: false, hasEnding: false, donePages: [], missingPages: [...scenes], pdfReady: false };
+    }
+    // Only generate missing / force all
+    const todo = _obSlots.filter(s => forceAll || s.status !== 'done');
+    if (!todo.length) {
+      showToast('كل الصور جاهزة ✓ — اعمل PDF', 'ok');
+      _obBusy = false;
+      obUpdatePdfButton();
+      return;
+    }
+    todo.forEach(s => { s.status = 'pending'; });
+    obRenderSlots();
+    const prog = document.getElementById('ob-progress');
+    if (prog) prog.style.display = '';
+    obSetProgress(5, `توليد ${todo.length} صورة · حتى ${OB_PAGE_PARALLEL} متوازي...`);
+
+    // Parallel workers
+    let idx = 0;
+    const runOne = async (item) => {
+      const sid = item.scene_id;
+      item.status = 'running';
+      _obPageJobs[sid] = 'running';
+      // mark running in DOM
+      const el = document.getElementById('ob-slot-' + sid);
+      if (el) {
+        el.className = 'ob-slot running';
+        const st = el.querySelector('.slot-status');
+        if (st) st.textContent = 'جاري...';
+        const body = document.getElementById('ob-slot-body-' + sid);
+        if (body) body.innerHTML = '<div class="slot-placeholder">⏳ جاري التوليد...</div>';
+        const regen = el.querySelector('button');
+        if (regen) regen.disabled = true;
+      }
+      obUpdateBatchStats();
+      try {
+        if (item.kind === 'cover') {
+          const page = await obGenerateCover(name, scenes.length, !!forceAll);
+          if (!page) throw new Error('فشل الغلاف');
+          obOnSlotDone('cover', page);
+        } else if (item.kind === 'ending') {
+          const page = await obGenerateEnding(name, !!forceAll);
+          if (!page) throw new Error('فشل النهاية');
+          obOnSlotDone('ending', page);
+        } else {
+          const page = await obGenerateOnePage(sid, !!forceAll);
+          if (!page || page.error) throw new Error((page && page.error) || 'فشل الصفحة');
+          obOnSlotDone(sid, page);
+        }
+        await obPersistProgress({ step: item.kind === 'cover' ? 'cover' : (item.kind === 'ending' ? 'ending' : 'pages'), scenes });
+      } catch (e) {
+        obOnSlotError(sid, e.message || 'فشل');
+      }
+    };
+
+    const workers = Array.from({ length: Math.min(OB_PAGE_PARALLEL, todo.length) }, async () => {
+      while (idx < todo.length) {
+        const i = idx++;
+        await runOne(todo[i]);
+      }
+    });
+    await Promise.all(workers);
+
+    const done = _obSlots.filter(s => s.status === 'done').length;
+    const fail = _obSlots.filter(s => s.status === 'error').length;
+    obSetProgress(100, `تم ${done} · فشل ${fail}`);
+    if (fail === 0 && done === _obSlots.length) {
+      // auto-build PDF
+      try {
+        await obBuildPdf();
+      } catch (_) {}
+    }
+    const msg = document.getElementById('ob-msg');
+    if (msg) {
+      msg.textContent = fail ? `خلص: ${done} نجح · ${fail} فشل — اضغط إعادة على الفاشل` : `تم توليد ${done} صورة وحفظهم ✓`;
+      msg.className = 'qb-msg ' + (fail ? 'err' : 'ok');
+    }
+  } catch (e) {
+    showToast(e.message || 'فشل', 'err');
+  } finally {
+    _obBusy = _obSlots.some(s => s.status === 'running');
+    const prog = document.getElementById('ob-progress');
+    setTimeout(() => { if (prog && !_obBusy) prog.style.display = 'none'; }, 1500);
+    obEstimateCost();
+    obUpdatePdfButton();
+  }
+}
+
+async function obRegenerateSlot(sceneId) {
+  if (_obBusy && _obPageJobs[sceneId] === 'running') return;
+  const name = obChildName();
+  if (!name) { showToast('اكتب اسم الطفل', 'err'); return; }
+  if (!confirm('تعيد توليد الصفحة دي؟ (≈ $' + obUnitUsd().toFixed(2) + ')')) return;
+  const item = _obSlots.find(s => s.scene_id === sceneId) || {
+    kind: sceneId === 'cover' ? 'cover' : (sceneId === 'ending' ? 'ending' : 'page'),
+    scene_id: sceneId, title: sceneTitle(sceneId),
+  };
+  _obBusy = true;
+  try {
+    if (!_obSessionId) await obEnsureSession({ forceNew: false });
+    item.status = 'running';
+    _obPageJobs[sceneId] = 'running';
+    obRenderSlots();
+    if (item.kind === 'cover' || sceneId === 'cover') {
+      const page = await obGenerateCover(name, _obPageCount, true);
+      obOnSlotDone('cover', page);
+    } else if (item.kind === 'ending' || sceneId === 'ending') {
+      const page = await obGenerateEnding(name, true);
+      obOnSlotDone('ending', page);
+    } else {
+      const page = await obGenerateOnePage(sceneId, true);
+      obOnSlotDone(sceneId, page);
+    }
+    await obPersistProgress({ scenes: _obLastScenes.length ? _obLastScenes : obSelectedIds() });
+  } catch (e) {
+    obOnSlotError(sceneId, e.message || 'فشل');
+    showToast(e.message || 'فشل', 'err');
+  } finally {
+    _obBusy = _obSlots.some(s => s.status === 'running');
+  }
+}
+
+async function obBuildPdf() {
+  const name = obChildName();
+  const scenes = _obLastScenes.length ? _obLastScenes : obSelectedIds();
+  if (!scenes.length) { showToast('مفيش صفحات', 'err'); return; }
+  try {
+    if (!_obSessionId) await obEnsureSession({ forceNew: false });
+    await obSaveToOrder(scenes, name);
+    _obState.pdfReady = true;
+    showToast('PDF جاهز ✓', 'ok');
+    const btn = document.getElementById('ob-btn-pdf');
+    if (btn) btn.style.display = '';
+    const res = document.getElementById('ob-result');
+    if (res) { res.style.display = 'flex'; res.classList.add('show'); }
+  } catch (e) {
+    showToast(e.message || 'فشل PDF', 'err');
+    throw e;
+  }
 }
 
 function obPageSrc(sceneId, bust) {
@@ -4220,6 +4664,12 @@ function obApplyStatusPayload(data) {
     _obPackId = progress.pack_id;
     _obPackExplicit = true;
   }
+  if (progress.provider) {
+    _obProvider = progress.provider === 'nanobanana' ? 'nanobanana' : 'chatgpt';
+  }
+  if (progress.cover_mode) {
+    _obCoverMode = progress.cover_mode;
+  }
   if (progress.scenes && progress.scenes.length) {
     _obLastScenes = [...progress.scenes];
     if (document.getElementById('ob-jobs')) {
@@ -4274,6 +4724,12 @@ function obApplyStatusPayload(data) {
     }
   });
   _obStep = data.current_step || progress.step || _obStep || 'setup';
+  if (document.getElementById('ob-slots')) {
+    obRebuildSlotsFromState();
+    obRenderSlots();
+    obEstimateCost();
+    obUpdatePdfButton();
+  }
   return data;
 }
 
@@ -4303,263 +4759,16 @@ function obRefreshPreviewsFromState() {
 }
 
 function obRenderWizardUI() {
-  const stepsEl = document.getElementById('ob-steps');
-  const listEl = document.getElementById('ob-step-checklist');
-  const actionsEl = document.getElementById('ob-step-actions');
-  const nowBox = document.getElementById('ob-now');
-  const nowKick = document.getElementById('ob-now-kicker');
-  const nowTitle = document.getElementById('ob-now-title');
-  const nowHelp = document.getElementById('ob-now-help');
-  const nowMeta = document.getElementById('ob-now-meta');
-  const partsEl = document.getElementById('ob-parts');
-  const ctaLabel = document.getElementById('ob-cta-label');
-  const pagesDetail = document.getElementById('ob-pages-detail');
-  if (!stepsEl && !actionsEl) return;
-
-  const flags = obStepDoneFlags();
-  const planned = flags.planned;
-  const doneN = _obState.donePages.filter(id => planned.includes(id)).length;
-  const missN = planned.length ? planned.length - doneN : 0;
-  const cur = _obStep === 'done' ? 'pdf' : _obStep;
-  const curIdx = obStepIndex(cur);
-  const isBookDone = _obStep === 'done' || (flags.cover && flags.pages && flags.ending && flags.pdf);
-  const curStep = OB_STEPS.find(s => s.id === cur) || OB_STEPS[0];
-
-  // Pipeline (5 stages)
-  if (stepsEl) {
-    stepsEl.innerHTML = OB_STEPS.map((s) => {
-      const isDone =
-        (s.id === 'setup' && flags.setup) ||
-        (s.id === 'cover' && flags.cover) ||
-        (s.id === 'pages' && flags.pages) ||
-        (s.id === 'ending' && flags.ending) ||
-        (s.id === 'pdf' && flags.pdf);
-      const isCurrent = s.id === cur && !isBookDone;
-      let cls = 'ob-pipe';
-      if (isCurrent) cls += ' current';
-      else if (isDone) cls += ' done';
-      let stateTxt = 'بانتظار';
-      if (isDone && !isCurrent) stateTxt = '✓ جاهز';
-      else if (isCurrent) stateTxt = '← أنت هنا';
-      if (s.id === 'pages' && planned.length) {
-        stateTxt = isDone && !isCurrent
-          ? `✓ ${doneN}/${planned.length}`
-          : (isCurrent ? `${doneN}/${planned.length} · أنت هنا` : `${doneN}/${planned.length}`);
-      }
-      return `<button type="button" class="${cls}" onclick="obGoStep('${s.id}')">
-        <span class="p-n">مرحلة ${s.n}</span>
-        <span class="p-label">${s.label}</span>
-        <span class="p-state">${stateTxt}</span>
-      </button>`;
-    }).join('');
+  // Legacy multi-step UI — new book page uses slots; keep no-op safe when old nodes missing
+  if (document.getElementById('ob-slots')) {
+    obRebuildSlotsFromState();
+    obRenderSlots();
+    obEstimateCost();
+    obUpdatePdfButton();
+    return;
   }
-
-  // Big "you are here"
-  if (nowBox) {
-    nowBox.classList.toggle('done', isBookDone);
-    if (nowKick) {
-      nowKick.textContent = isBookDone ? 'الكتاب مكتمل ✓' : 'أنت الآن هنا';
-    }
-    if (nowTitle) {
-      nowTitle.textContent = isBookDone
-        ? 'الكتاب جاهز على الطلب'
-        : `المرحلة ${curStep.n} من 5 — ${curStep.label}`;
-    }
-    if (nowHelp) {
-      nowHelp.textContent = isBookDone
-        ? 'الغلاف + صفحات التلوين + النهاية اتحفظوا. تقدر تحمّل PDF من تحت.'
-        : (curStep.help || '');
-    }
-    if (nowMeta) {
-      const doneStages = ['setup', 'cover', 'pages', 'ending', 'pdf'].filter(id => flags[id]).length;
-      nowMeta.innerHTML = isBookDone
-        ? `<strong>5 / 5</strong> مراحل · PDF محفوظ`
-        : `التقدّم: <strong>${doneStages} / 5</strong> مراحل` +
-          (planned.length ? ` · صفحات التلوين: <strong>${doneN}/${planned.length}</strong>` : '') +
-          (missN > 0 ? ` · ناقص ${missN}` : '');
-    }
-  }
-
-  // 3 book parts: cover · coloring · ending
-  if (partsEl) {
-    const csrc = flags.cover ? obPageSrc('cover') : '';
-    const esrc = flags.ending ? obPageSrc('ending') : '';
-    const part = (id, title, sub, done, active, statusHtml, thumb) => {
-      let cls = 'ob-part';
-      if (done) cls += ' done';
-      if (active) cls += ' current';
-      return `<div class="${cls}">
-        <div class="ob-part-icon">${done ? '✓' : (active ? '●' : '○')}</div>
-        <div class="ob-part-body">
-          <p class="ob-part-title">${title}</p>
-          <p class="ob-part-sub">${sub}</p>
-          <div class="ob-part-status ${done ? 'ok' : (active ? 'now' : 'wait')}">${statusHtml}</div>
-        </div>
-        ${thumb ? `<img class="ob-part-thumb" src="${thumb}" alt="" onclick="openLightbox('${thumb}')">` : ''}
-      </div>`;
-    };
-    partsEl.innerHTML = [
-      part(
-        'cover',
-        '1. غلاف البداية',
-        'أول صفحة — ملونة',
-        flags.cover,
-        cur === 'cover' && !isBookDone,
-        flags.cover ? 'جاهز ومحفوظ' : (cur === 'cover' ? 'المرحلة الحالية — ولّدها' : 'لسه'),
-        csrc,
-      ),
-      part(
-        'pages',
-        '2. صفحات التلوين',
-        planned.length
-          ? `${doneN} من ${planned.length} جاهزة`
-          : 'اختار الوظائف أولًا',
-        flags.pages,
-        cur === 'pages' && !isBookDone,
-        flags.pages
-          ? 'كل الصفحات جاهزة'
-          : (cur === 'pages'
-            ? (doneN ? `كمّل الناقص (${missN})` : 'ولّد صفحات التلوين')
-            : (doneN ? `${doneN} جاهزة · لسه` : 'لسه')),
-        '',
-      ),
-      part(
-        'ending',
-        '3. صفحة النهاية',
-        'آخر صفحة — ملونة',
-        flags.ending,
-        cur === 'ending' && !isBookDone,
-        flags.ending ? 'جاهزة ومحفوظة' : (cur === 'ending' ? 'المرحلة الحالية — ولّدها' : 'لسه'),
-        esrc,
-      ),
-    ].join('');
-  }
-
-  // Page checklist (collapsed by default unless on pages step)
-  if (listEl) {
-    const rows = [];
-    const timeMark = (id, fallback) => {
-      const s = _obTimings[id];
-      if (s == null) return fallback;
-      return `${fallback} · ${obFormatDuration(s)}`;
-    };
-    if (_obState.hasCover) {
-      const csrc = obPageSrc('cover');
-      rows.push(`<div class="ob-check-row done">
-        ${csrc ? `<img class="thumb" src="${csrc}" alt="غلاف" onclick="openLightbox('${csrc}')">` : ''}
-        <span style="flex:1">✓ غلاف البداية</span>
-        <span class="mark">${timeMark('cover', 'محفوظ')}</span>
-      </div>`);
-    }
-    planned.forEach(sid => {
-      const done = _obState.donePages.includes(sid);
-      const job = _obPageJobs[sid];
-      const src = done ? obPageSrc(sid) : '';
-      let mark = done ? 'محفوظ' : 'بانتظار';
-      let rowCls = done ? 'done' : 'todo';
-      if (job === 'running') { mark = '⏳ جاري...'; rowCls = 'todo'; }
-      else if (job === 'error' && !done) { mark = 'فشل — أعد'; }
-      else if (done) mark = timeMark(sid, 'محفوظ ✓');
-      else mark = timeMark(sid, mark);
-      rows.push(`<div class="ob-check-row ${rowCls}">
-        ${src ? `<img class="thumb" src="${src}" alt="" onclick="openLightbox('${src}')">` : '<span style="width:44px"></span>'}
-        <span style="flex:1">${done ? '✓' : (job === 'running' ? '…' : '○')} ${escHtml(sceneTitle(sid))}</span>
-        <span class="mark">${mark}</span>
-      </div>`);
-    });
-    if (_obState.hasEnding) {
-      const esrc = obPageSrc('ending');
-      rows.push(`<div class="ob-check-row done">
-        ${esrc ? `<img class="thumb" src="${esrc}" alt="نهاية" onclick="openLightbox('${esrc}')">` : ''}
-        <span style="flex:1">✓ صفحة النهاية</span>
-        <span class="mark">${timeMark('ending', 'محفوظ')}</span>
-      </div>`);
-    }
-    listEl.innerHTML = rows.join('')
-      || '<div class="muted" style="font-size:12.5px">اختار الوظائف فوق، بعدين احفظ الإعداد.</div>';
-  }
-  if (pagesDetail) {
-    pagesDetail.open = cur === 'pages' || missN > 0;
-  }
-
-  // Actions — one primary task, few secondary
-  let actions = '';
-  let cta = 'المطلوب دلوقتي';
-  if (cur === 'setup') {
-    cta = 'احفظ الإعداد عشان تبدأ الكتاب';
-    actions = `
-      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('setup')">1. احفظ الإعداد → ابدأ بالغلاف</button>
-      <button type="button" class="btn btn-ghost" onclick="obSaveProgressOnly()">حفظ الإعداد فقط</button>
-    `;
-  } else if (cur === 'cover') {
-    cta = flags.cover
-      ? 'الغلاف جاهز — تقدر تعيده أو تكمل للصفحات'
-      : 'ولّد غلاف البداية (أول صفحة في الكتاب)';
-    actions = `
-      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('cover')">${flags.cover ? '↻ إعادة غلاف البداية' : '2. توليد غلاف البداية'}</button>
-      ${flags.cover ? `<button type="button" class="btn btn-ghost" onclick="obGoStep('pages')">التالي: صفحات التلوين →</button>` : ''}
-    `;
-  } else if (cur === 'pages') {
-    cta = flags.pages
-      ? 'صفحات التلوين كاملة — انتقل للنهاية'
-      : (doneN
-        ? `كمّل الناقص: ${missN} صفحة (كل صفحة لوحدها وبتحفظ فورًا)`
-        : `ولّد صفحات التلوين — حتى ${OB_PAGE_PARALLEL} في نفس الوقت، كل واحدة بتحفظ لوحدها`);
-    actions = `
-      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('pages')">${flags.pages ? 'كل الصفحات جاهزة ✓ — التالي' : (doneN ? `توليد الناقص (${missN})` : '3. توليد صفحات التلوين')}</button>
-      ${flags.pages ? `<button type="button" class="btn btn-ghost" onclick="obGoStep('ending')">التالي: صفحة النهاية →</button>` : ''}
-      ${doneN ? `<button type="button" class="btn btn-ghost" onclick="if(confirm('هتعيد توليد كل الصفحات؟ الصفحات الجاهزة تفضل لحد ما الجديدة تخلص'))obRunStep('pages',{force:true})">↻ إعادة الكل</button>` : ''}
-    `;
-    if (flags.pages) {
-      // Override primary to go next rather than re-run empty
-      actions = `
-        <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obGoStep('ending')">التالي: صفحة النهاية →</button>
-        <button type="button" class="btn btn-ghost" onclick="if(confirm('هتعيد توليد كل الصفحات؟'))obRunStep('pages',{force:true})">↻ إعادة كل الصفحات</button>
-      `;
-    }
-  } else if (cur === 'ending') {
-    cta = flags.ending
-      ? 'صفحة النهاية جاهزة — احفظ PDF'
-      : 'ولّد صفحة النهاية (آخر صفحة في الكتاب)';
-    actions = `
-      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('ending')">${flags.ending ? '↻ إعادة صفحة النهاية' : '4. توليد صفحة النهاية'}</button>
-      ${flags.ending ? `<button type="button" class="btn btn-ghost" onclick="obGoStep('pdf')">التالي: حفظ PDF →</button>` : ''}
-    `;
-  } else {
-    cta = flags.pdf
-      ? 'PDF محفوظ — تقدر تحمّله تحت'
-      : 'آخر خطوة: اجمع الكتاب في PDF على الطلب';
-    actions = `
-      <button type="button" class="btn btn-primary" id="ob-run-btn" onclick="obRunStep('pdf')">${flags.pdf ? '↻ تحديث PDF' : '5. حفظ PDF على الطلب'}</button>
-      <button type="button" class="btn btn-ghost" id="ob-regen-all-btn" onclick="obCreateBook({force:true})">↻ إعادة الكتاب كامل</button>
-    `;
-  }
-  if (!isBookDone) {
-    actions += `
-      <button type="button" class="btn btn-ghost" onclick="obContinueWizard()" title="يكمل أول خطوة ناقصة">▶ كمل من حيث وصلت</button>
-    `;
-  }
-  if (ctaLabel) ctaLabel.textContent = cta;
-  if (actionsEl) actionsEl.innerHTML = actions;
-  if (_obBusy && actionsEl) {
-    actionsEl.querySelectorAll('button').forEach(b => { b.disabled = true; });
-  }
-
-  // PDF download visibility
-  const resultEl = document.getElementById('ob-result');
-  if (resultEl) {
-    if (_obState.pdfReady && (_obPdfFilename || (_obOrder && _obOrder.pdf_filename))) {
-      resultEl.classList.add('show');
-      resultEl.style.display = 'flex';
-      const a = document.getElementById('ob-download');
-      const saved = document.getElementById('ob-saved-pdf');
-      const url = obCurrentPdfUrl();
-      if (a && url) a.href = url;
-      if (saved && url) { saved.href = url; saved.style.display = ''; }
-    }
-  }
-
-  obRefreshPreviewsFromState();
+  // fallback old elements may exist on other screens — soft exit
+  return;
 }
 
 function obGoStep(stepId) {
@@ -4636,6 +4845,8 @@ async function obPersistProgress(extra = {}) {
       page_count: extra.page_count != null ? extra.page_count : _obPageCount,
       photo: _obPhoto,
       pack_id: _obPackId,
+      provider: _obProvider,
+      cover_mode: _obCoverMode,
     }),
   });
   const data = await parseJsonResponse(res);
@@ -4688,6 +4899,7 @@ async function obSaveToOrder(scenes, name) {
       session_id: _obSessionId,
       scenes: clean,
       child_name: name || obChildName(),
+      cover_mode: _obCoverMode,
     }),
   });
   const sData = await parseJsonResponse(sRes);
@@ -4725,6 +4937,7 @@ async function obGenerateCover(name, pageCount, force) {
       pack_id: _obPackId,
       order_id: _obOrder && _obOrder.id,
       book_id: _obBookId,
+      provider: _obProvider,
     }, {
       onTick: (d) => {
         const el = Math.round(d.elapsed_sec || 0);
@@ -4762,6 +4975,7 @@ async function obGenerateEnding(name, force) {
       pack_id: _obPackId,
       order_id: _obOrder && _obOrder.id,
       book_id: _obBookId,
+      provider: _obProvider,
     }, {
       onTick: (d) => {
         const el = Math.round(d.elapsed_sec || 0);
@@ -4802,6 +5016,7 @@ async function obGenerateOnePage(sid, force) {
       pack_id: _obPackId,
       order_id: _obOrder && _obOrder.id,
       book_id: _obBookId,
+      provider: _obProvider,
     });
     const secs = Math.round(((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0) / 100) / 10;
     const batch = gData.pages || [];
@@ -4820,7 +5035,7 @@ async function obGenerateOnePage(sid, force) {
       obCachePage(page);
     }
     const src = pagePreviewSrc(page, _obSessionId) || obPageSrc(page.scene_id || sid);
-    if (src) {
+    if (src && document.getElementById('ob-last-gen-img')) {
       obShowLastGenerated(page.scene_id || sid, page.title || title, src, secs);
     }
     // Merge into state without wiping other pages
@@ -4833,12 +5048,10 @@ async function obGenerateOnePage(sid, force) {
     try {
       await obPersistProgress({ step: 'pages', scenes: planned });
     } catch (_) { /* already on order disk from server */ }
-    obRefreshPreviewsFromState();
-    if (document.getElementById('ob-step-checklist')) obRenderWizardUI();
+    if (document.getElementById('ob-previews')) obRefreshPreviewsFromState();
     return page;
   } catch (e) {
     _obPageJobs[sid] = 'error';
-    if (document.getElementById('ob-step-checklist')) obRenderWizardUI();
     return { scene_id: sid, error: e.message || 'فشل' };
   }
 }

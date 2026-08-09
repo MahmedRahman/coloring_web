@@ -64,8 +64,44 @@ from paymob_client import (
 from kie_client import (
     generate_image_to_image,
     kie_configured,
+    model_for_provider,
+    normalize_provider,
     upload_image as kie_upload_image,
 )
+
+# Approximate Kie 1K image prices for admin cost estimates (USD)
+COST_CHATGPT_USD = float(os.environ.get("COST_CHATGPT_USD") or "0.03")
+COST_NANOBANANA_USD = float(os.environ.get("COST_NANOBANANA_USD") or "0.04")
+COST_USD_TO_EGP = float(os.environ.get("COST_USD_TO_EGP") or "50")
+
+COVER_MODES = frozenset({"none", "cover", "ending", "both"})
+
+
+def cost_rates_dict() -> dict:
+    return {
+        "chatgpt": COST_CHATGPT_USD,
+        "nanobanana": COST_NANOBANANA_USD,
+        "usd_to_egp": COST_USD_TO_EGP,
+        "note": "تقريبي — أسعار Kie 1K وقد تختلف حسب الدقة والرصيد",
+    }
+
+
+def normalize_cover_mode(raw: Optional[str]) -> str:
+    m = (raw or "both").strip().lower()
+    if m in COVER_MODES:
+        return m
+    if m in ("start", "front", "cover_only"):
+        return "cover"
+    if m in ("end", "ending_only", "back"):
+        return "ending"
+    if m in ("no", "0", "false", "off", "بدون"):
+        return "none"
+    return "both"
+
+
+def cover_mode_flags(mode: Optional[str]) -> tuple[bool, bool]:
+    m = normalize_cover_mode(mode)
+    return (m in ("cover", "both"), m in ("ending", "both"))
 
 ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
 API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN")
@@ -1741,10 +1777,14 @@ async def generate_cover_page_async(
     use_kie: bool = False,
     ref_url: Optional[str] = None,
     pack_id: Optional[str] = None,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> dict:
     """Generate the premium full-color front cover, themed for the chosen book type."""
     out = cover_page_path(d)
     created = False
+    prov = normalize_provider(provider) if use_kie else "cloudflare"
+    model_id = model or (model_for_provider(prov) if use_kie else None)
     if force or not out.exists():
         refs = ensure_multi_refs(d)
         if not refs:
@@ -1754,7 +1794,7 @@ async def generate_cover_page_async(
             if not kie_configured():
                 raise RuntimeError("KIE_API_KEY مش مضبوط لغلاف البداية.")
             img_bytes, _ = await generate_image_to_image(
-                prompt, refs[0], client, input_url=ref_url
+                prompt, refs[0], client, input_url=ref_url, model=model_id
             )
         else:
             img_bytes = await call_model_async(prompt, refs, client)
@@ -1768,7 +1808,8 @@ async def generate_cover_page_async(
         "emoji": "📗",
         "image_b64": b64,
         "created": created,
-        "provider": "kie" if use_kie else "cloudflare",
+        "provider": prov if use_kie else "cloudflare",
+        "model": model_id,
     }
 
 
@@ -1781,10 +1822,14 @@ async def generate_ending_page_async(
     use_kie: bool = False,
     ref_url: Optional[str] = None,
     pack_id: Optional[str] = None,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> dict:
     """Generate the premium full-color ending page, themed for the chosen book type."""
     out = ending_page_path(d)
     created = False
+    prov = normalize_provider(provider) if use_kie else "cloudflare"
+    model_id = model or (model_for_provider(prov) if use_kie else None)
     if force or not out.exists():
         refs = ensure_multi_refs(d)
         if not refs:
@@ -1794,7 +1839,7 @@ async def generate_ending_page_async(
             if not kie_configured():
                 raise RuntimeError("KIE_API_KEY مش مضبوط لصفحة النهاية.")
             img_bytes, _ = await generate_image_to_image(
-                prompt, refs[0], client, input_url=ref_url
+                prompt, refs[0], client, input_url=ref_url, model=model_id
             )
         else:
             img_bytes = await call_model_async(prompt, refs, client)
@@ -1808,7 +1853,8 @@ async def generate_ending_page_async(
         "emoji": "🎉",
         "image_b64": b64,
         "created": created,
-        "provider": "kie" if use_kie else "cloudflare",
+        "provider": prov if use_kie else "cloudflare",
+        "model": model_id,
     }
 
 
@@ -1834,7 +1880,7 @@ def assemble_book_images(
     include_ending: bool = True,
     include_cover: bool = True,
 ) -> List[Image.Image]:
-    """Cover + coloring pages (+ optional ending) for PDF."""
+    """Cover + coloring pages (+ optional ending) for PDF. No placeholder covers."""
     pages: List[Image.Image] = []
     skip = {ENDING_SCENE_ID, COVER_SCENE_ID}
     for sid in order:
@@ -1844,13 +1890,11 @@ def assemble_book_images(
         p = page_path(d, sid)
         if p.exists():
             pages.append(Image.open(p).convert("RGB"))
-    if not pages:
-        return []
     all_imgs: List[Image.Image] = []
     if include_cover:
         cover = load_cover_image(d)
         if cover is None:
-            cover = make_cover_page(child_name)
+            return []  # cover required but missing — caller should validate
         all_imgs.append(cover)
     all_imgs.extend(pages)
     if include_ending:
@@ -2068,11 +2112,15 @@ async def generate_one_kie_async(
     *,
     ref_url: Optional[str] = None,
     sem: Optional[asyncio.Semaphore] = None,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> dict:
-    """Generate one coloring page via Kie.ai GPT Image 2 (image-to-image)."""
+    """Generate one coloring page via Kie.ai (ChatGPT / Nano Banana image-to-image)."""
     scene_id = scene["id"]
     out = page_path(d, scene_id)
     created = False
+    prov = normalize_provider(provider)
+    model_id = model or model_for_provider(prov)
     # Never delete the old page before the new one succeeds
     if force or not out.exists():
         refs = ensure_multi_refs(d)
@@ -2095,7 +2143,7 @@ async def generate_one_kie_async(
 
         async def _work():
             img_bytes, _ = await generate_image_to_image(
-                prompt, ref_path, client, input_url=ref_url
+                prompt, ref_path, client, input_url=ref_url, model=model_id
             )
             _atomic_jpeg_bytes(out, img_bytes, quality=92)
 
@@ -2113,7 +2161,8 @@ async def generate_one_kie_async(
         "emoji": scene.get("emoji", "✨"),
         "image_b64": b64,
         "created": created,
-        "provider": "kie",
+        "provider": prov,
+        "model": model_id,
     }
 
 
@@ -3010,7 +3059,8 @@ def admin_logout():
 def admin_dashboard():
     stats = collect_admin_stats()
     return render_template(
-        "admin.html", stats=stats, scenes=ALL_SCENES, scene_packs=SCENE_PACKS
+        "admin.html", stats=stats, scenes=ALL_SCENES, scene_packs=SCENE_PACKS,
+        cost_rates=cost_rates_dict(),
     )
 
 
@@ -3069,6 +3119,8 @@ def admin_quick_book_generate():
 
     force = bool(data.get("force"))
     use_async = bool(data.get("async") or data.get("background"))
+    provider = normalize_provider(data.get("provider") or data.get("model_provider"))
+    kie_model = model_for_provider(provider)
     # Sync responses keep base64 for older clients; async defaults to preview URL only
     if "include_image" in data or "include_b64" in data:
         include_b64 = bool(data.get("include_image") or data.get("include_b64"))
@@ -3106,21 +3158,31 @@ def admin_quick_book_generate():
         async def _run_all():
             timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
             async with httpx.AsyncClient(timeout=timeout) as client:
-                ref_url = await kie_upload_image(
-                    refs[0],
-                    client,
-                    upload_path="coloring-book",
-                    file_name=f"{session_id}.png",
-                )
-                try:
-                    (d / "kie_ref_url.txt").write_text(ref_url, encoding="utf-8")
-                except OSError:
-                    pass
+                ref_url = None
+                cached = d / "kie_ref_url.txt"
+                if cached.exists():
+                    try:
+                        ref_url = cached.read_text(encoding="utf-8").strip() or None
+                    except OSError:
+                        ref_url = None
+                if not ref_url:
+                    ref_url = await kie_upload_image(
+                        refs[0],
+                        client,
+                        upload_path="coloring-book",
+                        file_name=f"{session_id}.png",
+                    )
+                    try:
+                        cached.write_text(ref_url, encoding="utf-8")
+                    except OSError:
+                        pass
 
                 sem = asyncio.Semaphore(3)
                 tasks = [
                     generate_one_kie_async(
-                        d, sc, force, style, client, ref_url=ref_url, sem=sem
+                        d, sc, force, style, client,
+                        ref_url=ref_url, sem=sem,
+                        provider=provider, model=kie_model,
                     )
                     for sc in scenes
                 ]
@@ -3160,13 +3222,14 @@ def admin_quick_book_generate():
             _persist_generated_to_order(order_id, session_id, book_id)
         return {
             "ok": True,
-            "provider": "kie",
-            "model": "gpt-image-2-image-to-image",
+            "provider": provider,
+            "model": kie_model,
             "pages": pages,
             "ok_count": len(ok_ids),
             "failed": [p for p in pages if p.get("error")],
             "session_id": session_id,
             "order_id": order_id,
+            "book_id": book_id,
         }
 
     if use_async:
@@ -3195,6 +3258,8 @@ def admin_quick_book_cover():
     pack_id = pack_by_id((data.get("pack_id") or "").strip())["id"]
     force = bool(data.get("force"))
     use_async = bool(data.get("async") or data.get("background"))
+    provider = normalize_provider(data.get("provider") or data.get("model_provider"))
+    kie_model = model_for_provider(provider)
     if "include_image" in data or "include_b64" in data:
         include_b64 = bool(data.get("include_image") or data.get("include_b64"))
     else:
@@ -3250,6 +3315,8 @@ def admin_quick_book_cover():
                     use_kie=True,
                     ref_url=ref_url,
                     pack_id=pack_id,
+                    provider=provider,
+                    model=kie_model,
                 )
 
         page = run_async(_run())
@@ -3258,9 +3325,11 @@ def admin_quick_book_cover():
         return {
             "ok": True,
             "page": _page_for_client(page, session_id, include_b64=include_b64),
-            "provider": "kie",
+            "provider": provider,
+            "model": kie_model,
             "session_id": session_id,
             "order_id": order_id,
+            "book_id": book_id,
         }
 
     if use_async:
@@ -3289,6 +3358,8 @@ def admin_quick_book_ending():
     pack_id = pack_by_id((data.get("pack_id") or "").strip())["id"]
     force = bool(data.get("force"))
     use_async = bool(data.get("async") or data.get("background"))
+    provider = normalize_provider(data.get("provider") or data.get("model_provider"))
+    kie_model = model_for_provider(provider)
     if "include_image" in data or "include_b64" in data:
         include_b64 = bool(data.get("include_image") or data.get("include_b64"))
     else:
@@ -3339,6 +3410,8 @@ def admin_quick_book_ending():
                     use_kie=True,
                     ref_url=ref_url,
                     pack_id=pack_id,
+                    provider=provider,
+                    model=kie_model,
                 )
 
         page = run_async(_run())
@@ -3347,9 +3420,11 @@ def admin_quick_book_ending():
         return {
             "ok": True,
             "page": _page_for_client(page, session_id, include_b64=include_b64),
-            "provider": "kie",
+            "provider": provider,
+            "model": kie_model,
             "session_id": session_id,
             "order_id": order_id,
+            "book_id": book_id,
         }
 
     if use_async:
@@ -4289,12 +4364,13 @@ def _infer_book_step(progress: dict, snap: dict, has_pdf: bool) -> str:
     if not isinstance(planned, list):
         planned = []
     planned = [s for s in planned if isinstance(s, str)]
+    want_cover, want_ending = cover_mode_flags(progress.get("cover_mode"))
     if not planned and not snap.get("generated_scenes"):
         return "setup"
     if not snap.get("session_active") and not snap.get("from_order_store"):
         return "setup"
     # Prefer real disk state over stale progress flags
-    if not snap.get("has_cover"):
+    if want_cover and not snap.get("has_cover"):
         return "cover"
     missing = snap.get("missing_pages")
     if planned and missing:
@@ -4303,7 +4379,7 @@ def _infer_book_step(progress: dict, snap: dict, has_pdf: bool) -> str:
         return "pages"
     if not planned and not snap.get("generated_scenes"):
         return "pages"
-    if not snap.get("has_ending"):
+    if want_ending and not snap.get("has_ending"):
         return "ending"
     if not has_pdf:
         return "pdf"
@@ -4767,6 +4843,8 @@ def admin_order_book_progress_by_id(order_id: int, book_id: int):
     except (TypeError, ValueError):
         page_count = None
     pack_id = (data.get("pack_id") or "").strip() or None
+    provider = data.get("provider")
+    cover_mode = data.get("cover_mode")
 
     if session_id and (not session_id.isalnum() or len(session_id) > 40):
         return jsonify({"error": "session غير صالح."}), 400
@@ -4810,12 +4888,16 @@ def admin_order_book_progress_by_id(order_id: int, book_id: int):
             pass
         snap = _session_book_snapshot(sid, clean_planned, order_id=order_id, book_id=book_id)
         now = datetime.now(timezone.utc).isoformat()
+        cov_mode = normalize_cover_mode(cover_mode or existing.get("cover_mode"))
+        prov = normalize_provider(provider or existing.get("provider"))
         progress = {
             **existing,
             "step": step or existing.get("step") or "setup",
             "child_name": child_name or existing.get("child_name") or (row["child_name"] or ""),
             "photo": photo or existing.get("photo"),
             "pack_id": pack_id or existing.get("pack_id") or brow["pack_id"],
+            "provider": prov,
+            "cover_mode": cov_mode,
             "scenes": clean_planned,
             "page_count": page_count if page_count is not None else existing.get("page_count"),
             "has_cover": snap["has_cover"],
@@ -4824,7 +4906,7 @@ def admin_order_book_progress_by_id(order_id: int, book_id: int):
             "missing_pages": snap["missing_pages"],
             "updated_at": now,
         }
-        if step == "setup" and clean_planned and not snap["has_cover"]:
+        if step == "setup" and clean_planned and not snap["has_cover"] and cover_mode_flags(cov_mode)[0]:
             progress["step"] = "setup"
         else:
             progress["step"] = _infer_book_step(progress, snap, bool(brow["pdf_filename"]))
@@ -4896,8 +4978,46 @@ def admin_order_book_save_by_id(order_id: int, book_id: int):
         if not isinstance(scenes, list) or not scenes:
             scenes = json.loads(brow["scenes"]) if brow["scenes"] else []
         clean = [s for s in scenes if isinstance(s, str) and SCENE_ID_RE.match(s)]
-        all_pages = assemble_book_images(d, clean, child_name or (row["child_name"] or ""), include_ending=True)
-        if len(all_pages) < 2:
+        progress_peek: dict = {}
+        if brow["progress"]:
+            try:
+                progress_peek = json.loads(brow["progress"]) if isinstance(brow["progress"], str) else (brow["progress"] or {})
+                if not isinstance(progress_peek, dict):
+                    progress_peek = {}
+            except (json.JSONDecodeError, TypeError):
+                progress_peek = {}
+        cover_mode = normalize_cover_mode(data.get("cover_mode") or progress_peek.get("cover_mode"))
+        want_cover, want_ending = cover_mode_flags(cover_mode)
+
+        def _ensure_page_on_session(scene_id: str) -> bool:
+            dest = page_path(d, scene_id)
+            if dest.exists():
+                return True
+            if book_id is not None:
+                src = _order_book_page_path(order_id, scene_id, book_id)
+                if src.exists():
+                    try:
+                        shutil.copy2(src, dest)
+                        return True
+                    except OSError:
+                        return False
+            return False
+
+        for sid in clean:
+            _ensure_page_on_session(sid)
+        if want_cover and not _ensure_page_on_session(COVER_SCENE_ID):
+            conn.close()
+            return jsonify({"error": "غلاف البداية مطلوب ومش جاهز. ولّده الأول."}), 400
+        if want_ending and not _ensure_page_on_session(ENDING_SCENE_ID):
+            conn.close()
+            return jsonify({"error": "غلاف النهاية مطلوب ومش جاهز. ولّده الأول."}), 400
+
+        all_pages = assemble_book_images(
+            d, clean, child_name or (row["child_name"] or ""),
+            include_ending=want_ending,
+            include_cover=want_cover,
+        )
+        if not all_pages:
             conn.close()
             return jsonify({"error": "مفيش صفحات جاهزة. ولّد الكتاب الأول."}), 400
 
@@ -4927,6 +5047,7 @@ def admin_order_book_save_by_id(order_id: int, book_id: int):
             "step": "done",
             "scenes": clean,
             "child_name": child_name or progress.get("child_name") or row["child_name"],
+            "cover_mode": cover_mode,
             "pdf_ready": True,
             "updated_at": now,
         })
