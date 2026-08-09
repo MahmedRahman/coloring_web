@@ -479,6 +479,221 @@ OCCASIONS_SCENES = [
      "scene": "opening a big wrapped gift box with a ribbon, looking surprised and delighted, confetti around"},
 ]
 
+# ── Story books ─────────────────────────────────────────────────────────────
+# A story is NOT a coloring pack: its pages are full-color, they run in a fixed
+# narrative order, and each page carries a line of Arabic narration ("text").
+# "scene" is the English illustration brief and completes "the child is ...".
+
+TREASURE_BEATS = [
+    {"id": "st_tr_1", "emoji": "🗺️", "title": "الخريطة",
+     "text": "لقى {name} خريطة قديمة تحت السرير… مكتوب عليها: كنز!",
+     "scene": "kneeling on a bedroom floor unrolling an old treasure map, dust and golden light "
+              "coming from under the bed, eyes wide with excitement"},
+    {"id": "st_tr_2", "emoji": "🎒", "title": "بداية الرحلة",
+     "text": "حط {name} الخريطة في الشنطة وقال: يلا نبدأ المغامرة!",
+     "scene": "walking out of a cozy house at sunrise wearing a backpack and an explorer hat, "
+              "a long winding path stretching ahead toward green hills"},
+    {"id": "st_tr_3", "emoji": "🌳", "title": "الغابة",
+     "text": "دخل غابة كبيرة… الشجر عالي والأصوات غريبة، بس {name} كمّل.",
+     "scene": "walking bravely through a tall dense forest with sunbeams between the trees, "
+              "curious eyes of small friendly animals peeking from the bushes"},
+    {"id": "st_tr_4", "emoji": "🦊", "title": "الصاحب الجديد",
+     "text": "قابل تعلب صغير تايه… خدّه معاه، وبقوا اتنين.",
+     "scene": "crouching to comfort a small lost fox cub in a forest clearing, the fox looking up "
+              "with big trusting eyes"},
+    {"id": "st_tr_5", "emoji": "🌉", "title": "النهر",
+     "text": "النهر كان واسع… بس {name} بنى قنطرة من الخشب وعدّى.",
+     "scene": "carefully crossing a wide river on a makeshift wooden log bridge with the fox cub "
+              "following, water sparkling below"},
+    {"id": "st_tr_6", "emoji": "🕯️", "title": "الكهف",
+     "text": "جوّه الكهف كان ضلمة… شغّل الشمعة ولقى الطريق.",
+     "scene": "holding a small lantern inside a dark cave, warm light revealing glittering crystals "
+              "on the rocky walls, the fox cub close by"},
+    {"id": "st_tr_7", "emoji": "💎", "title": "الكنز",
+     "text": "الكنز مكانش دهب… كان صندوق مليان كتب وألوان!",
+     "scene": "opening a big wooden treasure chest that glows with books, crayons and paint "
+              "instead of gold, face lit with wonder"},
+    {"id": "st_tr_8", "emoji": "🏡", "title": "الرجوع",
+     "text": "رجع {name} البيت… وأحلى كنز كان المغامرة نفسها ❤️",
+     "scene": "arriving home at sunset with the fox cub, family waving from the doorway, "
+              "the treasure chest carried under one arm, warm golden light"},
+]
+
+COURAGE_BEATS = [
+    {"id": "st_co_1", "emoji": "😟", "title": "الصبح",
+     "text": "أول يوم مدرسة… و{name} قلبه بيدق بسرعة.",
+     "scene": "sitting on the edge of the bed in the early morning wearing a school uniform, "
+              "looking worried, a packed backpack waiting by the door"},
+    {"id": "st_co_2", "emoji": "🤗", "title": "حضن ماما",
+     "text": "ماما حضنته وقالت: الشجاعة إنك تخاف… وتروح برضه.",
+     "scene": "being hugged warmly by a parent at the front door, soft morning light, "
+              "the parent kneeling to eye level, reassuring smile"},
+    {"id": "st_co_3", "emoji": "🏫", "title": "الباب الكبير",
+     "text": "باب المدرسة كان كبير أوي… بس {name} دخل.",
+     "scene": "standing small in front of a very large school gate, hand on the strap of the "
+              "backpack, taking one brave step forward"},
+    {"id": "st_co_4", "emoji": "🪑", "title": "لوحده",
+     "text": "قعد لوحده في الفصل… وكل الوشوش جديدة.",
+     "scene": "sitting alone at a classroom desk among unfamiliar children, holding a pencil, "
+              "looking quietly around the bright room"},
+    {"id": "st_co_5", "emoji": "🙂", "title": "أول ابتسامة",
+     "text": "طفل جنبه ابتسم وقال: تحب تلعب معايا؟",
+     "scene": "another child at the next desk turning with a warm friendly smile and offering "
+              "a shared box of crayons"},
+    {"id": "st_co_6", "emoji": "⚽", "title": "الفسحة",
+     "text": "في الفسحة لعبوا سوا… والخوف راح.",
+     "scene": "playing happily with new friends in a sunny school playground, laughing while "
+              "running after a ball"},
+    {"id": "st_co_7", "emoji": "✋", "title": "رفع إيده",
+     "text": "ورفع إيده في الفصل لأول مرة… وجاوب صح!",
+     "scene": "raising a hand confidently in class while the teacher smiles at the board, "
+              "classmates looking on"},
+    {"id": "st_co_8", "emoji": "🌟", "title": "البطل",
+     "text": "رجع البيت وقال: أنا قدرت! و{name} فعلاً بطل ❤️",
+     "scene": "running into a parent's open arms at home, beaming with pride, backpack "
+              "swinging, warm afternoon light through the window"},
+]
+
+SPACE_BEATS = [
+    {"id": "st_sp_1", "emoji": "🌌", "title": "النجوم",
+     "text": "كل ليلة {name} يبص من الشباك… ويسأل: فيه إيه فوق؟",
+     "scene": "looking up through a bedroom window at a huge starry night sky, chin resting "
+              "on hands, wonder on the face"},
+    {"id": "st_sp_2", "emoji": "🔧", "title": "الصاروخ",
+     "text": "قرر يبني صاروخ من الكراتين… واشتغل عليه أسبوع.",
+     "scene": "building a cardboard rocket in a backyard with tape, paint and tools scattered "
+              "around, tongue out in concentration"},
+    {"id": "st_sp_3", "emoji": "🚀", "title": "الإقلاع",
+     "text": "٣… ٢… ١… انطلق!",
+     "scene": "blasting off inside the small rocket, flames and smoke below, the house and "
+              "garden shrinking underneath"},
+    {"id": "st_sp_4", "emoji": "🪐", "title": "بين الكواكب",
+     "text": "عدّى جنب كواكب ملوّنة… وشاف الأرض صغيرة من بعيد.",
+     "scene": "floating in the rocket window between colorful ringed planets, Earth a small "
+              "blue marble far behind"},
+    {"id": "st_sp_5", "emoji": "👽", "title": "الصاحب الفضائي",
+     "text": "قابل كائن صغير أخضر… خاف الأول، بعدين ضحكوا.",
+     "scene": "meeting a small cute green alien with big friendly eyes on a rocky colorful "
+              "planet, both waving shyly at each other"},
+    {"id": "st_sp_6", "emoji": "🌕", "title": "على القمر",
+     "text": "مشيوا سوا على القمر… وكل خطوة كانت طايرة!",
+     "scene": "bouncing in low gravity across the moon surface with the alien friend, "
+              "footprints in grey dust, Earth glowing in the black sky"},
+    {"id": "st_sp_7", "emoji": "🚩", "title": "العلم",
+     "text": "زرع علم صغير مكتوب عليه اسمه… علشان يفضل هناك.",
+     "scene": "planting a small flag on the moon with both hands, standing proudly beside it, "
+              "the alien friend clapping"},
+    {"id": "st_sp_8", "emoji": "🛏️", "title": "الرجوع",
+     "text": "ورجع ينام… والنجوم بتغمز له من الشباك ✨",
+     "scene": "back in bed hugging a toy rocket, smiling in sleep, stars twinkling through "
+              "the window and a tiny alien doll on the shelf"},
+]
+
+SEA_BEATS = [
+    {"id": "st_se_1", "emoji": "🤿", "title": "بدلة الغطس",
+     "text": "لبس {name} بدلة الغطس… النهارده هينزل تحت البحر!",
+     "scene": "standing on a sunny boat deck wearing diving goggles and flippers, the blue sea "
+              "sparkling all around"},
+    {"id": "st_se_2", "emoji": "🌊", "title": "أول نزلة",
+     "text": "نزل الماء… والدنيا تحت كانت أحلى من فوق.",
+     "scene": "diving underwater for the first time surrounded by bubbles, shafts of sunlight "
+              "cutting through the blue water"},
+    {"id": "st_se_3", "emoji": "🐬", "title": "الدولفين",
+     "text": "دولفين لطيف جه يسلّم عليه… وقاله: اتبعني!",
+     "scene": "greeting a smiling dolphin underwater, hand touching its nose, small colorful "
+              "fish swirling around them"},
+    {"id": "st_se_4", "emoji": "🪸", "title": "المدينة المرجانية",
+     "text": "وصلوا مدينة مبنية من المرجان… بيوت وشوارع وكل حاجة!",
+     "scene": "swimming into a magical coral city with arches, towers and glowing anemones, "
+              "sea creatures going about their day"},
+    {"id": "st_se_5", "emoji": "🐢", "title": "السلحفاة",
+     "text": "لقى سلحفاة اتلخبطت في شبكة… فكّها بسرعة.",
+     "scene": "carefully freeing a large sea turtle tangled in an old fishing net, gentle "
+              "focused expression, the turtle looking grateful"},
+    {"id": "st_se_6", "emoji": "🐚", "title": "الصدفة",
+     "text": "السلحفاة شكرته… وودّته لصدفة كبيرة مقفولة.",
+     "scene": "riding on the turtle's back toward a giant closed pearl shell resting on the "
+              "glowing seabed"},
+    {"id": "st_se_7", "emoji": "🦪", "title": "اللؤلؤة",
+     "text": "الصدفة فتحت… وفيها لؤلؤة بتلمع زي القمر.",
+     "scene": "the giant shell opening to reveal a huge glowing pearl lighting up the child's "
+              "amazed face underwater"},
+    {"id": "st_se_8", "emoji": "🏖️", "title": "الطلوع",
+     "text": "طلع {name} فوق… ومعاه أحلى ذكرى في البحر ❤️",
+     "scene": "surfacing at sunset next to the boat holding the pearl up high, the dolphin and "
+              "turtle waving goodbye from the water"},
+]
+
+DREAM_BEATS = [
+    {"id": "st_dr_1", "emoji": "😴", "title": "الحلم",
+     "text": "نام {name} وهو بيفكر: أنا هبقى إيه لما أكبر؟",
+     "scene": "sleeping peacefully in bed with a dreamy cloud of tiny icons — a stethoscope, a "
+              "rocket, a paintbrush — floating above the pillow"},
+    {"id": "st_dr_2", "emoji": "✨", "title": "كبر فجأة",
+     "text": "وفجأة… لقى نفسه كبير وواقف في مكان جديد!",
+     "scene": "standing surprised in a bright new workplace, still with the same young face but "
+              "wearing a grown-up work uniform, light streaming in"},
+    {"id": "st_dr_3", "emoji": "🚪", "title": "أول يوم",
+     "text": "أول يوم شغل… كل حاجة جديدة وصعبة شوية.",
+     "scene": "walking into a busy workplace on the first day holding a folder, coworkers "
+              "greeting warmly, slightly nervous smile"},
+    {"id": "st_dr_4", "emoji": "😧", "title": "المشكلة",
+     "text": "وحصلت مشكلة… وكل الناس بصّت له.",
+     "scene": "facing a sudden problem at work with everyone turning to look, worried but "
+              "standing firm, papers and tools scattered"},
+    {"id": "st_dr_5", "emoji": "💡", "title": "الفكرة",
+     "text": "فكّر شوية… وافتكر حاجة اتعلمها وهو صغير.",
+     "scene": "a bright idea moment with a glowing lightbulb above the head, a flashback bubble "
+              "showing the same child as a small kid learning"},
+    {"id": "st_dr_6", "emoji": "🛠️", "title": "الحل",
+     "text": "اشتغل بإيديه… وحلّها لوحده!",
+     "scene": "working intently with both hands to fix the problem, sleeves rolled up, focused "
+              "determined expression, tools in use"},
+    {"id": "st_dr_7", "emoji": "👏", "title": "الشكر",
+     "text": "كل الناس صفّقوا… وقالوا: شكراً!",
+     "scene": "surrounded by smiling grateful people clapping, receiving a warm handshake, "
+              "sunlight and confetti-like sparkle in the air"},
+    {"id": "st_dr_8", "emoji": "📚", "title": "صحي",
+     "text": "صحي {name} من النوم وقال: يبقى لازم أذاكر من دلوقتي!",
+     "scene": "waking up in bed with a big determined smile, morning light on the face, reaching "
+              "for a school book on the bedside table"},
+]
+
+RAMADAN_BEATS = [
+    {"id": "st_ra_1", "emoji": "🌙", "title": "الهلال",
+     "text": "شاف {name} الهلال في السما… وعرف إن رمضان جه!",
+     "scene": "standing on a balcony at dusk pointing at a thin crescent moon, warm lanterns "
+              "glowing on the street below"},
+    {"id": "st_ra_2", "emoji": "🏮", "title": "الفانوس",
+     "text": "علّق فانوسه على الشباك… ونوّر البيت كله.",
+     "scene": "hanging a big colorful Ramadan lantern by a window, warm golden light spreading "
+              "across a cozy room"},
+    {"id": "st_ra_3", "emoji": "🥘", "title": "تحضير الفطار",
+     "text": "ساعد ماما في المطبخ… وحط الطبق على السفرة.",
+     "scene": "helping in a warm kitchen carrying a dish to a full iftar table set with dates, "
+              "soup and lanterns"},
+    {"id": "st_ra_4", "emoji": "💧", "title": "أول يوم صيام",
+     "text": "أول يوم يصوم… وكان صعب، بس كمّل.",
+     "scene": "sitting patiently by a window in the afternoon light with a glass of water "
+              "waiting on the table, determined little face"},
+    {"id": "st_ra_5", "emoji": "🔊", "title": "المدفع",
+     "text": "وسمع المدفع… ألله أكبر! أحلى تمرة في الدنيا.",
+     "scene": "joyfully biting into a date at the iftar table the moment the cannon sounds, "
+              "family hands reaching around the table, warm light"},
+    {"id": "st_ra_6", "emoji": "🍲", "title": "للجيران",
+     "text": "شال طبق للجيران… وقال: كل سنة وانتوا طيبين!",
+     "scene": "carrying a covered dish to a neighbor's door in a lit hallway, smiling as the "
+              "neighbor opens the door happily"},
+    {"id": "st_ra_7", "emoji": "🕌", "title": "التراويح",
+     "text": "وراح مع بابا التراويح… والمسجد كان مليان نور.",
+     "scene": "walking hand in hand with a parent toward a beautiful lit mosque at night, "
+              "minaret and crescent against a deep blue sky"},
+    {"id": "st_ra_8", "emoji": "🎁", "title": "العيد",
+     "text": "وجه العيد… وكل سنة و{name} طيب ❤️",
+     "scene": "wearing new Eid clothes holding gifts and balloons, family celebrating around a "
+              "table of sweets, festive decorations everywhere"},
+]
+
 # Each pack is a separate book type in the admin book picker.
 # Theme keys drive the whole book, not just the scene list:
 #   book_title / tagline / ending_line — Arabic text burned into cover + ending
@@ -592,7 +807,167 @@ SCENE_PACKS = [
      "scenes": OCCASIONS_SCENES},
 ]
 
+
+# Story books. `art_key` is repeated verbatim on every page of the story so all
+# pages look like one book — this is what keeps a storybook visually coherent.
+STORY_PACKS = [
+    {"id": "story_treasure", "kind": "story", "emoji": "🗺️", "title": "قصة الكنز المفقود",
+     "desc": "خريطة قديمة، غابة، كهف… وكنز مش زي ما تتوقع",
+     "book_title": "الكنز المفقود",
+     "tagline": "مغامرة بطلها إنت!",
+     "ending_line": "تمّت المغامرة",
+     "moral": "أحلى كنز هو الرحلة نفسها",
+     "art_key": "warm adventurous storybook painting, rich earthy greens and golds, soft painted "
+                "textures, gentle rim light, cinematic depth",
+     "cover_scene": "standing on a hilltop at sunrise holding an old treasure map, a fox cub at "
+                    "the feet, a winding path and distant cave behind",
+     "ending_scene": "sitting on the treasure chest at home surrounded by books and crayons with "
+                     "the fox cub asleep nearby, warm lamp light",
+     "palette": ["#b45309", "#15803d"],
+     "colors": "warm forest greens, golden amber, sunlit sandy browns, deep teal shadows",
+     "scenes": TREASURE_BEATS},
+
+    {"id": "story_courage", "kind": "story", "emoji": "🌟", "title": "قصة أول يوم مدرسة",
+     "desc": "الخوف، الحضن، أول صاحب… وأول مرة يرفع إيده",
+     "book_title": "أشجع طفل",
+     "tagline": "الشجاعة إنك تخاف وتروح برضه",
+     "ending_line": "أنا قدرت!",
+     "moral": "الشجاعة مش عدم الخوف",
+     "art_key": "soft gentle storybook illustration, warm pastel palette, cozy morning light, "
+                "tender emotional expressions, watercolor texture",
+     "cover_scene": "standing at a big school gate with a backpack, looking up bravely, morning "
+                    "sun behind the school building",
+     "ending_scene": "running happily into a parent's open arms after school, backpack swinging, "
+                     "golden afternoon light",
+     "palette": ["#f59e0b", "#38bdf8"],
+     "colors": "soft peach, warm cream, gentle sky blue, buttery morning yellow",
+     "scenes": COURAGE_BEATS},
+
+    {"id": "story_space", "kind": "story", "emoji": "🚀", "title": "قصة رحلة الفضاء",
+     "desc": "صاروخ كرتون، كواكب، صاحب فضائي، ومشي على القمر",
+     "book_title": "رحلة إلى النجوم",
+     "tagline": "٣… ٢… ١… انطلق!",
+     "ending_line": "رحلة النجوم",
+     "moral": "الخيال بيوصلك لأبعد مكان",
+     "art_key": "vivid cosmic storybook illustration, deep blues and purples with glowing stars, "
+                "soft nebula gradients, luminous highlights, dreamy scale",
+     "cover_scene": "sitting inside a cardboard rocket window flying between colorful planets "
+                    "with Earth glowing far below",
+     "ending_scene": "asleep in bed hugging a toy rocket while stars twinkle through the window "
+                     "and a tiny alien doll sits on the shelf",
+     "palette": ["#4338ca", "#0ea5e9"],
+     "colors": "deep indigo and violet, glowing cyan, starlight white sparks, warm orange rocket glow",
+     "scenes": SPACE_BEATS},
+
+    {"id": "story_sea", "kind": "story", "emoji": "🐬", "title": "قصة تحت البحر",
+     "desc": "غطس، دولفين، مدينة مرجانية، ولؤلؤة بتلمع",
+     "book_title": "لؤلؤة البحر",
+     "tagline": "تحت الماء فيه عالم تاني!",
+     "ending_line": "رحلة البحر",
+     "moral": "اللي بيساعد بيلاقي أحلى مكافأة",
+     "art_key": "luminous underwater storybook illustration, turquoise and aqua palette, caustic "
+                "light rays through water, floating bubbles, soft glow",
+     "cover_scene": "diving underwater with goggles beside a smiling dolphin, a glowing coral "
+                    "city in the distance below",
+     "ending_scene": "surfacing at sunset holding a glowing pearl while the dolphin and turtle "
+                     "wave goodbye from the water",
+     "palette": ["#0891b2", "#14b8a6"],
+     "colors": "turquoise and aqua, deep ocean blue, coral pink, sunlit golden green",
+     "scenes": SEA_BEATS},
+
+    {"id": "story_dream", "kind": "story", "emoji": "💭", "title": "قصة لما كبرت",
+     "desc": "حلم إنه كبر واشتغل… وقابل مشكلة وحلّها",
+     "book_title": "لما كبرت",
+     "tagline": "إنت هتبقى إيه لما تكبر؟",
+     "ending_line": "رحلة الحلم",
+     "moral": "اللي بتتعلمه دلوقتي بينفعك بكرة",
+     "art_key": "bright hopeful storybook illustration, clean modern shapes, warm sunlit "
+                "interiors, soft shadows, optimistic palette",
+     "cover_scene": "standing tall in a grown-up work uniform while a dreamy cloud above shows "
+                    "the same child asleep in bed",
+     "ending_scene": "waking up in bed with a determined smile reaching for a school book, "
+                     "morning light across the room",
+     "palette": ["#7c3aed", "#f59e0b"],
+     "colors": "warm sunlit amber, soft violet, clean sky blue, optimistic cream",
+     "scenes": DREAM_BEATS},
+
+    {"id": "story_ramadan", "kind": "story", "emoji": "🌙", "title": "قصة رمضان",
+     "desc": "الهلال، الفانوس، أول يوم صيام، المدفع… والعيد",
+     "book_title": "رمضان كريم",
+     "tagline": "أحلى شهر في السنة!",
+     "ending_line": "كل سنة وإنت طيب",
+     "moral": "رمضان فرحة ومشاركة",
+     "art_key": "warm nocturnal storybook illustration, deep blue night skies with golden lantern "
+                "glow, Arabic ornamental patterns, cozy family warmth",
+     "cover_scene": "holding a big glowing Ramadan lantern on a balcony under a crescent moon "
+                    "with warm lit streets below",
+     "ending_scene": "wearing new Eid clothes holding gifts and balloons with family celebrating "
+                     "around a table of sweets",
+     "palette": ["#1e3a8a", "#d97706"],
+     "colors": "deep midnight blue, golden lantern amber, warm brass, soft ivory",
+     "scenes": RAMADAN_BEATS},
+]
+
+# Coloring packs defined above are the default kind.
+for _p in SCENE_PACKS:
+    _p.setdefault("kind", "coloring")
+SCENE_PACKS.extend(STORY_PACKS)
+
 DEFAULT_PACK_ID = "jobs"
+
+
+def is_story_pack(pack: dict) -> bool:
+    return (pack or {}).get("kind") == "story"
+
+# ── Book picker presentation ────────────────────────────────────────────────
+# Tags + age hint + card order. Presentation only: nothing below changes any
+# book's scenes, cover, ending or prompts — it only affects how the picker
+# at #order/<id>/book/new lists the types.
+
+TAG_LABELS = {
+    "popular":     "الأكثر طلباً",
+    "new":         "جديد",
+    "gift":        "هدية",
+    "seasonal":    "موسمي",
+    "educational": "تربوي",
+}
+
+PACK_DISPLAY = {
+    "jobs":      {"tags": ["popular"],           "age": "4-8 سنين"},
+    "heroes":    {"tags": ["new"],               "age": "4-9 سنين"},
+    "animals":   {"tags": ["new"],               "age": "3-6 سنين"},
+    "girls":     {"tags": ["new"],               "age": "4-8 سنين"},
+    "sports":    {"tags": ["new"],               "age": "5-10 سنين"},
+    "occasions": {"tags": ["gift", "seasonal"],  "age": "كل الأعمار"},
+    "egypt":     {"tags": ["new", "seasonal"],   "age": "5-10 سنين"},
+    "daily":     {"tags": ["educational"],       "age": "3-5 سنين"},
+    # Stories
+    "story_treasure": {"tags": ["new"],                    "age": "5-9 سنين"},
+    "story_courage":  {"tags": ["new", "gift"],            "age": "4-7 سنين"},
+    "story_space":    {"tags": ["new"],                    "age": "5-9 سنين"},
+    "story_sea":      {"tags": ["new"],                    "age": "4-8 سنين"},
+    "story_dream":    {"tags": ["new", "educational"],     "age": "6-10 سنين"},
+    "story_ramadan":  {"tags": ["new", "seasonal"],        "age": "كل الأعمار"},
+}
+
+# Fun/gift books first, the educational one last. "jobs" must stay at index 0 —
+# it is the fallback pack for pack_by_id() and pack_for_scene().
+PACK_ORDER = [
+    # Coloring books
+    "jobs", "heroes", "animals", "girls", "sports", "occasions", "egypt", "daily",
+    # Story books
+    "story_courage", "story_treasure", "story_space", "story_sea",
+    "story_dream", "story_ramadan",
+]
+
+SCENE_PACKS.sort(
+    key=lambda p: PACK_ORDER.index(p["id"]) if p["id"] in PACK_ORDER else len(PACK_ORDER)
+)
+for _pack in SCENE_PACKS:
+    _display = PACK_DISPLAY.get(_pack["id"], {})
+    _pack["tags"] = _display.get("tags", [])
+    _pack["age"] = _display.get("age", "")
+assert SCENE_PACKS[0]["id"] == DEFAULT_PACK_ID, "default pack must stay first"
 
 
 def pack_by_id(pack_id: Optional[str]) -> dict:
@@ -1610,6 +1985,114 @@ def monthly_book_count(ip: str) -> int:
     return int(row["c"] if row else 0)
 
 
+def story_page_text(beat: dict, child_name: str = "") -> str:
+    """The Arabic narration for one story page, with {name} filled in."""
+    name = (child_name or "").strip()[:40] or "بطلنا"
+    return (beat.get("text") or "").replace("{name}", name)
+
+
+def build_story_prompt(
+    beat: dict,
+    pack: dict,
+    child_name: str = "",
+    page_no: int = 0,
+    total_pages: int = 0,
+) -> str:
+    """One full-color story page.
+
+    Three rules matter more than the wording:
+      1. `art_key` is repeated verbatim on every page so the whole book matches.
+      2. The page is fully painted "colored paper" — colour reaches all four edges.
+         A white page would read as an unfinished coloring sheet, not a storybook.
+      3. The image must contain NO text — Arabic narration is drawn on top by the
+         server (arabic_text + load_font), because image models garble Arabic.
+    """
+    name = (child_name or "").strip()[:40]
+    who = f'The hero of the story is a child named "{name}". ' if name else ""
+    where = (
+        f"This is page {page_no} of {total_pages} of one continuous story. "
+        if page_no and total_pages else ""
+    )
+    colors = pack.get("colors") or ", ".join(pack.get("palette") or []) or "the book's own warm palette"
+    return (
+        "Children's storybook illustration, FULL COLOR painted page, premium picture-book "
+        "quality, Disney/Pixar-grade warmth and appeal. "
+        "Vertical A4 portrait, full-bleed edge-to-edge, print-ready 300 DPI. "
+        f"ART STYLE (identical on every page of this book): {pack['art_key']}. "
+        f"DOMINANT COLORS (same across the whole book): {colors}. "
+        f"{who}{where}"
+        "This is image-to-image: the child must be the exact same child as the reference photo — "
+        "same face, same hairstyle, same age, same skin tone, same identity, clearly recognizable, "
+        "and drawn consistently the same across every page. "
+        f"SCENE: the child is {beat['scene']}. "
+        # Colored paper — the single most important difference from a coloring page.
+        "THE WHOLE PAGE IS PAINTED: rich saturated color covers the entire sheet from edge to "
+        "edge, including all four corners and the background behind the child. This is a printed "
+        "colored storybook page, NOT a white page with a drawing on it. "
+        "NEVER leave the background white, blank, empty or unpainted. No white paper anywhere, "
+        "no white frame, no white gutter, no plain white sky, no line art, no black-and-white areas. "
+        "Composition: keep the child clearly visible in the upper two thirds. "
+        "The bottom fifth must stay a calm PAINTED band — softly colored sky, ground, water or a "
+        "smooth gradient in the book's palette, with no important detail — so a caption can be "
+        "placed over it later. That band is colored, never white. "
+        "ABSOLUTELY NO text, no letters, no words, no numbers, no captions, no speech bubbles, "
+        "no watermark, no signature anywhere in the image. "
+        "Expressive storytelling, readable silhouette, soft cinematic lighting, rich color depth, "
+        "no letterboxing, no white borders, no empty margins."
+    )
+
+
+def build_story_cover_prompt(pack: dict, child_name: str = "") -> str:
+    """Story front cover — fully painted, and the one page with baked-in Arabic title."""
+    name = (child_name or "").strip()[:40] or "طفلي"
+    colors = pack.get("colors") or ", ".join(pack.get("palette") or []) or "the book's own warm palette"
+    return (
+        "Premium children's storybook front cover, FULL COLOR painted page, picture-book quality. "
+        "Vertical A4 portrait full-bleed, print-ready 300 DPI. "
+        f"ART STYLE: {pack['art_key']}. "
+        f"DOMINANT COLORS: {colors}. "
+        "The child must be the exact same child as the reference photo — same face, hairstyle, "
+        f'age, skin tone and identity. The child is named "{name}". '
+        f"Cover illustration: the child {pack['cover_scene']}. "
+        "Clear readable playful Arabic typography, well spaced, correctly shaped and connected: "
+        f'Large title at the top: "{pack["book_title"]}". '
+        f'Below the title, smaller: "بطلها {name}". '
+        f'Bottom banner: "{pack["tagline"]}". '
+        'Small round "لوني" logo badge in a bottom corner. '
+        "THE WHOLE COVER IS PAINTED: rich color covers the entire sheet edge to edge including "
+        "all four corners and the area behind the title. Never a white or blank background — "
+        "the Arabic text sits on painted artwork or a colored banner, not on white paper. "
+        "Leave generous calm space around the text so it stays readable. "
+        "No watermark, no extra text beyond what is listed. "
+        "Full-page edge-to-edge, no white borders, no letterboxing."
+    )
+
+
+def build_story_ending_prompt(pack: dict, child_name: str = "") -> str:
+    """Story last page — the moral, in the same visual identity as the cover."""
+    name = (child_name or "").strip()[:40]
+    who = f'The child is named "{name}". ' if name else ""
+    colors = pack.get("colors") or ", ".join(pack.get("palette") or []) or "the book's own warm palette"
+    return (
+        "Final page of a premium children's storybook, FULL COLOR painted page, picture-book quality. "
+        "Vertical A4 portrait full-bleed, print-ready 300 DPI. "
+        f"ART STYLE (same as the whole book): {pack['art_key']}. "
+        f"DOMINANT COLORS: {colors}. "
+        f"{who}"
+        "The child must be the exact same child as the reference photo — same face, hairstyle, "
+        "age and identity. "
+        f"Illustration: the child {pack['ending_scene']}. "
+        "Clear readable playful Arabic typography with generous calm space: "
+        f'Top: "{pack["ending_line"]}". '
+        f'Center-bottom on a soft banner: "{pack["moral"]}". '
+        'Small round "لوني" logo badge at the bottom. '
+        "THE WHOLE PAGE IS PAINTED: rich color edge to edge including all four corners and the "
+        "area behind the text. Never a white or blank background — no white paper anywhere. "
+        "Warm closing mood. No watermark, no extra text. "
+        "Full-page edge-to-edge, no white borders, no letterboxing."
+    )
+
+
 def build_prompt(
     scene_text: str,
     variant: str = DEFAULT_VARIANT,
@@ -1789,7 +2272,12 @@ async def generate_cover_page_async(
         refs = ensure_multi_refs(d)
         if not refs:
             raise RuntimeError("مفيش صورة مرجع لغلاف البداية.")
-        prompt = build_cover_prompt(child_name, page_count=page_count, pack_id=pack_id)
+        _pack = pack_by_id(pack_id)
+        prompt = (
+            build_story_cover_prompt(_pack, child_name)
+            if is_story_pack(_pack)
+            else build_cover_prompt(child_name, page_count=page_count, pack_id=pack_id)
+        )
         if use_kie:
             if not kie_configured():
                 raise RuntimeError("KIE_API_KEY مش مضبوط لغلاف البداية.")
@@ -1834,7 +2322,12 @@ async def generate_ending_page_async(
         refs = ensure_multi_refs(d)
         if not refs:
             raise RuntimeError("مفيش صورة مرجع لصفحة النهاية.")
-        prompt = build_ending_prompt(child_name, pack_id=pack_id)
+        _pack = pack_by_id(pack_id)
+        prompt = (
+            build_story_ending_prompt(_pack, child_name)
+            if is_story_pack(_pack)
+            else build_ending_prompt(child_name, pack_id=pack_id)
+        )
         if use_kie:
             if not kie_configured():
                 raise RuntimeError("KIE_API_KEY مش مضبوط لصفحة النهاية.")
@@ -2139,6 +2632,17 @@ async def generate_one_kie_async(
             "Full-page vertical A4 portrait composition, edge-to-edge illustration filling the entire page, "
             "no white borders, no letterboxing, no empty margins."
         )
+        # Story pages are full-colour narrative art — a different prompt entirely.
+        _pack = pack_for_scene(scene_id)
+        if is_story_pack(_pack):
+            _beats = _pack["scenes"]
+            _idx = next((i for i, b in enumerate(_beats) if b["id"] == scene_id), -1)
+            prompt = build_story_prompt(
+                scene, _pack,
+                child_name=style.get("child_name", ""),
+                page_no=_idx + 1 if _idx >= 0 else 0,
+                total_pages=len(_beats),
+            )
         ref_path = refs[0]
 
         async def _work():
@@ -3060,7 +3564,7 @@ def admin_dashboard():
     stats = collect_admin_stats()
     return render_template(
         "admin.html", stats=stats, scenes=ALL_SCENES, scene_packs=SCENE_PACKS,
-        cost_rates=cost_rates_dict(),
+        tag_labels=TAG_LABELS, cost_rates=cost_rates_dict(),
     )
 
 
@@ -3139,6 +3643,8 @@ def admin_quick_book_generate():
         "line_weight": data.get("line_weight") or "normal",
         "detail": data.get("detail") or "normal",
         "art_style": data.get("art_style") or "cartoon",
+        # Story pages name the hero inside the prompt; coloring pages ignore this.
+        "child_name": (data.get("child_name") or data.get("name") or "").strip()[:40],
     }
 
     scenes = []
