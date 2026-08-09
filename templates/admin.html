@@ -3854,7 +3854,46 @@ function obCurrentPdfUrl(filename) {
 
 function sceneTitle(id) {
   const s = ALL_SCENES.find(x => x.id === id);
-  return s ? s.title : id;
+  if (s) return s.title;
+  for (const p of SCENE_PACKS) {
+    const sc = (p.scenes || []).find(x => x.id === id);
+    if (sc) return sc.title;
+  }
+  return id;
+}
+
+/** Planned coloring pages: UI selection, saved list, or full story pack. */
+function obPlannedScenes() {
+  const pack = packById(_obPackId);
+  if (pack && pack.kind === 'story' && pack.scenes && pack.scenes.length) {
+    return pack.scenes.map(s => s.id);
+  }
+  const selected = obSelectedIds();
+  if (selected.length) return selected;
+  if (_obLastScenes && _obLastScenes.length) return [..._obLastScenes];
+  return [];
+}
+
+function obIsActuallyBusy() {
+  if (_obSlots.some(s => s.status === 'running')) return true;
+  return Object.keys(_obPageJobs || {}).some(k => _obPageJobs[k] === 'running');
+}
+
+/** Clear stuck busy/running leftover from a crashed or abandoned batch. */
+function obClearStaleBusy() {
+  if (_obBusy && !obIsActuallyBusy()) {
+    _obBusy = false;
+  }
+  (_obSlots || []).forEach(s => {
+    if (s.status === 'running' && _obPageJobs[s.scene_id] !== 'running') {
+      s.status = 'pending';
+    }
+  });
+  Object.keys(_obPageJobs || {}).forEach(k => {
+    if (_obPageJobs[k] === 'running' && !(_obSlots || []).some(s => s.scene_id === k && s.status === 'running')) {
+      delete _obPageJobs[k];
+    }
+  });
 }
 
 function obSelectedIds() {
@@ -4393,7 +4432,7 @@ function obUnitUsd() {
 }
 
 function obBuildQueue() {
-  const scenes = _obLastScenes.length ? _obLastScenes : obSelectedIds();
+  const scenes = obPlannedScenes();
   const { wantCover, wantEnding } = obCoverFlags();
   const q = [];
   if (wantCover) q.push({ id: 'cover', kind: 'cover', scene_id: 'cover', title: 'غلاف البداية' });
@@ -4409,15 +4448,16 @@ function obRebuildSlotsFromState() {
     if (item.kind === 'cover' && _obState.hasCover) status = 'done';
     else if (item.kind === 'ending' && _obState.hasEnding) status = 'done';
     else if (item.kind === 'page' && (_obState.donePages || []).includes(item.scene_id)) status = 'done';
-    if (_obPageJobs[item.scene_id] === 'running') status = 'running';
-    if (_obPageJobs[item.scene_id] === 'error') status = 'error';
+    // Prefer disk/state over stale "running" left after refresh
+    if (_obPageJobs[item.scene_id] === 'running' && status !== 'done') status = 'running';
+    if (_obPageJobs[item.scene_id] === 'error' && status !== 'done') status = 'error';
     return { ...item, status };
   });
 }
 
 function obEstimateCost() {
   const box = document.getElementById('ob-cost-box');
-  const scenes = obSelectedIds();
+  const scenes = obPlannedScenes();
   const { wantCover, wantEnding } = obCoverFlags();
   const n = scenes.length + (wantCover ? 1 : 0) + (wantEnding ? 1 : 0);
   const unit = obUnitUsd();
@@ -4496,13 +4536,13 @@ function obUpdateBatchStats() {
 function obUpdatePdfButton() {
   const btn = document.getElementById('ob-btn-pdf');
   if (!btn) return;
-  const scenes = (_obLastScenes.length ? _obLastScenes : obSelectedIds()).length;
+  const planned = obPlannedScenes();
+  const scenes = planned.length;
   const { wantCover, wantEnding } = obCoverFlags();
   const need = scenes + (wantCover ? 1 : 0) + (wantEnding ? 1 : 0);
   const okCover = !wantCover || _obState.hasCover;
   const okEnd = !wantEnding || _obState.hasEnding;
-  const donePages = (_obState.donePages || []).length;
-  const pagesOk = scenes > 0 && (_obLastScenes.length ? _obLastScenes : obSelectedIds()).every(s => (_obState.donePages || []).includes(s));
+  const pagesOk = scenes > 0 && planned.every(s => (_obState.donePages || []).includes(s));
   const allOk = need > 0 && okCover && okEnd && pagesOk;
   btn.style.display = allOk || _obState.pdfReady ? '' : 'none';
   if (allOk) {
@@ -4545,7 +4585,9 @@ function obOnSlotDone(sceneId, page) {
     obRenderSlots();
   }
   const stillRunning = _obSlots.some(s => s.status === 'running');
-  _obBusy = stillRunning;
+  // While batch is mid-loop keep busy; individual slots may finish ahead of peers
+  if (!stillRunning) _obBusy = false;
+  else _obBusy = true;
   obUpdateBatchStats();
   obEstimateCost();
   showToast(`اتحفظت «${(slot && slot.title) || sceneId}» ✓`, 'ok');
@@ -4565,55 +4607,99 @@ function obOnSlotError(sceneId, msg) {
     const regen = el.querySelector('button');
     if (regen) regen.disabled = false;
   }
-  _obBusy = _obSlots.some(s => s.status === 'running');
+  if (!_obSlots.some(s => s.status === 'running')) _obBusy = false;
   obUpdateBatchStats();
 }
 
 async function obStartBatchGenerate(forceAll) {
-  if (_obBusy) { showToast('فيه توليد شغّال…', 'err'); return; }
+  obClearStaleBusy();
+  if (_obBusy) {
+    showToast('فيه توليد شغّال… استنى أو حدّث الصفحة', 'err');
+    return;
+  }
   const name = obChildName();
   if (!name) { showToast('اكتب اسم الطفل', 'err'); return; }
-  const scenes = obSelectedIds();
-  if (scenes.length !== _obPageCount) {
-    showToast(`اختار ${_obPageCount} مواقف بالظبط`, 'err');
+
+  // Ensure story / saved scenes are planned even if UI selection was lost
+  let scenes = obPlannedScenes();
+  const pack = packById(_obPackId);
+  if (pack && pack.kind === 'story') {
+    scenes = pack.scenes.map(s => s.id);
+    _obPageCount = scenes.length;
+    _obLastScenes = [...scenes];
+    try { obSelectScenes(scenes); } catch (_) {}
+  } else if (!scenes.length && _obPageCount) {
+    obSelectAuto();
+    scenes = obSelectedIds();
+  }
+  if (!scenes.length) {
+    showToast('اختار الصفحات الأول', 'err');
+    return;
+  }
+  if (pack && pack.kind !== 'story' && scenes.length !== _obPageCount) {
+    showToast(`اختار ${_obPageCount} مواقف بالظبط (مختار ${scenes.length})`, 'err');
     return;
   }
   if (!_obBookId) { showToast('مفيش كتاب محدد', 'err'); return; }
 
   _obBusy = true;
   _obLastScenes = [...scenes];
+  const msgEl = document.getElementById('ob-msg');
+  if (msgEl) {
+    msgEl.textContent = forceAll ? 'جاري إعادة توليد الكل...' : 'جاري توليد الناقص...';
+    msgEl.className = 'qb-msg ok';
+  }
   try {
+    // Fresh disk status so "ناقص" matches reality
+    try {
+      const base = obBookApiBase();
+      if (base) {
+        const stRes = await fetch(base);
+        const stData = await parseJsonResponse(stRes);
+        if (stRes.ok) obApplyStatusPayload(stData);
+      }
+    } catch (_) {}
+
     if (!_obSessionId) {
       const st = await obEnsureSession({ forceNew: false });
-      if (!st) throw new Error('فشل الجلسة');
+      if (!st) throw new Error('فشل الجلسة — تأكد من صورة الطفل على الطلب');
     }
-    await obPersistProgress({ step: 'setup', scenes, child_name: name });
+    await obPersistProgress({ step: 'setup', scenes, child_name: name, page_count: scenes.length });
     obRebuildSlotsFromState();
     if (forceAll) {
-      _obSlots.forEach(s => { s.status = 'pending'; _obPageJobs[s.scene_id] = null; });
+      _obSlots.forEach(s => { s.status = 'pending'; delete _obPageJobs[s.scene_id]; });
       _obState = { hasCover: false, hasEnding: false, donePages: [], missingPages: [...scenes], pdfReady: false };
+      // Mark all pending after force-clear
+      _obSlots.forEach(s => { s.status = 'pending'; });
     }
     // Only generate missing / force all
-    const todo = _obSlots.filter(s => forceAll || s.status !== 'done');
+    let todo = _obSlots.filter(s => forceAll || s.status !== 'done');
+    // Never leave stuck "running" in the queue as skipped — re-queue them
+    todo = todo.map(s => {
+      if (s.status === 'running') s.status = 'pending';
+      return s;
+    });
     if (!todo.length) {
       showToast('كل الصور جاهزة ✓ — اعمل PDF', 'ok');
       _obBusy = false;
+      obRenderSlots();
       obUpdatePdfButton();
       return;
     }
-    todo.forEach(s => { s.status = 'pending'; });
+    todo.forEach(s => { s.status = 'pending'; delete _obPageJobs[s.scene_id]; });
     obRenderSlots();
     const prog = document.getElementById('ob-progress');
     if (prog) prog.style.display = '';
     obSetProgress(5, `توليد ${todo.length} صورة · حتى ${OB_PAGE_PARALLEL} متوازي...`);
+    showToast(`بدء توليد ${todo.length} صورة...`, 'ok');
 
     // Parallel workers
     let idx = 0;
     const runOne = async (item) => {
+      if (!item) return;
       const sid = item.scene_id;
       item.status = 'running';
       _obPageJobs[sid] = 'running';
-      // mark running in DOM
       const el = document.getElementById('ob-slot-' + sid);
       if (el) {
         el.className = 'ob-slot running';
@@ -4639,7 +4725,12 @@ async function obStartBatchGenerate(forceAll) {
           if (!page || page.error) throw new Error((page && page.error) || 'فشل الصفحة');
           obOnSlotDone(sid, page);
         }
-        await obPersistProgress({ step: item.kind === 'cover' ? 'cover' : (item.kind === 'ending' ? 'ending' : 'pages'), scenes });
+        try {
+          await obPersistProgress({
+            step: item.kind === 'cover' ? 'cover' : (item.kind === 'ending' ? 'ending' : 'pages'),
+            scenes,
+          });
+        } catch (_) {}
       } catch (e) {
         obOnSlotError(sid, e.message || 'فشل');
       }
@@ -4657,29 +4748,40 @@ async function obStartBatchGenerate(forceAll) {
     const fail = _obSlots.filter(s => s.status === 'error').length;
     obSetProgress(100, `تم ${done} · فشل ${fail}`);
     if (fail === 0 && done === _obSlots.length) {
-      // auto-build PDF
-      try {
-        await obBuildPdf();
-      } catch (_) {}
+      try { await obBuildPdf(); } catch (_) {}
     }
-    const msg = document.getElementById('ob-msg');
-    if (msg) {
-      msg.textContent = fail ? `خلص: ${done} نجح · ${fail} فشل — اضغط إعادة على الفاشل` : `تم توليد ${done} صورة وحفظهم ✓`;
-      msg.className = 'qb-msg ' + (fail ? 'err' : 'ok');
+    if (msgEl) {
+      msgEl.textContent = fail
+        ? `خلص: ${done} نجح · ${fail} فشل — اضغط إعادة على الفاشل أو توليد الناقص`
+        : `تم توليد ${done} صورة وحفظهم ✓`;
+      msgEl.className = 'qb-msg ' + (fail ? 'err' : 'ok');
     }
   } catch (e) {
     showToast(e.message || 'فشل', 'err');
+    if (msgEl) {
+      msgEl.textContent = e.message || 'فشل التوليد';
+      msgEl.className = 'qb-msg err';
+    }
+    // Unstick any running markers so next click works
+    (_obSlots || []).forEach(s => {
+      if (s.status === 'running') s.status = 'error';
+    });
+    Object.keys(_obPageJobs || {}).forEach(k => {
+      if (_obPageJobs[k] === 'running') _obPageJobs[k] = 'error';
+    });
   } finally {
-    _obBusy = _obSlots.some(s => s.status === 'running');
+    _obBusy = false;
     const prog = document.getElementById('ob-progress');
-    setTimeout(() => { if (prog && !_obBusy) prog.style.display = 'none'; }, 1500);
+    setTimeout(() => { if (prog) prog.style.display = 'none'; }, 1500);
     obEstimateCost();
     obUpdatePdfButton();
+    obRenderSlots();
   }
 }
 
 async function obRegenerateSlot(sceneId) {
-  if (_obBusy && _obPageJobs[sceneId] === 'running') return;
+  obClearStaleBusy();
+  if (_obPageJobs[sceneId] === 'running') return;
   const name = obChildName();
   if (!name) { showToast('اكتب اسم الطفل', 'err'); return; }
   if (!confirm('تعيد توليد الصفحة دي؟ (≈ $' + obUnitUsd().toFixed(2) + ')')) return;
@@ -4694,27 +4796,28 @@ async function obRegenerateSlot(sceneId) {
     _obPageJobs[sceneId] = 'running';
     obRenderSlots();
     if (item.kind === 'cover' || sceneId === 'cover') {
-      const page = await obGenerateCover(name, _obPageCount, true);
+      const page = await obGenerateCover(name, _obPageCount || obPlannedScenes().length || 8, true);
       obOnSlotDone('cover', page);
     } else if (item.kind === 'ending' || sceneId === 'ending') {
       const page = await obGenerateEnding(name, true);
       obOnSlotDone('ending', page);
     } else {
       const page = await obGenerateOnePage(sceneId, true);
+      if (page && page.error) throw new Error(page.error);
       obOnSlotDone(sceneId, page);
     }
-    await obPersistProgress({ scenes: _obLastScenes.length ? _obLastScenes : obSelectedIds() });
+    await obPersistProgress({ scenes: obPlannedScenes() });
   } catch (e) {
     obOnSlotError(sceneId, e.message || 'فشل');
     showToast(e.message || 'فشل', 'err');
   } finally {
-    _obBusy = _obSlots.some(s => s.status === 'running');
+    _obBusy = false;
   }
 }
 
 async function obBuildPdf() {
   const name = obChildName();
-  const scenes = _obLastScenes.length ? _obLastScenes : obSelectedIds();
+  const scenes = obPlannedScenes();
   if (!scenes.length) { showToast('مفيش صفحات', 'err'); return; }
   try {
     if (!_obSessionId) await obEnsureSession({ forceNew: false });
