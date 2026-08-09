@@ -5257,6 +5257,7 @@ async function obGenerateOnePage(sid, force) {
       order_id: _obOrder && _obOrder.id,
       book_id: _obBookId,
       provider: _obProvider,
+      child_name: obChildName(),
     });
     const secs = Math.round(((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0) / 100) / 10;
     const batch = gData.pages || [];

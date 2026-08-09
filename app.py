@@ -2108,7 +2108,8 @@ def build_prompt(
         ART_STYLE.get(art_style, ART_STYLE["cartoon"]),
     ])
     # Pack mood keeps every page of one book looking like the same book.
-    mood = pack_by_id(pack_id)["mood"] if pack_id else ""
+    # Story packs use art_key instead of mood — never require "mood".
+    mood = pack_by_id(pack_id).get("mood") or "" if pack_id else ""
     tail = f", {mood}" if mood else ""
     return f"{style}, {extras}, the child is {scene_text}{tail}"
 
@@ -2417,6 +2418,10 @@ def friendly_error(exc: Exception) -> str:
         return msg
     if "API error" in msg:
         return "الموديل رفض الطلب. جرّب صورة أوضح أو موقف تاني."
+    # Surface short exception text for easier admin debugging (no stack traces).
+    short = (msg or type(exc).__name__).strip()
+    if short and len(short) < 160 and "\n" not in short:
+        return f"حصل خطأ أثناء التوليد: {short}"
     return "حصل خطأ غير متوقع أثناء التوليد. جرّب مرة أخرى."
 
 
@@ -2617,23 +2622,8 @@ async def generate_one_kie_async(
     # Never delete the old page before the new one succeeds
     if force or not out.exists():
         refs = ensure_multi_refs(d)
-        prompt = build_prompt(
-            scene["scene"],
-            variant=style.get("variant", DEFAULT_VARIANT),
-            line_weight=style.get("line_weight", "normal"),
-            detail=style.get("detail", "normal"),
-            art_style=style.get("art_style", "cartoon"),
-            pack_id=pack_for_scene(scene_id)["id"],
-        )
-        prompt = (
-            f"{prompt}. "
-            "This is image-to-image: keep the exact same child face, hair, age and identity "
-            "from the reference photo, converted to simple black-and-white coloring book line art only. "
-            "Full-page vertical A4 portrait composition, edge-to-edge illustration filling the entire page, "
-            "no white borders, no letterboxing, no empty margins."
-        )
-        # Story pages are full-colour narrative art — a different prompt entirely.
         _pack = pack_for_scene(scene_id)
+        # Story pages: full-colour narrative art (skip line-art coloring prompt).
         if is_story_pack(_pack):
             _beats = _pack["scenes"]
             _idx = next((i for i, b in enumerate(_beats) if b["id"] == scene_id), -1)
@@ -2642,6 +2632,22 @@ async def generate_one_kie_async(
                 child_name=style.get("child_name", ""),
                 page_no=_idx + 1 if _idx >= 0 else 0,
                 total_pages=len(_beats),
+            )
+        else:
+            prompt = build_prompt(
+                scene["scene"],
+                variant=style.get("variant", DEFAULT_VARIANT),
+                line_weight=style.get("line_weight", "normal"),
+                detail=style.get("detail", "normal"),
+                art_style=style.get("art_style", "cartoon"),
+                pack_id=_pack["id"],
+            )
+            prompt = (
+                f"{prompt}. "
+                "This is image-to-image: keep the exact same child face, hair, age and identity "
+                "from the reference photo, converted to simple black-and-white coloring book line art only. "
+                "Full-page vertical A4 portrait composition, edge-to-edge illustration filling the entire page, "
+                "no white borders, no letterboxing, no empty margins."
             )
         ref_path = refs[0]
 
