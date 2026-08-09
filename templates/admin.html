@@ -2066,9 +2066,12 @@ let _obSessionId = null;
 let _obPhoto = null;
 let _obPageCount = 8;
 let _obBusy = false;
-let _obView = 'detail'; // detail | products | coloring
+let _obView = 'detail'; // detail | products | books-list | coloring
 let _obPackId = 'jobs';       // selected book type (scene pack)
 let _obPackExplicit = false;  // true when the admin just picked a type from the picker
+let _obBookId = null;         // special_order_books.id — each child can have many books
+let _obPdfUrl = null;
+let _obPdfFilename = null;
 let _obLastScenes = []; // planned / generated scene ids
 let _obStep = 'setup'; // setup|cover|pages|ending|pdf|done
 let _obState = {
@@ -2256,28 +2259,44 @@ function parseRoute(hash) {
   const h = (hash || '').replace(/^#/, '');
   // #order/new — add order
   if (h === 'order/new' || h === 'order-new') {
-    return { section: 'order-form', orderId: null, book: false, formMode: 'new' };
+    return { section: 'order-form', orderId: null, book: false, bookId: null, bookNew: false, formMode: 'new' };
   }
-  // #order/123/edit | #order/123/book | #order/123
-  const m = h.match(/^order[\/-](\d+)(?:\/(book|edit))?$/);
+  // #order/123/book/new | #order/123/book/45 | #order/123/book | #order/123/edit | #order/123
+  const mBook = h.match(/^order[\/-](\d+)\/book(?:\/(new|\d+))?$/);
+  if (mBook) {
+    const bookPart = mBook[2];
+    return {
+      section: 'order-detail',
+      orderId: parseInt(mBook[1], 10),
+      book: true,
+      bookNew: bookPart === 'new',
+      bookId: bookPart && bookPart !== 'new' ? parseInt(bookPart, 10) : null,
+      formMode: null,
+    };
+  }
+  const m = h.match(/^order[\/-](\d+)(?:\/(edit))?$/);
   if (m) {
     if (m[2] === 'edit') {
       return {
         section: 'order-form',
         orderId: parseInt(m[1], 10),
         book: false,
+        bookId: null,
+        bookNew: false,
         formMode: 'edit',
       };
     }
     return {
       section: 'order-detail',
       orderId: parseInt(m[1], 10),
-      book: m[2] === 'book',
+      book: false,
+      bookId: null,
+      bookNew: false,
       formMode: null,
     };
   }
-  if (sectionMeta[h]) return { section: h, orderId: null, book: false, formMode: null };
-  return { section: 'overview', orderId: null, book: false, formMode: null };
+  if (sectionMeta[h]) return { section: h, orderId: null, book: false, bookId: null, bookNew: false, formMode: null };
+  return { section: 'overview', orderId: null, book: false, bookId: null, bookNew: false, formMode: null };
 }
 
 function showSection(id, orderId) {
@@ -2318,7 +2337,10 @@ function showSection(id, orderId) {
   // Update URL hash (form handles its own)
   let nextHash;
   if (id === 'order-detail' && orderId) {
-    nextHash = '#order/' + orderId + (_obView === 'coloring' || _obView === 'products' ? '/book' : '');
+    if (_obView === 'coloring' && _obBookId) nextHash = '#order/' + orderId + '/book/' + _obBookId;
+    else if (_obView === 'products') nextHash = '#order/' + orderId + '/book/new';
+    else if (_obView === 'books-list' || _obView === 'coloring' || _obView === 'products') nextHash = '#order/' + orderId + '/book';
+    else nextHash = '#order/' + orderId;
   } else if (id === 'order-form') {
     nextHash = _soEditId != null ? '#order/' + _soEditId + '/edit' : '#order/new';
   } else {
@@ -3143,7 +3165,14 @@ function orderCardHTML(o) {
 async function openOrderDetailPage(id, opts = {}) {
   _detailOrderId = id;
   const openBook = !!(opts.openBook || opts.book);
-  const routeHash = openBook ? '#order/' + id + '/book' : '#order/' + id;
+  const bookId = opts.bookId != null ? opts.bookId : null;
+  const bookNew = !!opts.bookNew;
+  let routeHash = '#order/' + id;
+  if (openBook) {
+    if (bookId) routeHash = '#order/' + id + '/book/' + bookId;
+    else if (bookNew) routeHash = '#order/' + id + '/book/new';
+    else routeHash = '#order/' + id + '/book';
+  }
 
   // Ensure section is visible + URL is correct without re-entering openOrderDetailPage loop
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -3156,8 +3185,16 @@ async function openOrderDetailPage(id, opts = {}) {
 
   const titleEl = document.getElementById('page-title');
   const subEl   = document.getElementById('page-sub');
-  if (titleEl) titleEl.textContent = openBook ? 'إنشاء كتاب · طلب #' + id : 'تفاصيل الطلب #' + id;
-  if (subEl)   subEl.textContent   = openBook ? 'اختيار نوع الكتاب وتوليد PDF' : 'عرض وإدارة الطلب';
+  if (titleEl) {
+    titleEl.textContent = openBook
+      ? (bookId ? `كتاب #${bookId} · طلب #${id}` : `كتب الطفل · طلب #${id}`)
+      : 'تفاصيل الطلب #' + id;
+  }
+  if (subEl) {
+    subEl.textContent = openBook
+      ? (bookId ? 'توليد وحفظ الكتاب' : 'كل كتاب في صفحة مستقلة — والطفل ممكن يكون ليه أكتر من كتاب')
+      : 'عرض وإدارة الطلب';
+  }
 
   if (location.hash !== routeHash) {
     history.pushState(null, '', routeHash);
@@ -3188,15 +3225,20 @@ async function openOrderDetailPage(id, opts = {}) {
 
   _obOrder = o;
   if (openBook) {
-    // Resume coloring UI if already mid-session on this view, else product picker
-    if (_obView === 'coloring' && _obSessionId && _detailOrderId === id) {
-      renderOrderColoringBook(o);
-      await obEnsureSession({ forceNew: false });
-    } else {
+    if (bookId) {
+      _obBookId = bookId;
+      _obView = 'coloring';
+      await openNamedOrderBook(id, bookId);
+    } else if (bookNew) {
+      _obBookId = null;
       renderBookProductPicker(o);
+    } else {
+      _obBookId = null;
+      await renderOrderBooksList(o);
     }
   } else {
     _obView = 'detail';
+    _obBookId = null;
     renderOrderDetail(o);
   }
 }
@@ -3284,13 +3326,6 @@ function renderOrderDetail(o) {
       </div>`;
   }
 
-  const bookStatus = o.pdf_filename
-    ? `كتاب محفوظ${o.book_page_count ? ` · ${o.book_page_count} صفحة` : ''}${o.book_session_active ? ' · جلسة نشطة' : ''}`
-    : (o.book_session_active
-      ? `جلسة إنشاء محفوظة${o.book_page_count ? ` · ${o.book_page_count} صفحة` : ''}`
-      : 'من هنا تولّد كتاب التلوين من صورة واسم الطفل على الطلب');
-  const bookBtnLabel = (o.pdf_filename || o.book_session_active) ? 'متابعة / إنشاء كتاب' : 'إنشاء كتاب';
-
   root.innerHTML = `
     <button type="button" class="so-detail-back" onclick="showSection('special-orders')">← رجوع لقائمة الطلبات</button>
 
@@ -3305,7 +3340,7 @@ function renderOrderDetail(o) {
       <div class="so-detail-hero-actions">
         ${statusBadge}
         ${waBtn}
-        <button class="btn btn-primary" onclick="openBookFlow(${o.id})">${bookBtnLabel}</button>
+        <button class="btn btn-primary" onclick="openBookFlow(${o.id})">كتب الطفل</button>
         <button class="btn ${toggleClass}" onclick="toggleStatus(${o.id}, '${escHtml(o.status)}')">${toggleLabel}</button>
         <button class="btn btn-ghost" onclick="openOrderModal(${o.id})">تعديل</button>
       </div>
@@ -3313,14 +3348,19 @@ function renderOrderDetail(o) {
 
     <div class="so-detail-grid">
       <div class="so-detail-card full">
-        <h3 class="so-detail-section-title">إنشاء كتاب</h3>
-        <div class="ob-create-card">
+        <h3 class="so-detail-section-title">كتب التلوين</h3>
+        <p class="hint" style="margin:-4px 0 12px">كل كتاب في صفحة مستقلة — نفس الطفل يقدر يبقى ليه أكتر من كتاب.</p>
+        <div class="ob-create-card" style="margin-bottom:12px">
           <div class="ob-meta">
-            <strong>${bookBtnLabel}</strong>
-            <span>${escHtml(bookStatus)}</span>
+            <strong>إدارة الكتب</strong>
+            <span>افتح كتاب محفوظ أو أضف كتاب جديد بنوع مختلف</span>
           </div>
-          <button type="button" class="btn btn-primary" onclick="openBookFlow(${o.id})">${bookBtnLabel}</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-primary" onclick="openBookFlow(${o.id})">عرض كل الكتب</button>
+            <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id}, { openBook:true, bookNew:true })">+ كتاب جديد</button>
+          </div>
         </div>
+        <div id="so-order-books-mini">جاري تحميل الكتب...</div>
       </div>
 
       <div class="so-detail-card">
@@ -3376,26 +3416,103 @@ function renderOrderDetail(o) {
       </div>
     </div>
   `;
+
+  // Load multi-book list preview on order detail
+  loadOrderBooksMini(o.id);
 }
 
-/* ── Order → Create Book flow ── */
+async function loadOrderBooksMini(orderId) {
+  const box = document.getElementById('so-order-books-mini');
+  if (!box) return;
+  try {
+    const res = await fetch(`/admin/api/special-orders/${orderId}/books`);
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || 'فشل');
+    const books = data.books || [];
+    if (!books.length) {
+      box.innerHTML = '<p class="muted" style="font-size:13px;margin:0">لسه مفيش كتب — اضغط «كتاب جديد».</p>';
+      return;
+    }
+    box.innerHTML = `<div class="ob-products" style="margin:0">${books.map(b => {
+      const pack = b.pack || {};
+      return `
+        <button type="button" class="ob-product" style="text-align:right"
+                onclick="openOrderDetailPage(${orderId}, { openBook:true, bookId:${b.id} })">
+          <span class="emoji">${escHtml(pack.emoji || '📗')}</span>
+          <div class="name">${escHtml(b.title || pack.title || 'كتاب')}</div>
+          <div class="desc">${escHtml(b.current_step_label || '—')} · صفحات ${escHtml(String(b.pages_summary || '—'))}${b.pdf_ready ? ' · PDF ✓' : ''}</div>
+        </button>`;
+    }).join('')}</div>`;
+  } catch (e) {
+    box.innerHTML = `<p class="muted" style="font-size:13px;margin:0">${escHtml(e.message || 'فشل تحميل الكتب')}</p>`;
+  }
+}
+
+/* ── Order → multi-book flow (each book = separate page) ── */
 function openBookFlow(orderId) {
-  _obView = 'products';
+  _obView = 'books-list';
   openOrderDetailPage(orderId, { openBook: true });
 }
 
-function renderBookProductPicker(o) {
-  _obView = 'products';
-  _obPackExplicit = false;  // back at the picker — nothing chosen yet this round
+async function renderOrderBooksList(o) {
+  _obView = 'books-list';
+  _obBookId = null;
   const root = document.getElementById('so-detail-root');
   if (!root || !o) return;
   const titleEl = document.getElementById('page-title');
   const subEl = document.getElementById('page-sub');
-  if (titleEl) titleEl.textContent = 'إنشاء كتاب · طلب #' + o.id;
-  if (subEl) subEl.textContent = 'اختار نوع الكتاب';
+  if (titleEl) titleEl.textContent = `كتب «${o.child_name || 'الطفل'}» · طلب #${o.id}`;
+  if (subEl) subEl.textContent = 'كل كتاب ليه صفحة مستقلة — تقدر تفتحه أو تضيف كتاب جديد';
   if (location.hash !== '#order/' + o.id + '/book') {
     history.pushState(null, '', '#order/' + o.id + '/book');
   }
+  root.innerHTML = '<div class="so-detail-loading">جاري تحميل كتب الطفل...</div>';
+
+  let books = [];
+  try {
+    const res = await fetch(`/admin/api/special-orders/${o.id}/books`);
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || 'فشل تحميل الكتب');
+    books = data.books || [];
+  } catch (e) {
+    root.innerHTML = `
+      <button type="button" class="so-detail-back" onclick="_obView='detail'; openOrderDetailPage(${o.id})">← رجوع للطلب</button>
+      <div class="so-detail-error">${escHtml(e.message)}</div>`;
+    return;
+  }
+
+  const cards = books.length
+    ? books.map(b => {
+        const pack = b.pack || {};
+        const status = b.current_step_label || b.current_step || '—';
+        const pages = b.pages_summary || '—';
+        const pdfBtn = b.pdf_ready && b.pdf_filename
+          ? `<a class="btn btn-sm btn-success" href="/admin/special-orders/${o.id}/books/${b.id}/pdf/${encodeURIComponent(b.pdf_filename)}" target="_blank" onclick="event.stopPropagation()">PDF</a>`
+          : '<span class="muted" style="font-size:12px">PDF لسه</span>';
+        return `
+        <div class="ob-product" role="button" tabindex="0"
+             onclick="openOrderDetailPage(${o.id}, { openBook:true, bookId:${b.id} })"
+             style="text-align:right;cursor:pointer">
+          <span class="emoji">${escHtml(pack.emoji || '📗')}</span>
+          <div class="name">${escHtml(b.title || pack.title || 'كتاب')}</div>
+          <div class="desc">
+            ${escHtml(pack.title || '')}<br>
+            المرحلة: <strong>${escHtml(status)}</strong>
+            · صفحات: ${escHtml(String(pages))}
+            ${b.pdf_ready ? ' · PDF ✓' : ''}
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap" onclick="event.stopPropagation()">
+            <button type="button" class="btn btn-sm btn-primary"
+              onclick="openOrderDetailPage(${o.id}, { openBook:true, bookId:${b.id} })">فتح الكتاب</button>
+            ${pdfBtn}
+            <button type="button" class="btn btn-sm btn-danger"
+              onclick="deleteOrderBook(${o.id}, ${b.id})">حذف</button>
+          </div>
+        </div>`;
+      }).join('')
+    : `<div class="so-detail-card full" style="grid-column:1/-1">
+         <p class="hint" style="margin:0">لسه مفيش كتب لهذا الطفل. اضغط «كتاب جديد» واختار النوع.</p>
+       </div>`;
 
   root.innerHTML = `
     <button type="button" class="so-detail-back" onclick="_obView='detail'; openOrderDetailPage(${o.id})">← رجوع لتفاصيل الطلب</button>
@@ -3403,14 +3520,61 @@ function renderBookProductPicker(o) {
       <div class="so-detail-hero-main">
         <div class="so-detail-icon">📚</div>
         <div>
-          <h2>إنشاء كتاب</h2>
-          <p class="sub">لـ «${escHtml(o.child_name || 'الطفل')}» · طلب #${o.id}</p>
+          <h2>كتب «${escHtml(o.child_name || 'الطفل')}»</h2>
+          <p class="sub">طلب #${o.id} · ${books.length} كتاب</p>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary" onclick="openOrderDetailPage(${o.id}, { openBook:true, bookNew:true })">+ كتاب جديد</button>
+    </div>
+    <div class="so-detail-card full">
+      <h3 class="so-detail-section-title">الكتب المحفوظة</h3>
+      <p class="hint" style="margin:-4px 0 12px">اضغط أي كتاب يفتح في صفحة لوحده. كل كتاب مستقل (غلاف + صفحات تلوين + نهاية + PDF).</p>
+      <div class="ob-products">${cards}</div>
+    </div>
+  `;
+}
+
+async function deleteOrderBook(orderId, bookId) {
+  if (!confirm('تحذف الكتاب ده من الطلب؟ الصفحات والـ PDF بتوعه هيتشالوا.')) return;
+  try {
+    const res = await fetch(`/admin/api/special-orders/${orderId}/books/${bookId}`, { method: 'DELETE' });
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || 'فشل الحذف');
+    showToast('تم حذف الكتاب ✓', 'ok');
+    openOrderDetailPage(orderId, { openBook: true });
+  } catch (e) {
+    showToast(e.message || 'فشل', 'err');
+  }
+}
+
+function renderBookProductPicker(o) {
+  _obView = 'products';
+  _obPackExplicit = false;
+  _obBookId = null;
+  const root = document.getElementById('so-detail-root');
+  if (!root || !o) return;
+  const titleEl = document.getElementById('page-title');
+  const subEl = document.getElementById('page-sub');
+  if (titleEl) titleEl.textContent = 'كتاب جديد · طلب #' + o.id;
+  if (subEl) subEl.textContent = 'اختار نوع الكتاب — هيتفتح في صفحة مستقلة';
+  if (location.hash !== '#order/' + o.id + '/book/new') {
+    history.pushState(null, '', '#order/' + o.id + '/book/new');
+  }
+
+  root.innerHTML = `
+    <button type="button" class="so-detail-back" onclick="openOrderDetailPage(${o.id}, { openBook:true })">← رجوع لقائمة كتب الطفل</button>
+    <div class="so-detail-hero" style="margin-bottom:16px">
+      <div class="so-detail-hero-main">
+        <div class="so-detail-icon">✨</div>
+        <div>
+          <h2>أضف كتاب جديد</h2>
+          <p class="sub">لـ «${escHtml(o.child_name || 'الطفل')}» · الكتب القديمة بتفضل زي ما هي</p>
         </div>
       </div>
     </div>
     <div class="so-detail-card full">
       <h3 class="so-detail-section-title">نوع الكتاب</h3>
-      <p class="hint" style="margin:-4px 0 12px">كل نوع = باقة مواقف مختلفة. نفس الخطوات: صورة + اسم → غلاف + صفحات تلوين + نهاية → PDF على الطلب.</p>
+      <p class="hint" style="margin:-4px 0 12px">كل نوع بيتفتح في صفحة كاملة مستقلة. نفس الطفل يقدر يبقى ليه أكتر من كتاب.</p>
       <div class="ob-products">
         ${SCENE_PACKS.map((p, i) => `
         <button type="button" class="ob-product ${i === 0 ? 'primary' : ''}"
@@ -3419,14 +3583,112 @@ function renderBookProductPicker(o) {
           <div class="name">${escHtml(p.title)}</div>
           <div class="desc">${escHtml(p.desc)}</div>
         </button>`).join('')}
-        <button type="button" class="ob-product" disabled title="قريبًا">
-          <span class="emoji">📖</span>
-          <div class="name">كتاب قصة ملوّن</div>
-          <div class="desc">قريبًا</div>
-        </button>
       </div>
     </div>
   `;
+}
+
+async function startOrderColoringBook(orderId, packId) {
+  const o = _obOrder && _obOrder.id === orderId
+    ? _obOrder
+    : _soAll.find(x => x.id === orderId);
+  if (!o) {
+    showToast('الطلب مش موجود', 'err');
+    return;
+  }
+  if (!o.photos || !o.photos.length) {
+    showToast('ارفع صورة للطفل على الطلب الأول', 'err');
+    return;
+  }
+  const pack = packById(packId);
+  try {
+    showToast('جاري إنشاء صفحة الكتاب...', 'ok');
+    const res = await fetch(`/admin/api/special-orders/${orderId}/books`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pack_id: pack.id, title: pack.book_title || pack.title }),
+    });
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || 'فشل إنشاء الكتاب');
+    const bookId = data.book_id || (data.book && data.book.id);
+    if (!bookId) throw new Error('السيرفر مرجعش رقم الكتاب');
+    _obPackId = pack.id;
+    _obPackExplicit = true;
+    _obBookId = bookId;
+    await openOrderDetailPage(orderId, { openBook: true, bookId });
+  } catch (e) {
+    showToast(e.message || 'فشل', 'err');
+  }
+}
+
+async function openNamedOrderBook(orderId, bookId) {
+  _obBookId = bookId;
+  _obView = 'coloring';
+  _obSessionId = null;
+  _obLastScenes = [];
+  _obStep = 'setup';
+  _obState = { hasCover: false, hasEnding: false, donePages: [], missingPages: [], pdfReady: false };
+  _obImgCache = {};
+  _obLastGenerated = null;
+  _obPageJobs = {};
+  _obPdfUrl = null;
+  _obPdfFilename = null;
+
+  try {
+    const res = await fetch(`/admin/api/special-orders/${orderId}/books/${bookId}`);
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || 'الكتاب مش موجود');
+    if (data.order) _obOrder = data.order;
+    if (data.pack_id) {
+      _obPackId = data.pack_id;
+      _obPackExplicit = true;
+    }
+    // Seed progress fields onto order for wizard defaults (per book, not order-level)
+    const progress = data.progress || {};
+    if (_obOrder) {
+      _obOrder = {
+        ..._obOrder,
+        book_scenes_list: progress.scenes || (data.book && data.book.scenes_list) || [],
+        book_page_count: progress.page_count || (data.book && data.book.page_count) || null,
+        book_progress_data: progress,
+        pdf_filename: data.pdf_filename || null,
+      };
+    }
+    if (data.download_url) _obPdfUrl = data.download_url;
+    if (data.pdf_filename) _obPdfFilename = data.pdf_filename;
+    renderOrderColoringBook(_obOrder);
+    obApplyStatusPayload(data);
+    await obEnsureSession({ forceNew: false });
+    obRenderWizardUI();
+  } catch (e) {
+    showToast(e.message || 'فشل فتح الكتاب', 'err');
+    openOrderDetailPage(orderId, { openBook: true });
+  }
+}
+
+/** API base for the current named book (required — multi-book). */
+function obBookApiBase() {
+  if (!_obOrder || !_obOrder.id || !_obBookId) return null;
+  return `/admin/api/special-orders/${_obOrder.id}/books/${_obBookId}`;
+}
+
+function obPermanentPageUrl(sceneId, bust) {
+  if (!_obOrder || !_obOrder.id || !sceneId) return '';
+  const t = bust || Date.now();
+  if (_obBookId) {
+    return `/admin/special-orders/${_obOrder.id}/books/${_obBookId}/page/${sceneId}?t=${t}`;
+  }
+  return `/admin/special-orders/${_obOrder.id}/book-page/${sceneId}?t=${t}`;
+}
+
+function obCurrentPdfUrl(filename) {
+  if (_obPdfUrl) return _obPdfUrl;
+  const fn = filename || _obPdfFilename || (_obOrder && _obOrder.pdf_filename);
+  if (!fn || !_obOrder) return '';
+  if (_obBookId) {
+    return `/admin/special-orders/${_obOrder.id}/books/${_obBookId}/pdf/${encodeURIComponent(fn)}`;
+  }
+  return `/admin/special-orders/${_obOrder.id}/pdf/${encodeURIComponent(fn)}`;
 }
 
 function sceneTitle(id) {
@@ -3695,46 +3957,6 @@ function obBuildOrderedPreview(coverPage, okPages, endingPage) {
   return items;
 }
 
-async function startOrderColoringBook(orderId, packId) {
-  const o = _obOrder && _obOrder.id === orderId
-    ? _obOrder
-    : _soAll.find(x => x.id === orderId);
-  if (!o) {
-    showToast('الطلب مش موجود', 'err');
-    return;
-  }
-  if (!o.photos || !o.photos.length) {
-    showToast('ارفع صورة للطفل على الطلب الأول', 'err');
-    return;
-  }
-  _obPackId = packById(packId).id;
-  _obPackExplicit = true;   // this choice wins over whatever book is already saved
-
-  // The order's session caches cover/pages/ending on disk. If the saved book belongs to a
-  // different type, resuming it would hand back the old book's cover — start a fresh one.
-  const saved = o.book_scenes_list || (o.book_progress_data && o.book_progress_data.scenes) || [];
-  const savedPack = packForScenes(saved);
-  const switchingType = !!savedPack && savedPack.id !== _obPackId;
-  if (switchingType) {
-    const ok = confirm(
-      `الطلب ده عليه «${savedPack.title}» محفوظ.\n` +
-      `هتبدأ «${packById(_obPackId).title}» من الأول — الغلاف والصفحات القديمة هتتستبدل.\n\nتكمل؟`
-    );
-    if (!ok) return;
-  }
-
-  _obView = 'coloring';
-  _obPhoto = o.photos[0];
-  _obSessionId = null;
-  _obLastScenes = [];
-  _obStep = 'setup';
-  _obState = { hasCover: false, hasEnding: false, donePages: [], missingPages: [], pdfReady: false };
-  _obImgCache = {};
-  _obLastGenerated = null;
-  renderOrderColoringBook(o);
-  await obEnsureSession({ forceNew: switchingType });
-}
-
 function renderOrderColoringBook(o) {
   _obView = 'coloring';
   _obOrder = o;
@@ -3755,10 +3977,14 @@ function renderOrderColoringBook(o) {
 
   const titleEl = document.getElementById('page-title');
   const subEl = document.getElementById('page-sub');
-  if (titleEl) titleEl.textContent = pack.title + ' · طلب #' + o.id;
-  if (subEl) subEl.textContent = 'خطوات واضحة — احفظ أي خطوة وكمّل لاحقًا';
-  if (location.hash !== '#order/' + o.id + '/book') {
-    history.pushState(null, '', '#order/' + o.id + '/book');
+  const bookLabel = _obBookId ? `كتاب #${_obBookId}` : pack.title;
+  if (titleEl) titleEl.textContent = pack.title + ' · ' + bookLabel + ' · طلب #' + o.id;
+  if (subEl) subEl.textContent = 'صفحة هذا الكتاب بس — باقي كتب نفس الطفل في قائمة منفصلة';
+  const targetHash = _obBookId
+    ? '#order/' + o.id + '/book/' + _obBookId
+    : '#order/' + o.id + '/book';
+  if (location.hash !== targetHash) {
+    history.pushState(null, '', targetHash);
   }
 
   const photos = o.photos || [];
@@ -3779,12 +4005,13 @@ function renderOrderColoringBook(o) {
       <span class="title">${escHtml(s.title)}</span>
     </div>`).join('');
 
-  const savedPdf = o.pdf_filename
-    ? `<a class="btn btn-sm btn-success" id="ob-saved-pdf" href="/admin/special-orders/${o.id}/pdf/${escHtml(o.pdf_filename)}" target="_blank">تحميل PDF المحفوظ</a>`
+  const pdfHref = obCurrentPdfUrl(o.pdf_filename);
+  const savedPdf = pdfHref
+    ? `<a class="btn btn-sm btn-success" id="ob-saved-pdf" href="${escHtml(pdfHref)}" target="_blank">تحميل PDF المحفوظ</a>`
     : `<a class="btn btn-sm btn-success" id="ob-saved-pdf" href="#" target="_blank" style="display:none">تحميل PDF المحفوظ</a>`;
 
   root.innerHTML = `
-    <button type="button" class="so-detail-back" onclick="renderBookProductPicker(_obOrder)">← رجوع لأنواع الكتب</button>
+    <button type="button" class="so-detail-back" onclick="openOrderDetailPage(${o.id}, { openBook:true })">← رجوع لقائمة كتب الطفل</button>
 
     <div class="qb-wrap" style="margin-top:8px">
       <div class="qb-card">
@@ -3888,7 +4115,8 @@ function renderOrderColoringBook(o) {
         <div class="qb-msg" id="ob-msg"></div>
         <div class="qb-result" id="ob-result" style="margin-top:10px">
           <a class="btn btn-success" id="ob-download" href="#" target="_blank">تحميل PDF</a>
-          <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id})">رجوع للطلب</button>
+          <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id}, { openBook:true })">رجوع لكتب الطفل</button>
+          <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id})">تفاصيل الطلب</button>
           ${savedPdf}
         </div>
         <div class="qb-previews-head" id="ob-previews-head" style="display:none">
@@ -3926,7 +4154,7 @@ function obPageSrc(sceneId, bust) {
   if (!sceneId) return '';
   if (_obImgCache[sceneId]) return _obImgCache[sceneId];
   if (_obOrder && _obOrder.id) {
-    return `/admin/special-orders/${_obOrder.id}/book-page/${sceneId}?t=${bust || Date.now()}`;
+    return obPermanentPageUrl(sceneId, bust);
   }
   if (_obSessionId) {
     return `/admin/api/quick-book/preview/${_obSessionId}/${sceneId}?t=${bust || Date.now()}`;
@@ -3976,6 +4204,11 @@ function obShowLastGenerated(sceneId, title, src, durationSec) {
 function obApplyStatusPayload(data) {
   if (!data) return;
   if (data.session_id) _obSessionId = data.session_id;
+  if (data.book_id != null) _obBookId = data.book_id;
+  if (data.pack_id) {
+    _obPackId = data.pack_id;
+    _obPackExplicit = true;
+  }
   if (data.order) {
     _obOrder = data.order;
     const idx = _soAll.findIndex(x => x.id === data.order.id);
@@ -4004,12 +4237,18 @@ function obApplyStatusPayload(data) {
   }
   if (progress.photo) _obPhoto = progress.photo;
 
+  if (data.download_url) _obPdfUrl = data.download_url;
+  if (data.pdf_filename) {
+    _obPdfFilename = data.pdf_filename;
+    if (_obOrder) _obOrder.pdf_filename = data.pdf_filename;
+  }
+
   _obState = {
     hasCover: !!(data.has_cover ?? progress.has_cover),
     hasEnding: !!(data.has_ending ?? progress.has_ending),
     donePages: [...(data.done_pages || progress.done_pages || [])],
     missingPages: [...(data.missing_pages || progress.missing_pages || [])],
-    pdfReady: !!(data.pdf_ready || (_obOrder && _obOrder.pdf_filename)),
+    pdfReady: !!(data.pdf_ready || data.pdf_filename || _obPdfFilename),
   };
   // Seed permanent URLs into cache (don't overwrite fresh data URLs)
   const urls = data.page_urls || {};
@@ -4019,14 +4258,14 @@ function obApplyStatusPayload(data) {
     }
   });
   if (_obState.hasCover && !_obImgCache.cover && _obOrder) {
-    _obImgCache.cover = `/admin/special-orders/${_obOrder.id}/book-page/cover?t=${Date.now()}`;
+    _obImgCache.cover = obPermanentPageUrl('cover');
   }
   if (_obState.hasEnding && !_obImgCache.ending && _obOrder) {
-    _obImgCache.ending = `/admin/special-orders/${_obOrder.id}/book-page/ending?t=${Date.now()}`;
+    _obImgCache.ending = obPermanentPageUrl('ending');
   }
   _obState.donePages.forEach(sid => {
     if (!_obImgCache[sid] && _obOrder) {
-      _obImgCache[sid] = `/admin/special-orders/${_obOrder.id}/book-page/${sid}?t=${Date.now()}`;
+      _obImgCache[sid] = obPermanentPageUrl(sid);
     }
   });
   _obStep = data.current_step || progress.step || _obStep || 'setup';
@@ -4304,14 +4543,14 @@ function obRenderWizardUI() {
   // PDF download visibility
   const resultEl = document.getElementById('ob-result');
   if (resultEl) {
-    if (_obState.pdfReady && _obOrder && _obOrder.pdf_filename) {
+    if (_obState.pdfReady && (_obPdfFilename || (_obOrder && _obOrder.pdf_filename))) {
       resultEl.classList.add('show');
       resultEl.style.display = 'flex';
       const a = document.getElementById('ob-download');
       const saved = document.getElementById('ob-saved-pdf');
-      const url = `/admin/special-orders/${_obOrder.id}/pdf/${_obOrder.pdf_filename}`;
-      if (a) a.href = url;
-      if (saved) { saved.href = url; saved.style.display = ''; }
+      const url = obCurrentPdfUrl();
+      if (a && url) a.href = url;
+      if (saved && url) { saved.href = url; saved.style.display = ''; }
     }
   }
 
@@ -4338,9 +4577,14 @@ async function obPickPhoto(fn) {
 async function obEnsureSession({ forceNew = false, photo = null } = {}) {
   const orderId = _obOrder && _obOrder.id;
   if (!orderId) return null;
+  if (!_obBookId) {
+    showToast('افتح كتاب من قائمة كتب الطفل أولًا', 'err');
+    return null;
+  }
+  const base = obBookApiBase();
   const msg = document.getElementById('ob-msg');
   try {
-    const res = await fetch(`/admin/api/special-orders/${orderId}/book/start`, {
+    const res = await fetch(`${base}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -4373,8 +4617,10 @@ function obChildName() {
 
 async function obPersistProgress(extra = {}) {
   if (!_obOrder || !_obSessionId) throw new Error('مفيش جلسة كتاب');
+  const base = obBookApiBase();
+  if (!base) throw new Error('مفيش كتاب محدد — ارجع لقائمة الكتب وافتح كتاب');
   const scenes = extra.scenes || (_obLastScenes.length ? _obLastScenes : obSelectedIds());
-  const res = await fetch(`/admin/api/special-orders/${_obOrder.id}/book/progress`, {
+  const res = await fetch(`${base}/progress`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -4384,6 +4630,7 @@ async function obPersistProgress(extra = {}) {
       scenes,
       page_count: extra.page_count != null ? extra.page_count : _obPageCount,
       photo: _obPhoto,
+      pack_id: _obPackId,
     }),
   });
   const data = await parseJsonResponse(res);
@@ -4425,9 +4672,11 @@ async function obSaveProgressOnly() {
 
 async function obSaveToOrder(scenes, name) {
   if (!_obOrder || !_obSessionId) throw new Error('مفيش جلسة كتاب');
+  const base = obBookApiBase();
+  if (!base) throw new Error('مفيش كتاب محدد');
   const clean = (scenes || []).filter(Boolean);
   if (!clean.length) throw new Error('مفيش صفحات للحفظ');
-  const sRes = await fetch(`/admin/api/special-orders/${_obOrder.id}/book/save`, {
+  const sRes = await fetch(`${base}/save`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -4443,7 +4692,7 @@ async function obSaveToOrder(scenes, name) {
   const dl = document.getElementById('ob-download');
   const resultEl = document.getElementById('ob-result');
   const saved = document.getElementById('ob-saved-pdf');
-  const url = sData.download_url || `/admin/special-orders/${_obOrder.id}/pdf/${sData.pdf_filename}`;
+  const url = sData.download_url || obCurrentPdfUrl(sData.pdf_filename);
   if (dl) {
     dl.href = url;
     dl.setAttribute('download', `${name || 'coloring_book'}.pdf`);
@@ -4470,6 +4719,7 @@ async function obGenerateCover(name, pageCount, force) {
       force: !!force,
       pack_id: _obPackId,
       order_id: _obOrder && _obOrder.id,
+      book_id: _obBookId,
     }, {
       onTick: (d) => {
         const el = Math.round(d.elapsed_sec || 0);
@@ -4486,7 +4736,7 @@ async function obGenerateCover(name, pageCount, force) {
       }
       // permanent order URL after server-side save
       if (_obOrder && _obOrder.id) {
-        _obImgCache.cover = `/admin/special-orders/${_obOrder.id}/book-page/cover?t=${Date.now()}`;
+        _obImgCache.cover = obPermanentPageUrl('cover');
       }
     }
     return page;
@@ -4506,6 +4756,7 @@ async function obGenerateEnding(name, force) {
       force: !!force,
       pack_id: _obPackId,
       order_id: _obOrder && _obOrder.id,
+      book_id: _obBookId,
     }, {
       onTick: (d) => {
         const el = Math.round(d.elapsed_sec || 0);
@@ -4521,7 +4772,7 @@ async function obGenerateEnding(name, force) {
         page.preview_url = `/admin/api/quick-book/preview/${_obSessionId}/ending`;
       }
       if (_obOrder && _obOrder.id) {
-        _obImgCache.ending = `/admin/special-orders/${_obOrder.id}/book-page/ending?t=${Date.now()}`;
+        _obImgCache.ending = obPermanentPageUrl('ending');
       }
     }
     return page;
@@ -4545,6 +4796,7 @@ async function obGenerateOnePage(sid, force) {
       force: !!force,
       pack_id: _obPackId,
       order_id: _obOrder && _obOrder.id,
+      book_id: _obBookId,
     });
     const secs = Math.round(((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0) / 100) / 10;
     const batch = gData.pages || [];
@@ -4556,7 +4808,7 @@ async function obGenerateOnePage(sid, force) {
     obRecordTiming(page.scene_id || sid, secs);
     // Prefer permanent order URL (server already synced)
     if (_obOrder && _obOrder.id) {
-      const perm = `/admin/special-orders/${_obOrder.id}/book-page/${page.scene_id || sid}?t=${Date.now()}`;
+      const perm = obPermanentPageUrl(page.scene_id || sid);
       _obImgCache[page.scene_id || sid] = perm;
       page.preview_url = perm;
     } else {
@@ -4833,8 +5085,8 @@ async function obContinueWizard() {
   try {
     if (!_obSessionId) {
       await obEnsureSession({ forceNew: false });
-    } else if (_obOrder) {
-      const res = await fetch(`/admin/api/special-orders/${_obOrder.id}/book/status`);
+    } else if (_obOrder && _obBookId) {
+      const res = await fetch(`${obBookApiBase()}`);
       const data = await parseJsonResponse(res);
       if (res.ok) {
         obApplyStatusPayload(data);
@@ -5444,7 +5696,11 @@ function applyHashRoute() {
   if (route.section === 'order-form') {
     openOrderFormPage(route.formMode === 'edit' ? route.orderId : null);
   } else if (route.section === 'order-detail' && route.orderId) {
-    openOrderDetailPage(route.orderId, { openBook: !!route.book });
+    openOrderDetailPage(route.orderId, {
+      openBook: !!route.book,
+      bookId: route.bookId || null,
+      bookNew: !!route.bookNew,
+    });
   } else {
     _obView = 'detail';
     showSection(route.section);
