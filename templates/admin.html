@@ -4215,6 +4215,11 @@ function obApplyStatusPayload(data) {
     if (idx >= 0) _soAll[idx] = data.order;
   }
   const progress = data.progress || {};
+  // Always prefer this book's pack over any leftover order-level data
+  if (progress.pack_id) {
+    _obPackId = progress.pack_id;
+    _obPackExplicit = true;
+  }
   if (progress.scenes && progress.scenes.length) {
     _obLastScenes = [...progress.scenes];
     if (document.getElementById('ob-jobs')) {

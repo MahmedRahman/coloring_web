@@ -4105,7 +4105,11 @@ def _order_book_snapshot(
     planned_scenes: Optional[list] = None,
     book_id: Optional[int] = None,
 ) -> dict:
-    """Inspect permanent order book folder for assets (survives session cleanup)."""
+    """Inspect permanent order book folder for assets (survives session cleanup).
+
+    When ``book_id`` is set, ONLY that book's folder is used — never the legacy
+    single-book ``order/book`` path (would bleed the first book into every new one).
+    """
     snap = {
         "has_cover": False,
         "has_ending": False,
@@ -4116,37 +4120,34 @@ def _order_book_snapshot(
         "from_order_store": True,
     }
     odir = _order_book_dir(order_id, book_id)
-    # Also check legacy path if no book dir content
     snap["has_cover"] = (_order_book_page_path(order_id, COVER_SCENE_ID, book_id)).exists()
     snap["has_ending"] = (_order_book_page_path(order_id, ENDING_SCENE_ID, book_id)).exists()
-    if book_id is not None and not snap["has_cover"] and not snap["has_ending"]:
-        # fallback legacy single book folder
-        if (SPECIAL_ORDERS_DIR / str(order_id) / "book" / f"page_{COVER_SCENE_ID}.jpg").exists():
-            snap["has_cover"] = True
     page_ids = []
     for p in sorted(odir.glob("page_*.jpg")):
         sid = p.stem[len("page_"):]
         if sid not in (COVER_SCENE_ID, ENDING_SCENE_ID) and SCENE_ID_RE.match(sid):
             page_ids.append(sid)
-    if not page_ids and book_id is not None:
+    # Legacy shared folder only when no named multi-book id
+    if book_id is None:
         leg = SPECIAL_ORDERS_DIR / str(order_id) / "book"
-        if leg.exists():
+        if not snap["has_cover"] and (leg / f"page_{COVER_SCENE_ID}.jpg").exists():
+            snap["has_cover"] = True
+        if not snap["has_ending"] and (leg / f"page_{ENDING_SCENE_ID}.jpg").exists():
+            snap["has_ending"] = True
+        if not page_ids and leg.exists():
             for p in sorted(leg.glob("page_*.jpg")):
                 sid = p.stem[len("page_"):]
                 if sid not in (COVER_SCENE_ID, ENDING_SCENE_ID) and SCENE_ID_RE.match(sid):
                     page_ids.append(sid)
-            snap["has_cover"] = snap["has_cover"] or (leg / f"page_{COVER_SCENE_ID}.jpg").exists()
-            snap["has_ending"] = snap["has_ending"] or (leg / f"page_{ENDING_SCENE_ID}.jpg").exists()
     snap["generated_scenes"] = page_ids
     planned = [s for s in (planned_scenes or []) if isinstance(s, str) and SCENE_ID_RE.match(s)]
     if planned:
-        def _exists(s: str) -> bool:
-            if _order_book_page_path(order_id, s, book_id).exists():
-                return True
-            if book_id is not None and (SPECIAL_ORDERS_DIR / str(order_id) / "book" / f"page_{s}.jpg").exists():
-                return True
-            return False
-        done = [s for s in planned if _exists(s)]
+        done = [s for s in planned if _order_book_page_path(order_id, s, book_id).exists()]
+        if book_id is None:
+            leg = SPECIAL_ORDERS_DIR / str(order_id) / "book"
+            for s in planned:
+                if s not in done and (leg / f"page_{s}.jpg").exists():
+                    done.append(s)
         snap["done_planned"] = done
         snap["missing_pages"] = [s for s in planned if s not in done]
     else:
@@ -4259,7 +4260,7 @@ def _session_book_snapshot(
     snap["generated_scenes"] = page_ids
     planned = [s for s in (planned_scenes or []) if isinstance(s, str) and SCENE_ID_RE.match(s)]
     if planned:
-        # done if exists in session or order store
+        # done if exists in session or THIS book's store (no cross-book spill via legacy folder)
         done = []
         for s in planned:
             ok = False
@@ -4269,7 +4270,7 @@ def _session_book_snapshot(
                     ok = True
             if not ok and order_id is not None and _order_book_page_path(order_id, s, book_id).exists():
                 ok = True
-            if not ok and order_id is not None and book_id is not None:
+            if not ok and order_id is not None and book_id is None:
                 if (SPECIAL_ORDERS_DIR / str(order_id) / "book" / f"page_{s}.jpg").exists():
                     ok = True
             if ok:
@@ -4378,6 +4379,13 @@ def _build_named_book_status(order_row: sqlite3.Row, book_row: sqlite3.Row, phot
     planned = progress.get("scenes") or book.get("scenes_list") or []
     if not isinstance(planned, list):
         planned = []
+    # Isolate this book: never inherit another book's plan/pdf from order-level columns
+    order["book_scenes_list"] = list(planned) if planned else []
+    order["book_page_count"] = book.get("page_count") or progress.get("page_count")
+    order["book_progress_data"] = progress
+    order["book_session_id"] = book.get("session_id")
+    order["book_session_active"] = bool(book.get("session_active"))
+    order["pdf_filename"] = book.get("pdf_filename")  # this book only
     if book.get("session_id"):
         try:
             _sync_session_pages_to_order(order_id, book["session_id"], book_id=book_id)
@@ -4386,6 +4394,25 @@ def _build_named_book_status(order_row: sqlite3.Row, book_row: sqlite3.Row, phot
     snap = _session_book_snapshot(
         book.get("session_id"), planned, order_id=order_id, book_id=book_id
     )
+    # Empty book on disk: drop any leaked plan/progress so UI starts fresh
+    own_disk = bool(
+        snap.get("has_cover") or snap.get("has_ending") or snap.get("generated_scenes")
+    )
+    if not own_disk and not book.get("pdf_filename"):
+        if not planned:
+            progress = {
+                "step": "setup",
+                "pack_id": book.get("pack_id") or progress.get("pack_id") or "jobs",
+                "child_name": progress.get("child_name") or (order.get("child_name") or ""),
+                "photo": progress.get("photo"),
+                "scenes": [],
+                "page_count": None,
+                "has_cover": False,
+                "has_ending": False,
+                "done_pages": [],
+                "missing_pages": [],
+            }
+            planned = []
     progress["has_cover"] = snap["has_cover"]
     progress["has_ending"] = snap["has_ending"]
     progress["done_pages"] = snap["done_planned"] if planned else snap["generated_scenes"]
@@ -4399,7 +4426,11 @@ def _build_named_book_status(order_row: sqlite3.Row, book_row: sqlite3.Row, phot
     if book.get("pack_id") and not progress.get("pack_id"):
         progress["pack_id"] = book["pack_id"]
     step = _infer_book_step(progress, snap, bool(book.get("pdf_filename")))
-    progress["step"] = step
+    if not own_disk and not book.get("pdf_filename") and not planned:
+        step = "setup"
+        progress["step"] = "setup"
+    else:
+        progress["step"] = step
     labels = {
         "setup": "الإعداد", "cover": "غلاف البداية", "pages": "صفحات التلوين",
         "ending": "غلاف النهاية", "pdf": "حفظ PDF", "done": "مكتمل",
@@ -4948,12 +4979,9 @@ def admin_order_book_save_by_id(order_id: int, book_id: int):
 def admin_serve_named_book_page(order_id: int, book_id: int, scene_id: str):
     if not SCENE_ID_RE.match(scene_id):
         abort(400, "Bad scene")
+    # Strict: only this book's folder / its session (never legacy shared book/)
     p = _order_book_page_path(order_id, scene_id, book_id)
     if not p.exists():
-        # legacy fallback
-        p = SPECIAL_ORDERS_DIR / str(order_id) / "book" / f"page_{scene_id}.jpg"
-    if not p.exists():
-        # session fallback
         with _db_lock:
             conn = db_connect()
             brow = _get_book_row(conn, order_id, book_id)
