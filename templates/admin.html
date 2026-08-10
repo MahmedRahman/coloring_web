@@ -549,6 +549,26 @@
     border-color: rgba(56,189,248,0.5);
     background: var(--primary-dim);
   }
+  .so-parent-name-btn {
+    display: inline;
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    vertical-align: baseline;
+  }
+  .so-parent-name-btn strong {
+    color: var(--primary);
+    text-decoration: underline;
+    text-decoration-color: rgba(56,189,248,0.35);
+    text-underline-offset: 2px;
+  }
+  .so-parent-name-btn:hover strong {
+    color: var(--text);
+  }
   .so-parent-kids-count {
     color: var(--muted);
     font-weight: 700;
@@ -1522,13 +1542,13 @@
   </form>
 </div>
 <div class="mobile-nav-strip">
-  <button type="button" class="mobile-nav-btn active" data-section="overview" onclick="showSection('overview')">◆ الرئيسية</button>
-  <button type="button" class="mobile-nav-btn" data-section="quick-book" onclick="showSection('quick-book')">⚡ كتاب سريع</button>
-  <button type="button" class="mobile-nav-btn" data-section="special-orders" onclick="showSection('special-orders')">📱 طلبات خاصة</button>
-  <button type="button" class="mobile-nav-btn" data-section="users" onclick="showSection('users')">◎ المستخدمين</button>
-  <button type="button" class="mobile-nav-btn" data-section="books" onclick="showSection('books')">▤ الكتب</button>
-  <button type="button" class="mobile-nav-btn" data-section="payments" onclick="showSection('payments')">💳 المدفوعات</button>
-  <button type="button" class="mobile-nav-btn" data-section="jobs" onclick="showSection('jobs')">✦ الوظائف</button>
+  <button type="button" class="mobile-nav-btn active" data-section="overview" href="#overview" onclick="event.preventDefault();navigateAdmin('#overview')">◆ الرئيسية</button>
+  <button type="button" class="mobile-nav-btn" data-section="quick-book" onclick="event.preventDefault();navigateAdmin('#quick-book')">⚡ كتاب سريع</button>
+  <button type="button" class="mobile-nav-btn" data-section="special-orders" onclick="event.preventDefault();navigateAdmin('#special-orders')">📱 طلبات خاصة</button>
+  <button type="button" class="mobile-nav-btn" data-section="users" onclick="event.preventDefault();navigateAdmin('#users')">◎ المستخدمين</button>
+  <button type="button" class="mobile-nav-btn" data-section="books" onclick="event.preventDefault();navigateAdmin('#books')">▤ الكتب</button>
+  <button type="button" class="mobile-nav-btn" data-section="payments" onclick="event.preventDefault();navigateAdmin('#payments')">💳 المدفوعات</button>
+  <button type="button" class="mobile-nav-btn" data-section="jobs" onclick="event.preventDefault();navigateAdmin('#jobs')">✦ الوظائف</button>
 </div>
 
 <div class="shell">
@@ -1541,25 +1561,25 @@
 
     <div class="nav-label">القائمة</div>
     <nav>
-      <button type="button" class="nav-item active" data-section="overview" onclick="showSection('overview')">
+      <button type="button" class="nav-item active" data-section="overview" onclick="navigateAdmin('#overview')">
         <span class="nav-ico">◆</span> نظرة عامة
       </button>
-      <button type="button" class="nav-item" data-section="quick-book" onclick="showSection('quick-book')">
+      <button type="button" class="nav-item" data-section="quick-book" onclick="navigateAdmin('#quick-book')">
         <span class="nav-ico">⚡</span> إنشاء كتاب سريع
       </button>
-      <button type="button" class="nav-item" data-section="special-orders" id="nav-special-orders" onclick="showSection('special-orders')">
+      <button type="button" class="nav-item" data-section="special-orders" id="nav-special-orders" onclick="navigateAdmin('#special-orders')">
         <span class="nav-ico">📱</span> طلبات خاصة
       </button>
-      <button type="button" class="nav-item" data-section="users" onclick="showSection('users')">
+      <button type="button" class="nav-item" data-section="users" onclick="navigateAdmin('#users')">
         <span class="nav-ico">◎</span> المستخدمون
       </button>
-      <button type="button" class="nav-item" data-section="books" onclick="showSection('books')">
+      <button type="button" class="nav-item" data-section="books" onclick="navigateAdmin('#books')">
         <span class="nav-ico">▤</span> الكتب
       </button>
-      <button type="button" class="nav-item" data-section="payments" onclick="showSection('payments')">
+      <button type="button" class="nav-item" data-section="payments" onclick="navigateAdmin('#payments')">
         <span class="nav-ico">💳</span> المدفوعات
       </button>
-      <button type="button" class="nav-item" data-section="jobs" onclick="showSection('jobs')">
+      <button type="button" class="nav-item" data-section="jobs" onclick="navigateAdmin('#jobs')">
         <span class="nav-ico">✦</span> الوظائف
       </button>
     </nav>
@@ -2484,7 +2504,10 @@ function parseRoute(hash) {
   const h = (hash || '').replace(/^#/, '');
   // #order/new — add order
   if (h === 'order/new' || h === 'order-new') {
-    return { section: 'order-form', orderId: null, book: false, bookId: null, bookNew: false, formMode: 'new' };
+    return {
+      section: 'order-form', orderId: null, book: false, bookId: null, bookNew: false,
+      formMode: 'new', status: null, parentKey: null,
+    };
   }
   // #order/123/book/new | #order/123/book/45 | #order/123/book | #order/123/edit | #order/123
   const mBook = h.match(/^order[\/-](\d+)\/book(?:\/(new|\d+))?$/);
@@ -2497,6 +2520,8 @@ function parseRoute(hash) {
       bookNew: bookPart === 'new',
       bookId: bookPart && bookPart !== 'new' ? parseInt(bookPart, 10) : null,
       formMode: null,
+      status: null,
+      parentKey: null,
     };
   }
   const m = h.match(/^order[\/-](\d+)(?:\/(edit))?$/);
@@ -2505,35 +2530,96 @@ function parseRoute(hash) {
       return {
         section: 'order-form',
         orderId: parseInt(m[1], 10),
-        book: false,
-        bookId: null,
-        bookNew: false,
-        formMode: 'edit',
+        book: false, bookId: null, bookNew: false,
+        formMode: 'edit', status: null, parentKey: null,
       };
     }
     return {
       section: 'order-detail',
       orderId: parseInt(m[1], 10),
-      book: false,
-      bookId: null,
-      bookNew: false,
-      formMode: null,
+      book: false, bookId: null, bookNew: false,
+      formMode: null, status: null, parentKey: null,
     };
   }
-  if (sectionMeta[h]) return { section: h, orderId: null, book: false, bookId: null, bookNew: false, formMode: null };
-  return { section: 'overview', orderId: null, book: false, bookId: null, bookNew: false, formMode: null };
+  // #special-orders[/pending|done][/p/<parentKey>]
+  const mSo = h.match(/^special-orders(?:\/(pending|done|all))?(?:\/p\/(.+))?$/);
+  if (mSo) {
+    let parentKey = null;
+    if (mSo[2]) {
+      try { parentKey = decodeURIComponent(mSo[2]); }
+      catch (_) { parentKey = mSo[2]; }
+    }
+    const st = mSo[1] && mSo[1] !== 'all' ? mSo[1] : null;
+    return {
+      section: 'special-orders',
+      orderId: null, book: false, bookId: null, bookNew: false,
+      formMode: null,
+      status: st, // pending | done | null(all)
+      parentKey,
+    };
+  }
+  if (sectionMeta[h]) {
+    return {
+      section: h, orderId: null, book: false, bookId: null, bookNew: false,
+      formMode: null, status: null, parentKey: null,
+    };
+  }
+  return {
+    section: 'overview', orderId: null, book: false, bookId: null, bookNew: false,
+    formMode: null, status: null, parentKey: null,
+  };
+}
+
+/** Canonical URL for the special-orders list (status + guardian filter). */
+function specialOrdersHash() {
+  let h = '#special-orders';
+  if (_soFilter === 'pending' || _soFilter === 'done') h += '/' + _soFilter;
+  if (_soParentKey) h += '/p/' + encodeURIComponent(_soParentKey);
+  return h;
+}
+
+function setAdminHash(nextHash, { replace = false } = {}) {
+  if (!nextHash) return;
+  if (!nextHash.startsWith('#')) nextHash = '#' + nextHash;
+  if (location.hash === nextHash) return;
+  if (replace) history.replaceState(null, '', nextHash);
+  else history.pushState(null, '', nextHash);
+}
+
+function setStatusFilterUi(f) {
+  document.querySelectorAll('#section-special-orders .filter-btn').forEach(b => {
+    b.classList.remove('active', 'active-done', 'active-pending');
+    const df = b.getAttribute('data-filter');
+    if (df === f) {
+      if (f === 'all') b.classList.add('active');
+      else if (f === 'done') b.classList.add('active-done');
+      else if (f === 'pending') b.classList.add('active-pending');
+    }
+  });
 }
 
 function showSection(id, orderId) {
   // Support hash strings and detail routes
-  if (typeof id === 'string' && (id.startsWith('order/') || id.startsWith('order-'))) {
-    const route = parseRoute(id);
+  if (typeof id === 'string' && (id.startsWith('order/') || id.startsWith('order-') || id.startsWith('special-orders'))) {
+    const route = parseRoute(id.startsWith('#') ? id : '#' + id);
     if (route.section === 'order-form') {
-      openOrderModal(route.formMode === 'edit' ? route.orderId : null);
+      openOrderFormPage(route.formMode === 'edit' ? route.orderId : null);
       return;
     }
-    id = route.section;
-    orderId = route.orderId;
+    if (route.section === 'special-orders') {
+      if (route.status) _soFilter = route.status;
+      else if (id === 'special-orders' || id === '#special-orders') {
+        /* keep current filters when re-showing section unless pure nav */
+      }
+      if (route.parentKey !== null && route.parentKey !== undefined) {
+        _soParentKey = route.parentKey || null;
+      }
+      id = 'special-orders';
+      orderId = null;
+    } else {
+      id = route.section;
+      orderId = route.orderId;
+    }
   }
   if (!sectionMeta[id]) id = 'overview';
   if (id !== 'order-detail' && id !== 'order-form') orderId = null;
@@ -2559,7 +2645,7 @@ function showSection(id, orderId) {
   if (titleEl && sectionMeta[id]) titleEl.textContent = sectionMeta[id].title;
   if (subEl && sectionMeta[id])   subEl.textContent   = sectionMeta[id].sub;
 
-  // Update URL hash (form handles its own)
+  // Update URL hash (each admin screen is a shareable page)
   let nextHash;
   if (id === 'order-detail' && orderId) {
     if (_obView === 'coloring' && _obBookId) nextHash = '#order/' + orderId + '/book/' + _obBookId;
@@ -2568,19 +2654,23 @@ function showSection(id, orderId) {
     else nextHash = '#order/' + orderId;
   } else if (id === 'order-form') {
     nextHash = _soEditId != null ? '#order/' + _soEditId + '/edit' : '#order/new';
+  } else if (id === 'special-orders') {
+    nextHash = specialOrdersHash();
   } else {
     nextHash = '#' + id;
   }
-  if (location.hash !== nextHash) {
-    history.pushState(null, '', nextHash);
-  }
+  setAdminHash(nextHash);
 
   if (id === 'special-orders') {
     _obView = 'detail';
+    setStatusFilterUi(_soFilter || 'all');
     loadOrders();
   }
   if (id === 'order-detail' && orderId) {
     openOrderDetailPage(orderId);
+  }
+  if (id === 'users' && typeof loadUsers === 'function') {
+    try { loadUsers(); } catch (_) {}
   }
 }
 
@@ -3278,13 +3368,9 @@ function searchOrders(val) {
 }
 
 function filterOrders(f, btn) {
-  _soFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(b => {
-    b.classList.remove('active', 'active-done', 'active-pending');
-  });
-  if (f === 'all')     btn.classList.add('active');
-  if (f === 'done')    btn.classList.add('active-done');
-  if (f === 'pending') btn.classList.add('active-pending');
+  _soFilter = f || 'all';
+  setStatusFilterUi(_soFilter);
+  setAdminHash(specialOrdersHash());
   loadOrders();
 }
 
@@ -3292,8 +3378,9 @@ function filterOrders(f, btn) {
 function soNormPhone(phone) {
   let d = String(phone || '').replace(/\D/g, '');
   if (d.startsWith('00')) d = d.slice(2);
-  if (d.startsWith('2') && d.length >= 11) d = d.slice(1); // 2 + 01… → 01…
   if (d.startsWith('20') && d.length >= 12) d = '0' + d.slice(2);
+  // Egyptian mobile 01xxxxxxxxx still starts with 0 after stripping country code
+  if (d.startsWith('2') && d.length === 11 && d[1] === '0') d = d.slice(1);
   return d;
 }
 
@@ -3332,7 +3419,6 @@ function soBuildGuardians(orders) {
     g.count += 1;
     const cn = (o.child_name || '').trim();
     if (cn && !g.childNames.includes(cn)) g.childNames.push(cn);
-    // Prefer a non-empty / longer display name if later rows have it
     const nm = (o.client_name || '').trim();
     if (nm && (g.name === 'غير محدد' || nm.length > g.name.length)) g.name = nm;
     if (!g.phone && o.phone) g.phone = String(o.phone).trim();
@@ -3348,10 +3434,24 @@ function soFilteredOrders() {
   return _soAll.filter(o => soParentKey(o) === _soParentKey);
 }
 
+/** Select guardian filter (+ update URL). Use null/'all' for everyone. */
 function selectParentFilter(key) {
-  _soParentKey = key || null;
+  if (key === 'all' || key === '' || key == null) _soParentKey = null;
+  else _soParentKey = String(key);
+  setAdminHash(specialOrdersHash());
   renderParentsBar();
   applyOrdersView();
+  // Scroll chips into view if needed
+  try {
+    const el = document.querySelector(
+      _soParentKey
+        ? `.so-parent-chip[data-parent-select="${CSS.escape(_soParentKey)}"]`
+        : '.so-parent-chip.is-all'
+    );
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  } catch (_) {}
+  const g = _soParentKey && soBuildGuardians(_soAll).find(x => x.key === _soParentKey);
+  if (g) showToast(`أولاد «${g.name}» · ${soChildCountLabel(g.count)}`, 'ok');
 }
 
 function clearParentFilter() {
@@ -3381,7 +3481,7 @@ function renderParentsBar() {
   const chips = [
     `<button type="button" class="so-parent-chip is-all${allActive}"
        role="option" aria-selected="${!_soParentKey}"
-       onclick="selectParentFilter(null)">
+       data-parent-select="all">
       <div class="so-parent-chip-main">
         <span class="so-parent-name">كل أولياء الأمور</span>
         <span class="so-parent-sub">كل الأطفال في الفلتر</span>
@@ -3399,10 +3499,10 @@ function renderParentsBar() {
       <button type="button" class="so-parent-chip${active}"
         role="option" aria-selected="${_soParentKey === g.key}"
         title="${escHtml(g.name)} — ${soChildCountLabel(g.count)}"
-        onclick="selectParentFilter(${JSON.stringify(g.key)})">
+        data-parent-select="${escHtml(g.key)}">
         <div class="so-parent-chip-main">
           <span class="so-parent-name">${escHtml(g.name)}</span>
-          <span class="so-parent-sub">${sub}</span>
+          <span class="so-parent-sub">${sub} · ${soChildCountLabel(g.count)}</span>
         </div>
         <span class="so-parent-count" title="${soChildCountLabel(g.count)}">${g.count}</span>
       </button>`);
@@ -3508,10 +3608,16 @@ function orderCardHTML(o) {
         <div class="so-child-name-text">${escHtml(o.child_name || 'بدون اسم')}</div>
         <div class="so-client-line">
           ولي الأمر:
-          <strong>${escHtml(o.client_name || 'غير محدد')}</strong>${kidsNote}
-          <button type="button" class="so-client-filter-link"
+          <button type="button" class="so-parent-name-btn"
+            data-parent-select="${escHtml(parentKey)}"
             title="عرض أطفال ولي الأمر ده"
-            onclick="event.stopPropagation(); selectParentFilter(${JSON.stringify(parentKey)})">فلتر</button>
+            onclick="event.stopPropagation()">
+            <strong>${escHtml(o.client_name || 'غير محدد')}</strong>
+          </button>${kidsNote}
+          <button type="button" class="so-client-filter-link"
+            data-parent-select="${escHtml(parentKey)}"
+            title="عرض أطفال ولي الأمر ده"
+            onclick="event.stopPropagation()">فلتر</button>
         </div>
       </div>
     </div>
@@ -6413,20 +6519,107 @@ function openLightbox(src) {
 }
 
 /* ─── Navigation & Hash Listener Initialization ─── */
-// Global Event Delegation for data-section elements
+
+/** Go to an admin page URL (hash). Source of truth for section routing. */
+function navigateAdmin(hash, opts = {}) {
+  const h = (hash || '#overview').startsWith('#') ? (hash || '#overview') : ('#' + hash);
+  const route = parseRoute(h);
+
+  // Apply list filters from URL before rendering special-orders
+  if (route.section === 'special-orders') {
+    _soFilter = route.status || 'all';
+    _soParentKey = route.parentKey || null;
+    // Pure "#special-orders" from main nav → reset guardian & status
+    if (h === '#special-orders' && opts.resetOrders !== false) {
+      // only reset when navigating from sidebar (explicit)
+      if (opts.fromNav) {
+        _soFilter = 'all';
+        _soParentKey = null;
+      }
+    }
+  }
+
+  if (route.section === 'order-form') {
+    setAdminHash(h, opts);
+    openOrderFormPage(route.formMode === 'edit' ? route.orderId : null);
+    return;
+  }
+  if (route.section === 'order-detail' && route.orderId) {
+    setAdminHash(h, opts);
+    openOrderDetailPage(route.orderId, {
+      openBook: !!route.book,
+      bookId: route.bookId || null,
+      bookNew: !!route.bookNew,
+    });
+    return;
+  }
+
+  // Main sections
+  setAdminHash(
+    route.section === 'special-orders' ? specialOrdersHash() : h,
+    opts
+  );
+  // Render without re-pushing a different hash combatively
+  _renderSectionOnly(route.section, null);
+  if (route.section === 'special-orders') {
+    _obView = 'detail';
+    setStatusFilterUi(_soFilter || 'all');
+    loadOrders();
+  }
+  if (route.section === 'users' && typeof loadUsers === 'function') {
+    try { loadUsers(); } catch (_) {}
+  }
+}
+
+/** Show a section pane without independently inventing a URL. */
+function _renderSectionOnly(id, orderId) {
+  if (!sectionMeta[id]) id = 'overview';
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const targetSec = document.getElementById('section-' + id);
+  if (targetSec) targetSec.classList.add('active');
+  const navHighlight = (id === 'order-detail' || id === 'order-form') ? 'special-orders' : id;
+  document.querySelectorAll('[data-section]').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-section') === navHighlight);
+  });
+  const titleEl = document.getElementById('page-title');
+  const subEl   = document.getElementById('page-sub');
+  if (titleEl && sectionMeta[id]) titleEl.textContent = sectionMeta[id].title;
+  if (subEl && sectionMeta[id])   subEl.textContent   = sectionMeta[id].sub;
+}
+
+// Global Event Delegation for data-section nav + guardian chips
 document.addEventListener('click', (e) => {
+  // Parent / guardian filter chips & name links
+  const parentBtn = e.target.closest('[data-parent-select]');
+  if (parentBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    const raw = parentBtn.getAttribute('data-parent-select');
+    selectParentFilter(raw === 'all' || raw == null ? null : raw);
+    return;
+  }
+
   const target = e.target.closest('[data-section]');
-  if (target) {
+  if (target && !target.closest('form')) {
+    // Only for nav/mobile buttons that still use data-section without dedicated handler
+    if (target.tagName === 'A' || target.onclick) return; // handled by navigateAdmin / href
     const secId = target.getAttribute('data-section');
-    if (secId) {
+    if (secId && !e.defaultPrevented) {
       e.preventDefault();
-      showSection(secId);
+      navigateAdmin('#' + secId, { fromNav: true });
     }
   }
 });
 
 function applyHashRoute() {
-  const route = parseRoute(location.hash || '#overview');
+  const hash = location.hash || '#overview';
+  const route = parseRoute(hash);
+
+  if (route.section === 'special-orders') {
+    _soFilter = route.status || 'all';
+    _soParentKey = route.parentKey || null;
+  }
+
   if (route.section === 'order-form') {
     openOrderFormPage(route.formMode === 'edit' ? route.orderId : null);
   } else if (route.section === 'order-detail' && route.orderId) {
@@ -6437,7 +6630,14 @@ function applyHashRoute() {
     });
   } else {
     _obView = 'detail';
-    showSection(route.section);
+    _renderSectionOnly(route.section, null);
+    if (route.section === 'special-orders') {
+      setStatusFilterUi(_soFilter || 'all');
+      loadOrders();
+    }
+    if (route.section === 'users' && typeof loadUsers === 'function') {
+      try { loadUsers(); } catch (_) {}
+    }
   }
 }
 
