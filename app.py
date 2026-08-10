@@ -1994,6 +1994,187 @@ def story_page_text(beat: dict, child_name: str = "") -> str:
     return (beat.get("text") or "").replace("{name}", name)
 
 
+# Prefer faces that actually contain Arabic glyphs for story captions.
+STORY_FONT_CANDIDATES = [
+    "/System/Library/Fonts/SFArabic.ttf",
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    "/Library/Fonts/Arial Unicode.ttf",
+    "/usr/share/fonts/truetype/hosny-amiri/Amiri-Regular.ttf",
+    "/usr/share/fonts/truetype/amiri/Amiri-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+]
+
+
+def load_story_font(size: int) -> Union[ImageFont.FreeTypeFont, ImageFont.ImageFont]:
+    for path in STORY_FONT_CANDIDATES + list(FONT_CANDIDATES):
+        if Path(path).exists():
+            try:
+                return ImageFont.truetype(path, size)
+            except OSError:
+                continue
+    return ImageFont.load_default()
+
+
+def _text_width(draw: ImageDraw.ImageDraw, text: str, font) -> int:
+    try:
+        bbox = draw.textbbox((0, 0), text, font=font)
+        return max(0, bbox[2] - bbox[0])
+    except Exception:
+        return max(1, len(text) * max(8, getattr(font, "size", 16) // 2))
+
+
+def wrap_story_lines(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> list:
+    """Word-wrap Arabic (or mixed) caption to fit max_width using shaped measurement."""
+    text = (text or "").strip()
+    if not text:
+        return []
+    words = text.split()
+    if not words:
+        return [text]
+    lines: list = []
+    cur = ""
+    for w in words:
+        trial = f"{cur} {w}".strip() if cur else w
+        shaped = arabic_text(trial)
+        if _text_width(draw, shaped, font) <= max_width or not cur:
+            cur = trial
+        else:
+            lines.append(cur)
+            cur = w
+    if cur:
+        lines.append(cur)
+    # Soft-split any leftover line that's still too long (no spaces)
+    fixed: list = []
+    for line in lines:
+        shaped = arabic_text(line)
+        if _text_width(draw, shaped, font) <= max_width:
+            fixed.append(line)
+            continue
+        chunk = ""
+        for ch in line:
+            trial = chunk + ch
+            if _text_width(draw, arabic_text(trial), font) <= max_width or not chunk:
+                chunk = trial
+            else:
+                fixed.append(chunk)
+                chunk = ch
+        if chunk:
+            fixed.append(chunk)
+    return fixed or [text]
+
+
+def overlay_story_caption(
+    img: Image.Image,
+    caption: str,
+    *,
+    page_no: int = 0,
+    total_pages: int = 0,
+) -> Image.Image:
+    """Paint Arabic narration on the bottom band of a story page (server-side)."""
+    caption = (caption or "").strip()
+    if not caption:
+        return img.convert("RGB")
+
+    base = img.convert("RGBA")
+    w, h = base.size
+    band_h = max(int(h * 0.20), 220)
+    band_top = h - band_h
+
+    # Soft white band so dark art stays readable under Arabic text
+    band = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    bd = ImageDraw.Draw(band)
+    # Gradient-ish solid + top feather
+    for i in range(band_h):
+        t = i / max(band_h - 1, 1)
+        alpha = int(40 + 175 * min(1.0, t * 1.4))
+        y = band_top + i
+        bd.line([(0, y), (w, y)], fill=(255, 252, 245, alpha))
+    # Clean plate over lower 85% of band
+    plate_top = band_top + int(band_h * 0.18)
+    plate_box = [int(w * 0.05), plate_top, int(w * 0.95), h - int(h * 0.035)]
+    try:
+        bd.rounded_rectangle(
+            plate_box,
+            radius=28,
+            fill=(255, 255, 255, 230),
+            outline=(226, 232, 240, 255),
+            width=2,
+        )
+    except Exception:
+        bd.rectangle(plate_box, fill=(255, 255, 255, 230), outline=(226, 232, 240, 255), width=2)
+
+    composed = Image.alpha_composite(base, band).convert("RGB")
+    draw = ImageDraw.Draw(composed)
+
+    # Font size scales with page width
+    font_size = max(30, min(48, int(w * 0.036)))
+    font = load_story_font(font_size)
+    font_meta = load_story_font(max(22, font_size - 10))
+    max_w = int(w * 0.80)
+    lines = wrap_story_lines(draw, caption, font, max_w)
+    # Cap lines so band never overflows
+    if len(lines) > 4:
+        lines = lines[:3] + [lines[3] + "…"]
+
+    line_gap = int(font_size * 1.35)
+    block_h = line_gap * len(lines)
+    y0 = plate_top + max(18, (h - plate_top - int(h * 0.04) - block_h) // 2)
+
+    for i, line in enumerate(lines):
+        shaped = arabic_text(line)
+        tw = _text_width(draw, shaped, font)
+        x = (w - tw) // 2
+        y = y0 + i * line_gap
+        # Soft shadow for readability
+        draw.text((x + 2, y + 2), shaped, font=font, fill=(148, 163, 184))
+        draw.text((x, y), shaped, font=font, fill=(30, 41, 59))
+
+    if page_no and total_pages:
+        meta = arabic_text(f"{page_no} / {total_pages}")
+        mw = _text_width(draw, meta, font_meta)
+        draw.text((w - mw - int(w * 0.08), h - int(h * 0.045)), meta, font=font_meta, fill=(100, 116, 139))
+
+    return composed
+
+
+def apply_story_caption_to_page(
+    path: Path,
+    scene: dict,
+    child_name: str = "",
+    pack: Optional[dict] = None,
+) -> None:
+    """Load JPEG, draw Arabic story line, save back atomically."""
+    if not path or not Path(path).exists():
+        return
+    caption = story_page_text(scene, child_name)
+    if not caption:
+        return
+    pack = pack or pack_for_scene(scene.get("id") or "")
+    beats = (pack or {}).get("scenes") or []
+    sid = scene.get("id")
+    idx = next((i for i, b in enumerate(beats) if b.get("id") == sid), -1)
+    page_no = idx + 1 if idx >= 0 else 0
+    total = len(beats)
+
+    try:
+        img = Image.open(path).convert("RGB")
+    except Exception:
+        return
+    out = overlay_story_caption(img, caption, page_no=page_no, total_pages=total)
+    tmp = path.with_name(f".{path.stem}.cap.jpg")
+    try:
+        out.save(tmp, "JPEG", quality=92)
+        tmp.replace(path)
+    finally:
+        try:
+            if tmp.exists():
+                tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 def build_story_prompt(
     beat: dict,
     pack: dict,
@@ -2807,6 +2988,13 @@ async def generate_one_kie_async(
         else:
             await _work()
         created = True
+        # Story narration is drawn by us (models mangle Arabic glyphs).
+        if is_story_pack(_pack):
+            apply_story_caption_to_page(
+                out, scene,
+                child_name=style.get("child_name", ""),
+                pack=_pack,
+            )
     b64 = base64.b64encode(out.read_bytes()).decode()
     return {
         "scene_id": scene_id,
@@ -2817,6 +3005,7 @@ async def generate_one_kie_async(
         "created": created,
         "provider": prov,
         "model": model_id,
+        "caption": story_page_text(scene, style.get("child_name", "")),
     }
 
 
