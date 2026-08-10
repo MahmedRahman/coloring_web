@@ -63,6 +63,7 @@ from paymob_client import (
 )
 from kie_client import (
     generate_image_to_image,
+    is_mock_provider,
     kie_configured,
     model_for_provider,
     normalize_provider,
@@ -72,6 +73,7 @@ from kie_client import (
 # Approximate Kie 1K image prices for admin cost estimates (USD)
 COST_CHATGPT_USD = float(os.environ.get("COST_CHATGPT_USD") or "0.03")
 COST_NANOBANANA_USD = float(os.environ.get("COST_NANOBANANA_USD") or "0.04")
+COST_MOCK_USD = float(os.environ.get("COST_MOCK_USD") or "0")
 COST_USD_TO_EGP = float(os.environ.get("COST_USD_TO_EGP") or "50")
 
 COVER_MODES = frozenset({"none", "cover", "ending", "both"})
@@ -81,8 +83,9 @@ def cost_rates_dict() -> dict:
     return {
         "chatgpt": COST_CHATGPT_USD,
         "nanobanana": COST_NANOBANANA_USD,
+        "mock": COST_MOCK_USD,
         "usd_to_egp": COST_USD_TO_EGP,
-        "note": "تقريبي — أسعار Kie 1K وقد تختلف حسب الدقة والرصيد",
+        "note": "تقريبي — أسعار Kie 1K وقد تختلف. Mock = $0 (اختبار بدون Kie).",
     }
 
 
@@ -2251,9 +2254,105 @@ def cover_page_path(d: Path) -> Path:
     return d / f"page_{COVER_SCENE_ID}.jpg"
 
 
+def build_mock_image_bytes(
+    title: str,
+    *,
+    kind: str = "page",
+    child_name: str = "",
+    ref_path: Optional[Path] = None,
+    subtitle: str = "",
+) -> bytes:
+    """Cheap free local JPEG for admin pipeline testing — never calls Kie."""
+    w, h = PAGE_WIDTH, PAGE_HEIGHT
+    kind = (kind or "page").lower()
+    if kind == "cover":
+        bg = (255, 236, 210)
+        accent = (180, 83, 9)
+        banner = "MOCK COVER · تجريبي"
+    elif kind == "ending":
+        bg = (220, 252, 231)
+        accent = (22, 163, 74)
+        banner = "MOCK ENDING · تجريبي"
+    elif kind == "story":
+        bg = (237, 233, 254)
+        accent = (109, 40, 217)
+        banner = "MOCK STORY · بدون Kie"
+    else:
+        bg = (255, 255, 255)
+        accent = (56, 189, 248)
+        banner = "MOCK · اختبار بلا تكلفة"
+
+    img = Image.new("RGB", (w, h), bg)
+    draw = ImageDraw.Draw(img)
+    # Frame
+    for inset, width in ((36, 8), (56, 3)):
+        draw.rectangle([inset, inset, w - inset, h - inset], outline=accent, width=width)
+
+    # Top banner
+    draw.rectangle([0, 0, w, 72], fill=accent)
+    font_lg = load_font(42)
+    font_md = load_font(36)
+    font_sm = load_font(28)
+
+    def _center(text: str, font, y: int, fill):
+        try:
+            bbox = draw.textbbox((0, 0), text, font=font)
+            tw = bbox[2] - bbox[0]
+        except Exception:
+            tw = len(text) * 14
+        draw.text(((w - tw) / 2, y), text, font=font, fill=fill)
+
+    _center(banner, font_sm, 18, "#ffffff")
+
+    # Optional child photo (proves ref path still used)
+    if ref_path and Path(ref_path).exists():
+        try:
+            face = Image.open(ref_path).convert("RGB")
+            face.thumbnail((360, 360), Image.Resampling.LANCZOS)
+            fx = (w - face.width) // 2
+            fy = 180
+            plate = [fx - 16, fy - 16, fx + face.width + 16, fy + face.height + 16]
+            try:
+                draw.rounded_rectangle(plate, radius=20, fill="#ffffff", outline=accent, width=3)
+            except Exception:
+                draw.rectangle(plate, fill="#ffffff", outline=accent, width=3)
+            img.paste(face, (fx, fy))
+        except Exception:
+            pass
+
+    name = (child_name or "").strip() or "طفل"
+    ttl = (title or "صفحة").strip()[:48]
+    mid_y = h // 2 + 80
+    try:
+        label = arabic_text(f"MOCK · {ttl}")
+        name_l = arabic_text(name)
+    except Exception:
+        label = f"MOCK · {ttl}"
+        name_l = name
+    _center(label, font_lg, mid_y, accent)
+    _center(name_l, font_md, mid_y + 70, "#334155")
+    if subtitle:
+        try:
+            sub_l = arabic_text(subtitle[:60])
+        except Exception:
+            sub_l = subtitle[:60]
+        _center(sub_l, font_sm, mid_y + 130, "#64748b")
+    _center("$0 · no Kie call", font_sm, h - 120, "#94a3b8")
+
+    # Coloring pages: light dashed doodle so they look different from photo covers
+    if kind == "page":
+        for i in range(6):
+            y = 900 + i * 70
+            draw.line([(120, y), (w - 120, y)], fill="#cbd5e1", width=2)
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=88)
+    return buf.getvalue()
+
+
 async def generate_cover_page_async(
     d: Path,
-    client: httpx.AsyncClient,
+    client: Optional[httpx.AsyncClient],
     *,
     child_name: str = "",
     page_count: int = 0,
@@ -2267,26 +2366,41 @@ async def generate_cover_page_async(
     """Generate the premium full-color front cover, themed for the chosen book type."""
     out = cover_page_path(d)
     created = False
-    prov = normalize_provider(provider) if use_kie else "cloudflare"
-    model_id = model or (model_for_provider(prov) if use_kie else None)
+    prov = normalize_provider(provider) if (use_kie or is_mock_provider(provider)) else "cloudflare"
+    model_id = model or (model_for_provider(prov) if (use_kie or is_mock_provider(provider)) else None)
     if force or not out.exists():
         refs = ensure_multi_refs(d)
         if not refs:
             raise RuntimeError("مفيش صورة مرجع لغلاف البداية.")
         _pack = pack_by_id(pack_id)
-        prompt = (
-            build_story_cover_prompt(_pack, child_name)
-            if is_story_pack(_pack)
-            else build_cover_prompt(child_name, page_count=page_count, pack_id=pack_id)
-        )
-        if use_kie:
-            if not kie_configured():
-                raise RuntimeError("KIE_API_KEY مش مضبوط لغلاف البداية.")
-            img_bytes, _ = await generate_image_to_image(
-                prompt, refs[0], client, input_url=ref_url, model=model_id
+        if is_mock_provider(provider):
+            await asyncio.sleep(0.45)
+            title = (_pack or {}).get("book_title") or (_pack or {}).get("title") or "غلاف"
+            img_bytes = build_mock_image_bytes(
+                title,
+                kind="cover",
+                child_name=child_name,
+                ref_path=refs[0],
+                subtitle="Cover · free mock",
             )
         else:
-            img_bytes = await call_model_async(prompt, refs, client)
+            prompt = (
+                build_story_cover_prompt(_pack, child_name)
+                if is_story_pack(_pack)
+                else build_cover_prompt(child_name, page_count=page_count, pack_id=pack_id)
+            )
+            if use_kie:
+                if not kie_configured():
+                    raise RuntimeError("KIE_API_KEY مش مضبوط لغلاف البداية.")
+                if client is None:
+                    raise RuntimeError("HTTP client مطلوب لتوليد Kie.")
+                img_bytes, _ = await generate_image_to_image(
+                    prompt, refs[0], client, input_url=ref_url, model=model_id
+                )
+            else:
+                if client is None:
+                    raise RuntimeError("HTTP client مطلوب.")
+                img_bytes = await call_model_async(prompt, refs, client)
         _atomic_jpeg_bytes(out, img_bytes, quality=93)
         created = True
     b64 = base64.b64encode(out.read_bytes()).decode()
@@ -2297,14 +2411,14 @@ async def generate_cover_page_async(
         "emoji": "📗",
         "image_b64": b64,
         "created": created,
-        "provider": prov if use_kie else "cloudflare",
+        "provider": prov if (use_kie or is_mock_provider(provider)) else "cloudflare",
         "model": model_id,
     }
 
 
 async def generate_ending_page_async(
     d: Path,
-    client: httpx.AsyncClient,
+    client: Optional[httpx.AsyncClient],
     *,
     child_name: str = "",
     force: bool = False,
@@ -2317,26 +2431,41 @@ async def generate_ending_page_async(
     """Generate the premium full-color ending page, themed for the chosen book type."""
     out = ending_page_path(d)
     created = False
-    prov = normalize_provider(provider) if use_kie else "cloudflare"
-    model_id = model or (model_for_provider(prov) if use_kie else None)
+    prov = normalize_provider(provider) if (use_kie or is_mock_provider(provider)) else "cloudflare"
+    model_id = model or (model_for_provider(prov) if (use_kie or is_mock_provider(provider)) else None)
     if force or not out.exists():
         refs = ensure_multi_refs(d)
         if not refs:
             raise RuntimeError("مفيش صورة مرجع لصفحة النهاية.")
         _pack = pack_by_id(pack_id)
-        prompt = (
-            build_story_ending_prompt(_pack, child_name)
-            if is_story_pack(_pack)
-            else build_ending_prompt(child_name, pack_id=pack_id)
-        )
-        if use_kie:
-            if not kie_configured():
-                raise RuntimeError("KIE_API_KEY مش مضبوط لصفحة النهاية.")
-            img_bytes, _ = await generate_image_to_image(
-                prompt, refs[0], client, input_url=ref_url, model=model_id
+        if is_mock_provider(provider):
+            await asyncio.sleep(0.45)
+            title = (_pack or {}).get("ending_line") or "النهاية"
+            img_bytes = build_mock_image_bytes(
+                title,
+                kind="ending",
+                child_name=child_name,
+                ref_path=refs[0],
+                subtitle="Ending · free mock",
             )
         else:
-            img_bytes = await call_model_async(prompt, refs, client)
+            prompt = (
+                build_story_ending_prompt(_pack, child_name)
+                if is_story_pack(_pack)
+                else build_ending_prompt(child_name, pack_id=pack_id)
+            )
+            if use_kie:
+                if not kie_configured():
+                    raise RuntimeError("KIE_API_KEY مش مضبوط لصفحة النهاية.")
+                if client is None:
+                    raise RuntimeError("HTTP client مطلوب لتوليد Kie.")
+                img_bytes, _ = await generate_image_to_image(
+                    prompt, refs[0], client, input_url=ref_url, model=model_id
+                )
+            else:
+                if client is None:
+                    raise RuntimeError("HTTP client مطلوب.")
+                img_bytes = await call_model_async(prompt, refs, client)
         _atomic_jpeg_bytes(out, img_bytes, quality=93)
         created = True
     b64 = base64.b64encode(out.read_bytes()).decode()
@@ -2347,7 +2476,7 @@ async def generate_ending_page_async(
         "emoji": "🎉",
         "image_b64": b64,
         "created": created,
-        "provider": prov if use_kie else "cloudflare",
+        "provider": prov if (use_kie or is_mock_provider(provider)) else "cloudflare",
         "model": model_id,
     }
 
@@ -2606,14 +2735,14 @@ async def generate_one_kie_async(
     scene: dict,
     force: bool,
     style: dict,
-    client: httpx.AsyncClient,
+    client: Optional[httpx.AsyncClient],
     *,
     ref_url: Optional[str] = None,
     sem: Optional[asyncio.Semaphore] = None,
     provider: Optional[str] = None,
     model: Optional[str] = None,
 ) -> dict:
-    """Generate one coloring page via Kie.ai (ChatGPT / Nano Banana image-to-image)."""
+    """Generate one coloring page via Kie.ai, or free local Mock placeholder."""
     scene_id = scene["id"]
     out = page_path(d, scene_id)
     created = False
@@ -2622,38 +2751,53 @@ async def generate_one_kie_async(
     # Never delete the old page before the new one succeeds
     if force or not out.exists():
         refs = ensure_multi_refs(d)
+        if not refs:
+            raise RuntimeError("مفيش صورة مرجع.")
         _pack = pack_for_scene(scene_id)
-        # Story pages: full-colour narrative art (skip line-art coloring prompt).
-        if is_story_pack(_pack):
-            _beats = _pack["scenes"]
-            _idx = next((i for i, b in enumerate(_beats) if b["id"] == scene_id), -1)
-            prompt = build_story_prompt(
-                scene, _pack,
-                child_name=style.get("child_name", ""),
-                page_no=_idx + 1 if _idx >= 0 else 0,
-                total_pages=len(_beats),
-            )
-        else:
-            prompt = build_prompt(
-                scene["scene"],
-                variant=style.get("variant", DEFAULT_VARIANT),
-                line_weight=style.get("line_weight", "normal"),
-                detail=style.get("detail", "normal"),
-                art_style=style.get("art_style", "cartoon"),
-                pack_id=_pack["id"],
-            )
-            prompt = (
-                f"{prompt}. "
-                "This is image-to-image: keep the exact same child face, hair, age and identity "
-                "from the reference photo, converted to simple black-and-white coloring book line art only. "
-                "Full-page vertical A4 portrait composition, edge-to-edge illustration filling the entire page, "
-                "no white borders, no letterboxing, no empty margins."
-            )
-        ref_path = refs[0]
 
         async def _work():
+            if is_mock_provider(prov):
+                await asyncio.sleep(0.4)
+                kind = "story" if is_story_pack(_pack) else "page"
+                img_bytes = build_mock_image_bytes(
+                    scene.get("title") or scene_id,
+                    kind=kind,
+                    child_name=style.get("child_name", ""),
+                    ref_path=refs[0],
+                    subtitle=f"id:{scene_id}",
+                )
+                _atomic_jpeg_bytes(out, img_bytes, quality=88)
+                return
+            # Story pages: full-colour narrative art (skip line-art coloring prompt).
+            if is_story_pack(_pack):
+                _beats = _pack["scenes"]
+                _idx = next((i for i, b in enumerate(_beats) if b["id"] == scene_id), -1)
+                prompt = build_story_prompt(
+                    scene, _pack,
+                    child_name=style.get("child_name", ""),
+                    page_no=_idx + 1 if _idx >= 0 else 0,
+                    total_pages=len(_beats),
+                )
+            else:
+                prompt = build_prompt(
+                    scene["scene"],
+                    variant=style.get("variant", DEFAULT_VARIANT),
+                    line_weight=style.get("line_weight", "normal"),
+                    detail=style.get("detail", "normal"),
+                    art_style=style.get("art_style", "cartoon"),
+                    pack_id=_pack["id"],
+                )
+                prompt = (
+                    f"{prompt}. "
+                    "This is image-to-image: keep the exact same child face, hair, age and identity "
+                    "from the reference photo, converted to simple black-and-white coloring book line art only. "
+                    "Full-page vertical A4 portrait composition, edge-to-edge illustration filling the entire page, "
+                    "no white borders, no letterboxing, no empty margins."
+                )
+            if client is None:
+                raise RuntimeError("HTTP client مطلوب لتوليد Kie.")
             img_bytes, _ = await generate_image_to_image(
-                prompt, ref_path, client, input_url=ref_url, model=model_id
+                prompt, refs[0], client, input_url=ref_url, model=model_id
             )
             _atomic_jpeg_bytes(out, img_bytes, quality=92)
 
@@ -3607,13 +3751,15 @@ def admin_quick_book_upload():
 @app.route("/admin/api/quick-book/generate", methods=["POST"])
 @admin_required
 def admin_quick_book_generate():
-    """Admin: generate coloring pages via Kie.ai GPT Image 2 (no freemium)."""
-    if not kie_configured():
+    """Admin: generate coloring pages via Kie.ai — or free Mock placeholder."""
+    data = request.get_json(silent=True) or {}
+    provider = normalize_provider(data.get("provider") or data.get("model_provider"))
+    if not is_mock_provider(provider) and not kie_configured():
         return jsonify({
-            "error": "مفتاح Kie.ai مش مضبوط. أضف KIE_API_KEY في ملف .env وأعد تشغيل السيرفر.",
+            "error": "مفتاح Kie.ai مش مضبوط. أضف KIE_API_KEY في ملف .env وأعد تشغيل السيرفر. "
+                     "أو اختار Mock mode للتجربة المجانية.",
         }), 500
 
-    data = request.get_json(silent=True) or {}
     session_id = (data.get("session_id") or "").strip()
     if not session_id.isalnum() or len(session_id) > 40:
         return jsonify({"error": "session غير صالح."}), 400
@@ -3629,7 +3775,6 @@ def admin_quick_book_generate():
 
     force = bool(data.get("force"))
     use_async = bool(data.get("async") or data.get("background"))
-    provider = normalize_provider(data.get("provider") or data.get("model_provider"))
     kie_model = model_for_provider(provider)
     # Sync responses keep base64 for older clients; async defaults to preview URL only
     if "include_image" in data or "include_b64" in data:
@@ -3669,6 +3814,25 @@ def admin_quick_book_generate():
     def _do_generate() -> dict:
         async def _run_all():
             timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
+
+            # Mock: no Kie upload, no network
+            if is_mock_provider(provider):
+                results = []
+                for sc in scenes:
+                    try:
+                        results.append(
+                            await generate_one_kie_async(
+                                d, sc, force, style, None,
+                                provider=provider, model=kie_model,
+                            )
+                        )
+                    except Exception as e:
+                        results.append({"scene_id": sc["id"], "error": friendly_error(e)})
+                return [
+                    r if r.get("error") else _page_for_client(r, session_id, include_b64=include_b64)
+                    for r in results
+                ]
+
             async with httpx.AsyncClient(timeout=timeout) as client:
                 ref_url = None
                 cached = d / "kie_ref_url.txt"
@@ -3713,7 +3877,7 @@ def admin_quick_book_generate():
             p["scene_id"] for p in pages
             if not p.get("error") and p.get("created")
         ]
-        if created_ids:
+        if created_ids and not is_mock_provider(provider):
             ip = get_remote_address()
             now = datetime.now(timezone.utc).isoformat()
             with _db_lock:
@@ -3758,19 +3922,20 @@ def admin_quick_book_generate():
 @app.route("/admin/api/quick-book/cover", methods=["POST"])
 @admin_required
 def admin_quick_book_cover():
-    """Generate premium full-color front cover via Kie GPT Image 2."""
-    if not kie_configured():
+    """Generate premium full-color front cover via Kie — or free Mock placeholder."""
+    data = request.get_json(silent=True) or {}
+    provider = normalize_provider(data.get("provider") or data.get("model_provider"))
+    if not is_mock_provider(provider) and not kie_configured():
         return jsonify({
-            "error": "مفتاح Kie.ai مش مضبوط. أضف KIE_API_KEY في ملف .env وأعد تشغيل السيرفر.",
+            "error": "مفتاح Kie.ai مش مضبوط. أضف KIE_API_KEY في ملف .env وأعد تشغيل السيرفر. "
+                     "أو اختار Mock mode للتجربة المجانية.",
         }), 500
 
-    data = request.get_json(silent=True) or {}
     session_id = (data.get("session_id") or "").strip()
     child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
     pack_id = pack_by_id((data.get("pack_id") or "").strip())["id"]
     force = bool(data.get("force"))
     use_async = bool(data.get("async") or data.get("background"))
-    provider = normalize_provider(data.get("provider") or data.get("model_provider"))
     kie_model = model_for_provider(provider)
     if "include_image" in data or "include_b64" in data:
         include_b64 = bool(data.get("include_image") or data.get("include_b64"))
@@ -3800,6 +3965,17 @@ def admin_quick_book_cover():
 
     def _do_cover() -> dict:
         async def _run():
+            if is_mock_provider(provider):
+                return await generate_cover_page_async(
+                    d, None,
+                    child_name=child_name,
+                    page_count=page_count,
+                    force=force,
+                    use_kie=False,
+                    pack_id=pack_id,
+                    provider=provider,
+                    model=kie_model,
+                )
             timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
             async with httpx.AsyncClient(timeout=timeout) as client:
                 ref_url = None
@@ -3858,19 +4034,20 @@ def admin_quick_book_cover():
 @app.route("/admin/api/quick-book/ending", methods=["POST"])
 @admin_required
 def admin_quick_book_ending():
-    """Generate premium full-color final page via Kie GPT Image 2."""
-    if not kie_configured():
+    """Generate premium full-color final page via Kie — or free Mock placeholder."""
+    data = request.get_json(silent=True) or {}
+    provider = normalize_provider(data.get("provider") or data.get("model_provider"))
+    if not is_mock_provider(provider) and not kie_configured():
         return jsonify({
-            "error": "مفتاح Kie.ai مش مضبوط. أضف KIE_API_KEY في ملف .env وأعد تشغيل السيرفر.",
+            "error": "مفتاح Kie.ai مش مضبوط. أضف KIE_API_KEY في ملف .env وأعد تشغيل السيرفر. "
+                     "أو اختار Mock mode للتجربة المجانية.",
         }), 500
 
-    data = request.get_json(silent=True) or {}
     session_id = (data.get("session_id") or "").strip()
     child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
     pack_id = pack_by_id((data.get("pack_id") or "").strip())["id"]
     force = bool(data.get("force"))
     use_async = bool(data.get("async") or data.get("background"))
-    provider = normalize_provider(data.get("provider") or data.get("model_provider"))
     kie_model = model_for_provider(provider)
     if "include_image" in data or "include_b64" in data:
         include_b64 = bool(data.get("include_image") or data.get("include_b64"))
@@ -3896,6 +4073,16 @@ def admin_quick_book_ending():
 
     def _do_ending() -> dict:
         async def _run():
+            if is_mock_provider(provider):
+                return await generate_ending_page_async(
+                    d, None,
+                    child_name=child_name,
+                    force=force,
+                    use_kie=False,
+                    pack_id=pack_id,
+                    provider=provider,
+                    model=kie_model,
+                )
             timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
             async with httpx.AsyncClient(timeout=timeout) as client:
                 ref_url = None

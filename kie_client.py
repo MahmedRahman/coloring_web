@@ -34,8 +34,10 @@ def kie_configured() -> bool:
 
 def model_for_provider(provider: Optional[str] = None) -> str:
     """Map UI provider id → Kie model slug."""
-    p = (provider or "chatgpt").strip().lower()
-    if p in ("nanobanana", "nano", "nano-banana", "nano_banana"):
+    p = normalize_provider(provider)
+    if p == "mock":
+        return "mock-placeholder"
+    if p == "nanobanana":
         return KIE_NANOBANANA_MODEL
     return KIE_I2I_MODEL
 
@@ -44,7 +46,13 @@ def normalize_provider(provider: Optional[str] = None) -> str:
     p = (provider or "chatgpt").strip().lower()
     if p in ("nanobanana", "nano", "nano-banana", "nano_banana"):
         return "nanobanana"
+    if p in ("mock", "test", "dry", "dryrun", "dry-run", "dummy", "placeholder"):
+        return "mock"
     return "chatgpt"
+
+
+def is_mock_provider(provider: Optional[str] = None) -> bool:
+    return normalize_provider(provider) == "mock"
 
 
 def _auth_headers() -> dict:

@@ -2307,7 +2307,7 @@ let _obPackExplicit = false;  // true when the admin just picked a type from the
 let _obBookId = null;         // special_order_books.id — each child can have many books
 let _obPdfUrl = null;
 let _obPdfFilename = null;
-let _obProvider = 'chatgpt';   // chatgpt | nanobanana
+let _obProvider = 'chatgpt';   // chatgpt | nanobanana | mock
 let _obCoverMode = 'both';     // none | cover | ending | both
 let _obSlots = [];             // [{ id, kind, scene_id, title, status }]
 let _obLastScenes = []; // planned / generated scene ids
@@ -4760,21 +4760,28 @@ function renderOrderColoringBook(o) {
 
       <div class="qb-card">
         <h3>2. مزوّد التوليد</h3>
-        <p class="hint">كلاهما عبر Kie.ai — السعر تقريبي لصورة 1K</p>
+        <p class="hint">ChatGPT / Nano عبر Kie (مدفوع) · Mock = اختبار مجاني بدون Kie</p>
         <div class="ob-products" id="ob-provider-picks">
           <button type="button" class="ob-product ${_obProvider === 'chatgpt' ? 'selected primary' : ''}"
-                  onclick="obSetProvider('chatgpt')">
+                  data-provider="chatgpt" onclick="obSetProvider('chatgpt')">
             <span class="emoji">🤖</span>
             <div class="name">ChatGPT</div>
             <div class="desc">GPT Image 2 · ≈ $${cg} / صورة</div>
           </button>
           <button type="button" class="ob-product ${_obProvider === 'nanobanana' ? 'selected primary' : ''}"
-                  onclick="obSetProvider('nanobanana')">
+                  data-provider="nanobanana" onclick="obSetProvider('nanobanana')">
             <span class="emoji">🍌</span>
             <div class="name">Nano Banana</div>
             <div class="desc">Google via Kie · ≈ $${nb} / صورة</div>
           </button>
+          <button type="button" class="ob-product ${_obProvider === 'mock' ? 'selected primary' : ''}"
+                  data-provider="mock" onclick="obSetProvider('mock')">
+            <span class="emoji">🧪</span>
+            <div class="name">Mock · تجربة</div>
+            <div class="desc">بدون Kie · $0 · placeholder</div>
+          </button>
         </div>
+        ${_obProvider === 'mock' ? '<p class="hint" style="margin-top:10px;color:var(--warn)">وضع تجريبي: صور placeholder فقط لاختبار الدُفع والحفظ — مش للجودة النهائية.</p>' : ''}
       </div>
 
       <div class="qb-card">
@@ -4908,13 +4915,15 @@ function renderOrderColoringBook(o) {
       const nameEl = document.getElementById('ob-name');
       if (nameEl && !nameEl.value) nameEl.value = pd.child_name;
     }
-    if (pd.provider) _obProvider = pd.provider === 'nanobanana' ? 'nanobanana' : 'chatgpt';
+    if (pd.provider) {
+      _obProvider = (pd.provider === 'nanobanana' || pd.provider === 'mock')
+        ? pd.provider : 'chatgpt';
+    }
     if (pd.cover_mode) _obCoverMode = pd.cover_mode;
   }
   // re-sync selected provider/cover UI classes
   document.querySelectorAll('#ob-provider-picks .ob-product').forEach(el => {
-    const isNb = (el.textContent || '').includes('Nano');
-    const id = isNb ? 'nanobanana' : 'chatgpt';
+    const id = el.getAttribute('data-provider') || 'chatgpt';
     el.classList.toggle('selected', id === _obProvider);
     el.classList.toggle('primary', id === _obProvider);
   });
@@ -4929,13 +4938,29 @@ function renderOrderColoringBook(o) {
 }
 
 function obSetProvider(p) {
-  _obProvider = p === 'nanobanana' ? 'nanobanana' : 'chatgpt';
+  if (p === 'nanobanana' || p === 'mock') _obProvider = p;
+  else _obProvider = 'chatgpt';
   document.querySelectorAll('#ob-provider-picks .ob-product').forEach(el => {
-    const isNb = (el.textContent || '').includes('Nano');
-    const id = isNb ? 'nanobanana' : 'chatgpt';
+    const id = el.getAttribute('data-provider') || 'chatgpt';
     el.classList.toggle('selected', id === _obProvider);
     el.classList.toggle('primary', id === _obProvider);
   });
+  // Refresh the mock hint under provider picks if present
+  const picks = document.getElementById('ob-provider-picks');
+  if (picks) {
+    let hint = picks.parentElement && picks.parentElement.querySelector('.ob-mock-hint');
+    if (_obProvider === 'mock') {
+      if (!hint) {
+        hint = document.createElement('p');
+        hint.className = 'hint ob-mock-hint';
+        hint.style.cssText = 'margin-top:10px;color:var(--warn)';
+        hint.textContent = 'وضع تجريبي: صور placeholder فقط لاختبار الدُفع والحفظ — مش للجودة النهائية.';
+        picks.parentElement.appendChild(hint);
+      }
+    } else if (hint) {
+      hint.remove();
+    }
+  }
   obEstimateCost();
 }
 
@@ -4958,6 +4983,7 @@ function obCoverFlags() {
 
 function obUnitUsd() {
   const r = COST_RATES || {};
+  if (_obProvider === 'mock') return Number(r.mock || 0);
   return Number(_obProvider === 'nanobanana' ? (r.nanobanana || 0.04) : (r.chatgpt || 0.03));
 }
 
@@ -4998,7 +5024,9 @@ function obEstimateCost() {
   if (wantCover) parts.push('غلاف بداية');
   if (scenes.length) parts.push(scenes.length + ' صفحة تلوين');
   if (wantEnding) parts.push('غلاف نهاية');
-  const provLabel = _obProvider === 'nanobanana' ? 'Nano Banana' : 'ChatGPT';
+  const provLabel = _obProvider === 'nanobanana'
+    ? 'Nano Banana'
+    : (_obProvider === 'mock' ? 'Mock (مجاني)' : 'ChatGPT');
   if (!box) return { n, usd, unit };
   box.innerHTML = `
     <div>سيتولّد <strong>${n}</strong> صور (${parts.join(' + ') || '—'}) بمزوّد <strong>${provLabel}</strong></div>
@@ -5525,7 +5553,8 @@ function obApplyStatusPayload(data) {
     _obPackExplicit = true;
   }
   if (progress.provider) {
-    _obProvider = progress.provider === 'nanobanana' ? 'nanobanana' : 'chatgpt';
+    _obProvider = (progress.provider === 'nanobanana' || progress.provider === 'mock')
+      ? progress.provider : 'chatgpt';
   }
   if (progress.cover_mode) {
     _obCoverMode = progress.cover_mode;
