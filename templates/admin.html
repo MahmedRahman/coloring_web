@@ -449,6 +449,112 @@
     min-height: 18px;
   }
 
+  /* Parent / guardian filter */
+  .so-parents-bar {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border-2);
+    border-radius: 14px;
+  }
+  .so-parents-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; flex-wrap: wrap;
+  }
+  .so-parents-title {
+    font-size: 12.5px; font-weight: 800; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .so-parents-title span.muted { font-weight: 600; color: var(--muted); font-size: 12px; }
+  .so-parents-clear {
+    font-size: 12px; font-weight: 700; color: var(--primary);
+    background: transparent; border: none; cursor: pointer;
+    padding: 4px 8px; border-radius: 8px;
+  }
+  .so-parents-clear:hover { background: var(--primary-dim); }
+  .so-parents-clear[hidden] { display: none !important; }
+  .so-parents-list {
+    display: flex; align-items: stretch; gap: 8px;
+    overflow-x: auto; padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .so-parent-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    flex: 0 0 auto;
+    max-width: 260px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border-2);
+    background: var(--surface-2);
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+    text-align: right;
+  }
+  .so-parent-chip:hover {
+    border-color: rgba(56,189,248,0.55);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  }
+  .so-parent-chip.active {
+    background: var(--primary-dim);
+    border-color: rgba(56,189,248,0.55);
+    color: var(--primary);
+  }
+  .so-parent-chip-main {
+    display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  }
+  .so-parent-name {
+    font-size: 13px; font-weight: 800;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 170px;
+  }
+  .so-parent-sub {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 170px;
+  }
+  .so-parent-chip.active .so-parent-sub { color: rgba(56,189,248,0.85); }
+  .so-parent-count {
+    flex-shrink: 0;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800;
+    background: rgba(148,163,184,0.15);
+    color: var(--text);
+  }
+  .so-parent-chip.active .so-parent-count {
+    background: rgba(56,189,248,0.22);
+    color: var(--primary);
+  }
+  .so-parent-chip.is-all .so-parent-name { font-size: 12.5px; }
+  .so-client-filter-link {
+    margin-inline-start: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border-2);
+    background: var(--surface-2);
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 800;
+    font-family: inherit;
+    cursor: pointer;
+    vertical-align: middle;
+  }
+  .so-client-filter-link:hover {
+    border-color: rgba(56,189,248,0.5);
+    background: var(--primary-dim);
+  }
+  .so-parent-kids-count {
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 12px;
+  }
+
   .so-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -1983,6 +2089,17 @@
           </div>
           <button class="btn btn-primary" onclick="openOrderModal(null)">+ طلب جديد</button>
         </div>
+        <div class="so-parents-bar" id="so-parents-bar">
+          <div class="so-parents-head">
+            <div class="so-parents-title">
+              👨‍👩‍👧 أولياء الأمور
+              <span class="muted" id="so-parents-meta"></span>
+            </div>
+            <button type="button" class="so-parents-clear" id="so-parents-clear" hidden
+                    onclick="clearParentFilter()">عرض كل الأطفال</button>
+          </div>
+          <div class="so-parents-list" id="so-parents-list" role="listbox" aria-label="فلتر ولي الأمر"></div>
+        </div>
         <div class="so-toolbar-row">
           <div class="so-search-wrap">
             <span class="so-search-ico">⌕</span>
@@ -2150,8 +2267,9 @@
 
 <script>
 /* ─── Global State Variables ─── */
-let _soAll = [];          // all loaded special orders
+let _soAll = [];          // all loaded special orders (status/search — full set)
 let _soFilter = 'all';    // current filter (all/pending/done)
+let _soParentKey = null;  // selected guardian key (null = all)
 let _soEditId = null;     // null = new order, number = edit
 let _modalOrderId = null;
 let _existingPhotos = []; // filenames currently on server
@@ -3136,13 +3254,12 @@ async function loadOrders(filter) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'فشل التحميل');
     _soAll = data.orders || [];
-    renderOrders(_soAll);
-    if (note) {
-      if (q) note.textContent = `${_soAll.length} نتيجة`;
-      else if (_soFilter === 'pending') note.textContent = `${_soAll.length} طلب معلّق`;
-      else if (_soFilter === 'done') note.textContent = `${_soAll.length} طلب مكتمل`;
-      else note.textContent = `${_soAll.length} طلب`;
+    // Drop parent selection if that guardian is gone from the current result set
+    if (_soParentKey && !soBuildGuardians(_soAll).some(g => g.key === _soParentKey)) {
+      _soParentKey = null;
     }
+    renderParentsBar();
+    applyOrdersView();
   } catch(e) {
     console.error('loadOrders error:', e);
     const grid = document.getElementById('so-grid');
@@ -3150,6 +3267,8 @@ async function loadOrders(filter) {
       grid.innerHTML = '<div class="so-empty"><span class="so-empty-ico">⚠️</span>حدث خطأ أثناء تحميل الطلبات. حاول مجدداً.</div>';
     }
     if (note) note.textContent = '';
+    const list = document.getElementById('so-parents-list');
+    if (list) list.innerHTML = '';
   }
 }
 
@@ -3169,13 +3288,161 @@ function filterOrders(f, btn) {
   loadOrders();
 }
 
+/** Normalize phone digits for grouping the same guardian across kids. */
+function soNormPhone(phone) {
+  let d = String(phone || '').replace(/\D/g, '');
+  if (d.startsWith('00')) d = d.slice(2);
+  if (d.startsWith('2') && d.length >= 11) d = d.slice(1); // 2 + 01… → 01…
+  if (d.startsWith('20') && d.length >= 12) d = '0' + d.slice(2);
+  return d;
+}
+
+/** Group key: same phone (preferred) or same client_name; else "unknown". */
+function soParentKey(o) {
+  const phone = soNormPhone(o && o.phone);
+  if (phone && phone.length >= 8) return 'p:' + phone;
+  const name = String((o && o.client_name) || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (name) return 'n:' + name;
+  return 'u:unknown';
+}
+
+function soChildCountLabel(n) {
+  const c = Number(n) || 0;
+  if (c === 1) return 'طفل واحد';
+  if (c === 2) return 'طفلان';
+  if (c >= 3 && c <= 10) return c + ' أطفال';
+  return c + ' طفل';
+}
+
+function soBuildGuardians(orders) {
+  const map = new Map();
+  for (const o of orders || []) {
+    const key = soParentKey(o);
+    let g = map.get(key);
+    if (!g) {
+      g = {
+        key,
+        name: (o.client_name || '').trim() || 'غير محدد',
+        phone: (o.phone || '').trim(),
+        childNames: [],
+        count: 0,
+      };
+      map.set(key, g);
+    }
+    g.count += 1;
+    const cn = (o.child_name || '').trim();
+    if (cn && !g.childNames.includes(cn)) g.childNames.push(cn);
+    // Prefer a non-empty / longer display name if later rows have it
+    const nm = (o.client_name || '').trim();
+    if (nm && (g.name === 'غير محدد' || nm.length > g.name.length)) g.name = nm;
+    if (!g.phone && o.phone) g.phone = String(o.phone).trim();
+  }
+  return [...map.values()].sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.name.localeCompare(b.name, 'ar');
+  });
+}
+
+function soFilteredOrders() {
+  if (!_soParentKey) return _soAll.slice();
+  return _soAll.filter(o => soParentKey(o) === _soParentKey);
+}
+
+function selectParentFilter(key) {
+  _soParentKey = key || null;
+  renderParentsBar();
+  applyOrdersView();
+}
+
+function clearParentFilter() {
+  selectParentFilter(null);
+}
+
+function renderParentsBar() {
+  const list = document.getElementById('so-parents-list');
+  const meta = document.getElementById('so-parents-meta');
+  const clearBtn = document.getElementById('so-parents-clear');
+  if (!list) return;
+
+  const guardians = soBuildGuardians(_soAll);
+  if (meta) {
+    meta.textContent = guardians.length
+      ? `· ${guardians.length} ولي أمر · ${_soAll.length} طفل`
+      : '';
+  }
+  if (clearBtn) clearBtn.hidden = !_soParentKey;
+
+  if (!_soAll.length) {
+    list.innerHTML = '<div class="muted" style="font-size:12.5px;padding:6px 2px">مفيش طلبات لعرض أولياء الأمور.</div>';
+    return;
+  }
+
+  const allActive = !_soParentKey ? ' active' : '';
+  const chips = [
+    `<button type="button" class="so-parent-chip is-all${allActive}"
+       role="option" aria-selected="${!_soParentKey}"
+       onclick="selectParentFilter(null)">
+      <div class="so-parent-chip-main">
+        <span class="so-parent-name">كل أولياء الأمور</span>
+        <span class="so-parent-sub">كل الأطفال في الفلتر</span>
+      </div>
+      <span class="so-parent-count">${_soAll.length}</span>
+    </button>`,
+  ];
+
+  for (const g of guardians) {
+    const active = _soParentKey === g.key ? ' active' : '';
+    const sub = g.phone
+      ? escHtml(g.phone)
+      : escHtml(g.childNames.slice(0, 2).join(' · ') || '—');
+    chips.push(`
+      <button type="button" class="so-parent-chip${active}"
+        role="option" aria-selected="${_soParentKey === g.key}"
+        title="${escHtml(g.name)} — ${soChildCountLabel(g.count)}"
+        onclick="selectParentFilter(${JSON.stringify(g.key)})">
+        <div class="so-parent-chip-main">
+          <span class="so-parent-name">${escHtml(g.name)}</span>
+          <span class="so-parent-sub">${sub}</span>
+        </div>
+        <span class="so-parent-count" title="${soChildCountLabel(g.count)}">${g.count}</span>
+      </button>`);
+  }
+  list.innerHTML = chips.join('');
+}
+
+function applyOrdersView() {
+  const note = document.getElementById('so-results-note');
+  const visible = soFilteredOrders();
+  renderOrders(visible);
+
+  if (!note) return;
+  const q = (document.getElementById('so-search')?.value || '').trim();
+  let base = '';
+  if (q) base = `${_soAll.length} نتيجة بحث`;
+  else if (_soFilter === 'pending') base = `${_soAll.length} طلب معلّق`;
+  else if (_soFilter === 'done') base = `${_soAll.length} طلب مكتمل`;
+  else base = `${_soAll.length} طلب`;
+
+  if (_soParentKey) {
+    const g = soBuildGuardians(_soAll).find(x => x.key === _soParentKey);
+    const gName = g ? g.name : 'ولي الأمر';
+    note.textContent = `${soChildCountLabel(visible.length)} · ولي الأمر: ${gName} · (من ${base})`;
+  } else {
+    note.textContent = base;
+  }
+}
+
 function renderOrders(orders) {
   const grid = document.getElementById('so-grid');
   if (!orders.length) {
     const q = (document.getElementById('so-search')?.value || '').trim();
-    grid.innerHTML = q
-      ? '<div class="so-empty"><span class="so-empty-ico">⌕</span>مفيش نتائج مطابقة للبحث.</div>'
-      : '<div class="so-empty"><span class="so-empty-ico">📱</span>مفيش طلبات في هذه الفئة.</div>';
+    if (_soParentKey) {
+      grid.innerHTML = '<div class="so-empty"><span class="so-empty-ico">👨‍👩‍👧</span>مفيش أطفال تحت ولي الأمر ده في الفلتر الحالي.</div>';
+    } else {
+      grid.innerHTML = q
+        ? '<div class="so-empty"><span class="so-empty-ico">⌕</span>مفيش نتائج مطابقة للبحث.</div>'
+        : '<div class="so-empty"><span class="so-empty-ico">📱</span>مفيش طلبات في هذه الفئة.</div>';
+    }
     return;
   }
   grid.innerHTML = orders.map(o => orderCardHTML(o)).join('');
@@ -3222,6 +3489,11 @@ function orderCardHTML(o) {
   const toggleLabel = isDone ? '↩ معلّق' : '✓ مكتمل';
   const toggleClass = isDone ? 'btn-ghost' : 'btn-success';
   const date = formatOrderDate(o.created_at);
+  const parentKey = soParentKey(o);
+  const siblings = _soAll.filter(x => soParentKey(x) === parentKey).length;
+  const kidsNote = siblings > 1
+    ? `<span class="so-parent-kids-count"> · ${soChildCountLabel(siblings)}</span>`
+    : '';
 
   return `
   <div class="so-card status-${escHtml(o.status || 'pending')}" id="so-card-${o.id}"
@@ -3236,7 +3508,10 @@ function orderCardHTML(o) {
         <div class="so-child-name-text">${escHtml(o.child_name || 'بدون اسم')}</div>
         <div class="so-client-line">
           ولي الأمر:
-          <strong>${escHtml(o.client_name || 'غير محدد')}</strong>
+          <strong>${escHtml(o.client_name || 'غير محدد')}</strong>${kidsNote}
+          <button type="button" class="so-client-filter-link"
+            title="عرض أطفال ولي الأمر ده"
+            onclick="event.stopPropagation(); selectParentFilter(${JSON.stringify(parentKey)})">فلتر</button>
         </div>
       </div>
     </div>
