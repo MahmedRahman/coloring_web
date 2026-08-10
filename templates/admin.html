@@ -6423,9 +6423,17 @@ async function submitOrderForm() {
     msgEl.textContent = isEdit ? 'تم التعديل ✓' : 'تم إضافة الطلب ✓';
     msgEl.className   = 'of-msg modal-msg ok';
     showToast(isEdit ? 'تم تعديل الطلب ✓' : 'تم إضافة الطلب ✓', 'ok');
+    // After successful save → back to special orders list
     setTimeout(() => {
-      openOrderDetailPage(orderId);
-    }, 500);
+      _soEditId = null;
+      _modalFiles = [];
+      _existingPhotos = [];
+      if (typeof navigateAdmin === 'function') {
+        navigateAdmin('#special-orders', { fromNav: true });
+      } else {
+        showSection('special-orders');
+      }
+    }, 400);
   } catch(e) {
     msgEl.textContent = e.message;
     msgEl.className = 'of-msg modal-msg err';
