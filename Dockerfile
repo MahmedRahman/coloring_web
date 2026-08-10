@@ -2,8 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# DejaVu covers Latin; Amiri/Noto give proper Arabic glyphs for story captions.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-dejavu-core \
+    fonts-noto-core \
+    fonts-hosny-amiri \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
