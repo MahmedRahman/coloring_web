@@ -2328,10 +2328,14 @@ let _obTimerLabel = '';
 let _obTimerRunningFor = '';
 // Per-page coloring generation status: scene_id -> 'running' | 'done' | 'error'
 let _obPageJobs = {};
-const OB_PAGE_PARALLEL = 3; // concurrent independent coloring page jobs
+const OB_PAGE_PARALLEL = 2; // pairs only — wait until visible before next pair
 // Approx Kie 1K rates (server-injected, overridable)
 const COST_RATES = {{ (cost_rates if cost_rates is defined else {"chatgpt": 0.03, "nanobanana": 0.04, "usd_to_egp": 50}) | tojson }};
 
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
 
 const OB_STEPS = [
   {
@@ -2405,33 +2409,68 @@ async function parseJsonResponse(res) {
 
 /** Poll background generation job (short requests, avoids Cloudflare 100s timeout). */
 async function awaitQuickBookJob(jobId, { onTick } = {}) {
-  const maxMs = 12 * 60 * 1000;
+  const maxMs = 15 * 60 * 1000;
   const start = Date.now();
+  let missingStreak = 0;
   while (Date.now() - start < maxMs) {
-    const res = await fetch(`/admin/api/quick-book/job/${jobId}`);
-    const data = await parseJsonResponse(res);
-    if (data.status === 'running') {
-      if (onTick) onTick(data);
-      await new Promise(r => setTimeout(r, 1500));
+    let res;
+    let data;
+    try {
+      res = await fetch(`/admin/api/quick-book/job/${jobId}`, { cache: 'no-store' });
+      data = await parseJsonResponse(res);
+    } catch (_) {
+      // Transient network/parse glitch — keep waiting (job may still finish)
+      await sleep(2000);
       continue;
     }
-    if (data.status === 'error' || (!res.ok && data.status !== 'done')) {
+
+    const st = data.status || '';
+    // Job file not visible yet (or race) — do NOT fail immediately
+    if (st === 'running' || st === 'missing') {
+      if (st === 'missing') {
+        missingStreak += 1;
+        if (missingStreak > 45) {
+          throw new Error('المهمة مش ظاهرة في السيرفر. حدّث الصفحة — لو الصورة خلصت هتكون ظاهرة.');
+        }
+      } else {
+        missingStreak = 0;
+      }
+      if (onTick) onTick(data);
+      await sleep(2000);
+      continue;
+    }
+    if (st === 'error') {
       throw new Error(data.error || 'فشل التوليد');
     }
-    if (data.status === 'done' || res.ok) {
+    if (st === 'done') {
       return data;
     }
-    throw new Error(data.error || 'فشل التوليد');
+    // Unknown / 5xx without clear status — keep polling
+    if (!res.ok) {
+      await sleep(2000);
+      continue;
+    }
+    // Fallback if server returns payload without status field
+    if (res.ok && (data.pages || data.page || data.ok)) {
+      return data;
+    }
+    await sleep(2000);
   }
   throw new Error('التوليد أخد وقت طويل. حدّث الصفحة — لو الصورة خلصت هتكون ظاهرة.');
 }
 
-/** Start async generation and wait via polling. */
-async function qbPostAsync(url, body, { onTick } = {}) {
+/** Start async generation and wait via polling. Always ask for image bytes so the UI
+ *  can show the page immediately without waiting for disk/CDN. */
+async function qbPostAsync(url, body, { onTick, includeB64 = true } = {}) {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...body, async: true }),
+    body: JSON.stringify({
+      ...body,
+      async: true,
+      include_b64: includeB64,
+      include_image: includeB64,
+    }),
   });
   const data = await parseJsonResponse(res);
   if (!res.ok) throw new Error(data.error || 'فشل الطلب');
@@ -4223,6 +4262,116 @@ function obPermanentPageUrl(sceneId, bust) {
   return `/admin/special-orders/${_obOrder.id}/book-page/${sceneId}?t=${t}`;
 }
 
+/** Refresh book status from server (source of truth for which pages exist). */
+async function obRefreshBookStatus() {
+  const base = typeof obBookApiBase === 'function' ? obBookApiBase() : null;
+  if (!base) return null;
+  try {
+    const stRes = await fetch(base, { cache: 'no-store' });
+    const stData = await parseJsonResponse(stRes);
+    if (stRes.ok) {
+      obApplyStatusPayload(stData);
+      return stData;
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function obIsPageOnDisk(sceneId) {
+  await obRefreshBookStatus();
+  if (sceneId === 'cover') return !!_obState.hasCover;
+  if (sceneId === 'ending') return !!_obState.hasEnding;
+  return (_obState.donePages || []).includes(sceneId);
+}
+
+/** Wait until the browser can actually load the image (or it's a data URL). */
+async function waitForImgUrl(url, maxMs = 20000) {
+  if (!url) return false;
+  if (String(url).startsWith('data:')) return true;
+  const deadline = Date.now() + maxMs;
+  while (Date.now() < deadline) {
+    const bust = url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
+    const loaded = await new Promise((resolve) => {
+      const img = new Image();
+      const to = setTimeout(() => {
+        img.onload = img.onerror = null;
+        resolve(false);
+      }, 10000);
+      img.onload = () => { clearTimeout(to); resolve(true); };
+      img.onerror = () => { clearTimeout(to); resolve(false); };
+      img.src = bust;
+    });
+    if (loaded) return true;
+    try {
+      const r = await fetch(bust, { cache: 'no-store' });
+      if (r.ok) {
+        const buf = await r.arrayBuffer();
+        if (buf && buf.byteLength > 800) return true;
+      }
+    } catch (_) {}
+    await sleep(1000);
+  }
+  return false;
+}
+
+/**
+ * Confirm the page is really ready for the admin UI:
+ * 1) prefer image_b64, 2) wait for disk status, 3) wait until <img> loads.
+ * Returns usable src or null.
+ */
+async function obConfirmPageVisible(sceneId, page, { maxMs = 90000, onWait } = {}) {
+  if (page && page.image_b64) {
+    const src = `data:image/jpeg;base64,${page.image_b64}`;
+    _obImgCache[sceneId] = src;
+    return src;
+  }
+  const candidates = [];
+  if (page && page.preview_url) candidates.push(page.preview_url.split('?')[0] + '?t=' + Date.now());
+  if (_obSessionId) {
+    candidates.push(`/admin/api/quick-book/preview/${_obSessionId}/${sceneId}?t=${Date.now()}`);
+  }
+  if (_obOrder && _obOrder.id) {
+    candidates.push(obPermanentPageUrl(sceneId));
+  }
+
+  const start = Date.now();
+  let attempt = 0;
+  while (Date.now() - start < maxMs) {
+    attempt += 1;
+    if (onWait) onWait(attempt, Math.round((Date.now() - start) / 1000));
+
+    const onDisk = await obIsPageOnDisk(sceneId).catch(() => false);
+    for (const u of candidates) {
+      const bust = u.includes('?') ? u.replace(/([?&]t=)\d+/, `$1${Date.now()}`) : (u + '?t=' + Date.now());
+      if (await waitForImgUrl(bust, 6000)) {
+        _obImgCache[sceneId] = bust;
+        return bust;
+      }
+    }
+    // File on disk but CDN/browser not ready — still show permanent URL after a few tries
+    if (onDisk && attempt >= 3) {
+      const perm = _obOrder ? obPermanentPageUrl(sceneId) : (_obSessionId
+        ? `/admin/api/quick-book/preview/${_obSessionId}/${sceneId}?t=${Date.now()}`
+        : null);
+      if (perm) {
+        _obImgCache[sceneId] = perm;
+        return perm;
+      }
+    }
+    await sleep(1500);
+  }
+  // Last chance: if disk says done, accept permanent URL even without load
+  if (await obIsPageOnDisk(sceneId).catch(() => false)) {
+    const perm = obPermanentPageUrl(sceneId) ||
+      (`/admin/api/quick-book/preview/${_obSessionId}/${sceneId}?t=${Date.now()}`);
+    if (perm) {
+      _obImgCache[sceneId] = perm;
+      return perm;
+    }
+  }
+  return null;
+}
+
 function obCurrentPdfUrl(filename) {
   if (_obPdfUrl) return _obPdfUrl;
   const fn = filename || _obPdfFilename || (_obOrder && _obOrder.pdf_filename);
@@ -4944,9 +5093,14 @@ function obOnSlotDone(sceneId, page) {
 
   let src = '';
   if (page) {
-    if (page.preview_url) src = page.preview_url + (page.preview_url.includes('?') ? '&' : '?') + 't=' + Date.now();
-    else if (page.image_b64) src = `data:image/jpeg;base64,${page.image_b64}`;
+    if (page.image_b64) src = `data:image/jpeg;base64,${page.image_b64}`;
+    else if (page.preview_url) {
+      src = page.preview_url.includes('?')
+        ? page.preview_url
+        : (page.preview_url + '?t=' + Date.now());
+    }
   }
+  if (!src && _obImgCache[sceneId]) src = _obImgCache[sceneId];
   if (!src && _obOrder) src = obPermanentPageUrl(sceneId);
   if (src) _obImgCache[sceneId] = src;
 
@@ -4958,20 +5112,32 @@ function obOnSlotDone(sceneId, page) {
     if (st) st.textContent = 'تم ✓';
     const body = document.getElementById('ob-slot-body-' + sceneId);
     if (body && src) {
-      body.innerHTML = `<img src="${escHtml(src)}" alt="" onclick="openLightbox(this.src)">`;
+      body.innerHTML = `<img src="${escHtml(src)}" alt="" onclick="openLightbox(this.src)" loading="eager">`;
+    } else if (body && !src) {
+      body.innerHTML = '<div class="slot-placeholder">✓ محفوظة — بنحمّل المعاينة...</div>';
+      // Deferred load from permanent URL
+      const u = obPermanentPageUrl(sceneId);
+      if (u) {
+        _obImgCache[sceneId] = u;
+        const img = new Image();
+        img.onload = () => {
+          body.innerHTML = `<img src="${escHtml(u)}" alt="" onclick="openLightbox(this.src)">`;
+        };
+        img.src = u;
+      }
     }
     const regen = el.querySelector('button');
     if (regen) regen.disabled = false;
   } else {
     obRenderSlots();
   }
-  const stillRunning = _obSlots.some(s => s.status === 'running');
+  const stillRunning = _obSlots.some(s => s.status === 'running' || s.status === 'pending');
   // While batch is mid-loop keep busy; individual slots may finish ahead of peers
   if (!stillRunning) _obBusy = false;
   else _obBusy = true;
   obUpdateBatchStats();
   obEstimateCost();
-  showToast(`اتحفظت «${(slot && slot.title) || sceneId}» ✓`, 'ok');
+  obUpdatePdfButton();
 }
 
 function obOnSlotError(sceneId, msg) {
@@ -5071,11 +5237,10 @@ async function obStartBatchGenerate(forceAll) {
     obRenderSlots();
     const prog = document.getElementById('ob-progress');
     if (prog) prog.style.display = '';
-    obSetProgress(5, `توليد ${todo.length} صورة · حتى ${OB_PAGE_PARALLEL} متوازي...`);
-    showToast(`بدء توليد ${todo.length} صورة...`, 'ok');
+    const totalTodo = todo.length;
+    obSetProgress(5, `توليد ${totalTodo} صورة · دفعتين (2) مع تأكيد ظهور كل صورة...`);
+    showToast(`بدء توليد ${totalTodo} صورة — دفعتين دفعة…`, 'ok');
 
-    // Parallel workers
-    let idx = 0;
     const runOne = async (item) => {
       if (!item) return;
       const sid = item.scene_id;
@@ -5093,19 +5258,50 @@ async function obStartBatchGenerate(forceAll) {
       }
       obUpdateBatchStats();
       try {
+        let page = null;
         if (item.kind === 'cover') {
-          const page = await obGenerateCover(name, scenes.length, !!forceAll);
-          if (!page) throw new Error('فشل الغلاف');
-          obOnSlotDone('cover', page);
+          page = await obGenerateCover(name, scenes.length, !!forceAll);
         } else if (item.kind === 'ending') {
-          const page = await obGenerateEnding(name, !!forceAll);
-          if (!page) throw new Error('فشل النهاية');
-          obOnSlotDone('ending', page);
+          page = await obGenerateEnding(name, !!forceAll);
         } else {
-          const page = await obGenerateOnePage(sid, !!forceAll);
-          if (!page || page.error) throw new Error((page && page.error) || 'فشل الصفحة');
-          obOnSlotDone(sid, page);
+          page = await obGenerateOnePage(sid, !!forceAll);
+          if (page && page.error) throw new Error(page.error);
         }
+        // Job said fail, but file may already be on disk (false failure)
+        if (!page || page.error) {
+          if (await obIsPageOnDisk(sid)) {
+            page = { scene_id: sid };
+          } else {
+            throw new Error((page && page.error) || 'فشل الصفحة');
+          }
+        }
+
+        // Wait until image is really visible / saved — don't mark done early
+        if (el) {
+          const st = el.querySelector('.slot-status');
+          if (st) st.textContent = 'جاري التأكيد...';
+          const body = document.getElementById('ob-slot-body-' + sid);
+          if (body) body.innerHTML = '<div class="slot-placeholder">⏳ بنأكد حفظ الصورة وظهورها...</div>';
+        }
+        const vis = await obConfirmPageVisible(sid, page, {
+          maxMs: 90000,
+          onWait: (n, sec) => {
+            const st = el && el.querySelector('.slot-status');
+            if (st) st.textContent = `تأكيد ${sec}ث`;
+          },
+        });
+        if (!vis) {
+          // One more recover
+          if (await obIsPageOnDisk(sid)) {
+            page.preview_url = obPermanentPageUrl(sid) || page.preview_url;
+          } else {
+            throw new Error('الصورة لسة مش ظاهرة — جرّب إعادة بعد ثواني');
+          }
+        } else {
+          page.preview_url = vis;
+          if (vis.startsWith('data:')) page.image_b64 = page.image_b64 || null;
+        }
+        obOnSlotDone(sid, page);
         try {
           await obPersistProgress({
             step: item.kind === 'cover' ? 'cover' : (item.kind === 'ending' ? 'ending' : 'pages'),
@@ -5113,21 +5309,45 @@ async function obStartBatchGenerate(forceAll) {
           });
         } catch (_) {}
       } catch (e) {
+        // Recover: generation may have finished after a timeout/false fail
+        try {
+          if (await obIsPageOnDisk(sid)) {
+            const vis = await obConfirmPageVisible(sid, { scene_id: sid }, { maxMs: 20000 });
+            obOnSlotDone(sid, { scene_id: sid, preview_url: vis || obPermanentPageUrl(sid) });
+            return;
+          }
+        } catch (_) {}
         obOnSlotError(sid, e.message || 'فشل');
       }
     };
 
-    const workers = Array.from({ length: Math.min(OB_PAGE_PARALLEL, todo.length) }, async () => {
-      while (idx < todo.length) {
-        const i = idx++;
-        await runOne(todo[i]);
+    // Process in pairs of OB_PAGE_PARALLEL — never start the next pair until this pair settles
+    for (let i = 0; i < todo.length; i += OB_PAGE_PARALLEL) {
+      const chunk = todo.slice(i, i + OB_PAGE_PARALLEL);
+      const pairNo = Math.floor(i / OB_PAGE_PARALLEL) + 1;
+      const pairs = Math.ceil(todo.length / OB_PAGE_PARALLEL);
+      const doneBefore = _obSlots.filter(s => s.status === 'done').length;
+      obSetProgress(
+        5 + Math.round((doneBefore / Math.max(totalTodo, 1)) * 90),
+        `دفعة ${pairNo}/${pairs} · ${chunk.map(c => c.title || c.scene_id).join(' + ')} · بنستنى يخلصوا ويظهروا...`,
+      );
+      await Promise.all(chunk.map(item => runOne(item)));
+      // Re-sync disk after every pair before starting the next
+      try { await obRefreshBookStatus(); } catch (_) {}
+      const pairFail = chunk.some(c => {
+        const s = _obSlots.find(x => x.scene_id === c.scene_id);
+        return s && s.status === 'error';
+      });
+      if (pairFail) {
+        // still continue remaining? User asked wait-confirm-next; continue so rest of book can finish
       }
-    });
-    await Promise.all(workers);
+      await sleep(400);
+    }
 
     const done = _obSlots.filter(s => s.status === 'done').length;
     const fail = _obSlots.filter(s => s.status === 'error').length;
     obSetProgress(100, `تم ${done} · فشل ${fail}`);
+    try { await obRefreshBookStatus(); } catch (_) {}
     if (fail === 0 && done === _obSlots.length) {
       try { await obBuildPdf(); } catch (_) {}
     }
@@ -5153,9 +5373,15 @@ async function obStartBatchGenerate(forceAll) {
   } finally {
     _obBusy = false;
     const prog = document.getElementById('ob-progress');
-    setTimeout(() => { if (prog) prog.style.display = 'none'; }, 1500);
+    setTimeout(() => { if (prog) prog.style.display = 'none'; }, 2500);
     obEstimateCost();
     obUpdatePdfButton();
+    // Don't full re-render slots if cache already shows images — only refresh status chrome
+    (_obSlots || []).forEach(s => {
+      if (s.status === 'done' && !_obImgCache[s.scene_id] && _obOrder) {
+        _obImgCache[s.scene_id] = obPermanentPageUrl(s.scene_id);
+      }
+    });
     obRenderSlots();
   }
 }
@@ -5176,19 +5402,32 @@ async function obRegenerateSlot(sceneId) {
     item.status = 'running';
     _obPageJobs[sceneId] = 'running';
     obRenderSlots();
+    let page = null;
     if (item.kind === 'cover' || sceneId === 'cover') {
-      const page = await obGenerateCover(name, _obPageCount || obPlannedScenes().length || 8, true);
-      obOnSlotDone('cover', page);
+      page = await obGenerateCover(name, _obPageCount || obPlannedScenes().length || 8, true);
     } else if (item.kind === 'ending' || sceneId === 'ending') {
-      const page = await obGenerateEnding(name, true);
-      obOnSlotDone('ending', page);
+      page = await obGenerateEnding(name, true);
     } else {
-      const page = await obGenerateOnePage(sceneId, true);
+      page = await obGenerateOnePage(sceneId, true);
       if (page && page.error) throw new Error(page.error);
-      obOnSlotDone(sceneId, page);
     }
+    if (!page || page.error) {
+      if (!(await obIsPageOnDisk(sceneId))) throw new Error((page && page.error) || 'فشل');
+      page = { scene_id: sceneId };
+    }
+    const vis = await obConfirmPageVisible(sceneId, page, { maxMs: 60000 });
+    if (vis) page.preview_url = vis;
+    else if (!(await obIsPageOnDisk(sceneId))) throw new Error('الصورة لسة مش ظاهرة');
+    obOnSlotDone(sceneId, page);
     await obPersistProgress({ scenes: obPlannedScenes() });
   } catch (e) {
+    try {
+      if (await obIsPageOnDisk(sceneId)) {
+        const vis = await obConfirmPageVisible(sceneId, { scene_id: sceneId }, { maxMs: 15000 });
+        obOnSlotDone(sceneId, { scene_id: sceneId, preview_url: vis || obPermanentPageUrl(sceneId) });
+        return;
+      }
+    } catch (_) {}
     obOnSlotError(sceneId, e.message || 'فشل');
     showToast(e.message || 'فشل', 'err');
   } finally {
@@ -5648,13 +5887,18 @@ async function obGenerateOnePage(sid, force) {
     }
     page.duration_sec = secs;
     obRecordTiming(page.scene_id || sid, secs);
-    // Prefer permanent order URL (server already synced)
-    if (_obOrder && _obOrder.id) {
+    // Prefer data URL for instant display; permanent URL once synced
+    if (page.image_b64) {
+      _obImgCache[page.scene_id || sid] = `data:image/jpeg;base64,${page.image_b64}`;
+    } else if (_obOrder && _obOrder.id) {
       const perm = obPermanentPageUrl(page.scene_id || sid);
       _obImgCache[page.scene_id || sid] = perm;
-      page.preview_url = perm;
+      page.preview_url = page.preview_url || perm;
     } else {
       obCachePage(page);
+    }
+    if (!page.preview_url && _obSessionId) {
+      page.preview_url = `/admin/api/quick-book/preview/${_obSessionId}/${page.scene_id || sid}`;
     }
     const src = pagePreviewSrc(page, _obSessionId) || obPageSrc(page.scene_id || sid);
     if (src && document.getElementById('ob-last-gen-img')) {
