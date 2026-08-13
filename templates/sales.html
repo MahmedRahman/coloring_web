@@ -1,0 +1,1159 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لونّي — طفلك بطل كتابه</title>
+<meta name="description" content="في لونّي بنحوّل صورة طفلك لكتاب تلوين مطبوع باسمه وملامحه. احجز من الفورم — السعر {{ sales_price_egp }} جنيه. توصيل والدفع عند الاستلام.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --display: "Baloo Bhaijaan 2", "SF Arabic", sans-serif;
+  --font: "IBM Plex Sans Arabic", "SF Arabic", Tahoma, sans-serif;
+  --ink: #2a1f1a;
+  --muted: #6b5e56;
+  --coral: #e85d4c;
+  --coral-deep: #d24a3a;
+  --peach: #fff1ea;
+  --cream: #fffaf6;
+  --paper: #ffffff;
+  --line: rgba(42, 31, 26, 0.1);
+  --wa: #128c7e;
+  --wa-deep: #0b6b60;
+  --mint: #0d9488;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--cream);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+.wrap { width: min(1120px, calc(100% - 40px)); margin-inline: auto; }
+
+/* Nav — matches Lovable header */
+.nav {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(255,246,240,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(42,31,26,.04);
+}
+.nav-inner {
+  width: min(1180px, calc(100% - 48px)); margin-inline: auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px; padding: 16px 0; min-height: 72px;
+}
+.brand {
+  display: inline-flex; align-items: center;
+  line-height: 1;
+}
+.brand img {
+  height: 56px;
+  width: auto;
+  display: block;
+}
+.nav-links {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.nav-links a {
+  padding: 8px 14px; font-size: 15px; font-weight: 600;
+  color: var(--ink); border-radius: 10px; opacity: .85;
+}
+.nav-links a:hover { opacity: 1; background: rgba(42,31,26,.04); }
+.nav .btn { padding: 11px 20px; font-size: 14px; border-radius: 999px; }
+.nav-actions { display: inline-flex; align-items: center; gap: 10px; }
+.lang-switch {
+  font-weight: 700; font-size: 13px; color: var(--muted);
+  padding: 8px 12px; border-radius: 999px;
+  border: 1.5px solid rgba(42,31,26,.12);
+  background: #fff;
+}
+.lang-switch:hover { color: var(--ink); border-color: rgba(42,31,26,.22); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 28px; border-radius: 999px; font-family: var(--font);
+  font-weight: 700; font-size: 16px; border: 0; cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn-coral {
+  background: var(--coral);
+  color: #fff; box-shadow: 0 10px 24px rgba(232,93,76,.28);
+}
+.btn-coral:hover { background: var(--coral-deep); }
+.btn-wa {
+  background: linear-gradient(135deg, var(--wa), var(--wa-deep));
+  color: #fff; box-shadow: 0 12px 28px rgba(18,140,126,.28);
+}
+.btn-ghost {
+  background: #fff; color: var(--ink);
+  border: 1.5px solid rgba(42,31,26,.14);
+}
+.btn-ghost:hover { border-color: rgba(42,31,26,.24); }
+
+/* Hero — two-column like Lovable reference */
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fff6f0 0%, #fffaf6 70%, #ffffff 100%);
+  display: flex;
+  align-items: flex-start;
+}
+.hero-inner {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 18px 0 36px;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 48px;
+  align-items: center;
+}
+.hero-copy { max-width: 560px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--coral); font-weight: 700; font-size: 14px;
+  animation: rise .7s ease both;
+}
+.badge svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.hero h1 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(36px, 5.2vw, 54px);
+  line-height: 1.18;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin: 16px 0 16px;
+  animation: rise .7s ease .08s both;
+}
+.hero-sub {
+  font-size: clamp(16px, 1.9vw, 18px);
+  color: var(--muted);
+  line-height: 1.75;
+  max-width: 38ch;
+  margin-bottom: 18px;
+  animation: rise .7s ease .14s both;
+}
+
+/* Clear before/after price card */
+.price-card {
+  display: grid;
+  grid-template-columns: 1fr auto 1.2fr;
+  gap: 10px 14px;
+  align-items: center;
+  max-width: 420px;
+  margin: 0 0 22px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1.5px solid rgba(232,93,76,.18);
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(42,31,26,.06);
+  animation: rise .7s ease .16s both;
+}
+.price-card .col { display: flex; flex-direction: column; gap: 2px; }
+.price-card .lbl {
+  font-size: 11px; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted);
+}
+.price-card .was-val {
+  font-family: var(--display); font-weight: 800; font-size: 22px;
+  color: #9a8b83; text-decoration: line-through;
+  text-decoration-thickness: 2.5px; text-decoration-color: var(--coral);
+}
+.price-card .now-val {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(30px, 4vw, 38px); color: var(--coral); line-height: 1;
+}
+.price-card .now-val small { font-size: .42em; font-weight: 700; margin-inline-start: 4px; }
+.price-card .divider {
+  width: 1px; align-self: stretch;
+  background: linear-gradient(180deg, transparent, rgba(42,31,26,.12), transparent);
+}
+.price-card .save-row {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-top: 10px; border-top: 1px dashed rgba(42,31,26,.1);
+  font-size: 13px; font-weight: 700; color: var(--muted);
+}
+.price-card .save-pill {
+  font-size: 12px; font-weight: 800; color: #fff;
+  background: var(--coral); padding: 5px 11px; border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Hero covers fan — real book covers */
+.hero-visual {
+  position: relative;
+  min-height: 420px;
+  display: grid;
+  place-items: center;
+  animation: rise .9s ease .12s both;
+}
+.hero-stage {
+  position: relative;
+  width: min(100%, 440px);
+  height: 440px;
+}
+.hero-cover {
+  position: absolute;
+  width: 52%;
+  aspect-ratio: 210 / 297;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 22px 48px rgba(42,31,26,.18);
+  border: 3px solid #fff;
+  transition: transform .35s ease;
+}
+.hero-cover img { width: 100%; height: 100%; object-fit: cover; }
+.hero-cover.c1 {
+  inset-inline-start: 0; top: 42px;
+  transform: rotate(-9deg);
+  z-index: 1;
+}
+.hero-cover.c2 {
+  inset-inline-start: 24%; top: 8px;
+  transform: rotate(2deg);
+  z-index: 3;
+  width: 56%;
+  box-shadow: 0 28px 56px rgba(42,31,26,.22);
+}
+.hero-cover.c3 {
+  inset-inline-end: 0; top: 52px;
+  transform: rotate(10deg);
+  z-index: 2;
+}
+.hero-visual:hover .c1 { transform: rotate(-12deg) translateY(-4px); }
+.hero-visual:hover .c2 { transform: rotate(0deg) translateY(-8px); }
+.hero-visual:hover .c3 { transform: rotate(13deg) translateY(-4px); }
+.hero-float {
+  position: absolute;
+  inset-inline-end: 6%;
+  bottom: 18px;
+  z-index: 4;
+  background: #fff;
+  border-radius: 16px;
+  padding: 10px 14px;
+  box-shadow: 0 14px 30px rgba(42,31,26,.14);
+  border: 1px solid rgba(42,31,26,.06);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.hero-float .f-was {
+  font-size: 12px; font-weight: 700; color: #9a8b83;
+  text-decoration: line-through;
+}
+.hero-float .f-now {
+  font-family: var(--display); font-weight: 800;
+  font-size: 22px; color: var(--coral); line-height: 1;
+}
+.hero-float .f-now small { font-size: .5em; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Value strip */
+.values {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  padding: 36px 0 8px;
+}
+.value h3 {
+  font-family: var(--display); font-size: 22px; margin-bottom: 6px;
+}
+.value p { color: var(--muted); font-size: 15px; max-width: 28ch; }
+.value-num {
+  font-family: var(--display); font-weight: 800; color: var(--coral);
+  font-size: 14px; margin-bottom: 8px; letter-spacing: .04em;
+}
+
+/* Sections */
+.sec { padding: 72px 0; }
+.sec-alt {
+  background:
+    radial-gradient(800px 360px at 100% 0%, rgba(232,93,76,.08), transparent 55%),
+    #fff;
+}
+.sec-soft { background: var(--peach); }
+.sec-dark {
+  background: linear-gradient(145deg, #2a1f1a 0%, #3a2a22 55%, #1f1713 100%);
+  color: #fff;
+}
+.kicker {
+  display: inline-block;
+  font-size: 12px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--coral); margin-bottom: 10px;
+}
+.sec-dark .kicker { color: #ffb4a8; }
+.sec h2 {
+  font-family: var(--display);
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.2; letter-spacing: -0.02em;
+  margin-bottom: 12px; max-width: 18ch;
+}
+.sec p.lead {
+  color: var(--muted); font-size: 17px; max-width: 44ch; margin-bottom: 28px;
+}
+.sec-dark p.lead { color: rgba(255,255,255,.78); }
+
+.box-grid {
+  display: grid;
+  grid-template-columns: 1.05fr .95fr;
+  gap: 36px;
+  align-items: center;
+}
+.box-visual {
+  border-radius: 28px; overflow: hidden;
+  box-shadow: 0 24px 50px rgba(42,31,26,.14);
+  min-height: 340px;
+}
+.box-visual img { width: 100%; height: 100%; object-fit: cover; min-height: 340px; }
+.box-list { list-style: none; display: grid; gap: 14px; margin-top: 8px; }
+.box-list li {
+  display: grid; grid-template-columns: 10px 1fr; gap: 12px;
+  align-items: start; font-size: 15px;
+}
+.box-list li::before {
+  content: ""; width: 10px; height: 10px; margin-top: 8px;
+  border-radius: 50%; background: var(--coral);
+  box-shadow: 0 0 0 4px rgba(232,93,76,.15);
+}
+.box-list strong { display: block; font-size: 16px; margin-bottom: 2px; }
+.box-list span { color: var(--muted); font-weight: 500; }
+
+/* Product reels (vertical) */
+.reels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 260px));
+  gap: 24px;
+  justify-content: center;
+  margin-top: 8px;
+}
+.reel {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+  margin-inline: auto;
+  aspect-ratio: 9 / 16;
+  border-radius: 28px;
+  overflow: hidden;
+  background: #1a1411;
+  box-shadow:
+    0 0 0 1px rgba(42,31,26,.08),
+    0 28px 56px rgba(42,31,26,.18);
+  transform: translateY(12px) scale(.98);
+  opacity: 0;
+  transition: opacity .7s ease, transform .7s ease;
+}
+.reel.in {
+  opacity: 1;
+  transform: none;
+}
+.reel:nth-child(2) { transition-delay: .12s; }
+.reel:nth-child(3) { transition-delay: .24s; }
+.reel video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.reel-cap {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding: 48px 16px 16px;
+  background: linear-gradient(180deg, transparent 0%, rgba(26,20,17,.72) 70%);
+  color: #fff;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+/* Steps */
+.steps {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 28px; counter-reset: step;
+}
+.step { position: relative; padding-top: 4px; }
+.step::before {
+  counter-increment: step; content: counter(step);
+  display: grid; place-items: center;
+  width: 44px; height: 44px; border-radius: 14px;
+  background: rgba(232,93,76,.12); color: var(--coral);
+  font-family: var(--display); font-weight: 800; font-size: 20px;
+  margin-bottom: 14px;
+}
+.step h3 { font-family: var(--display); font-size: 22px; margin-bottom: 6px; }
+.step p { color: var(--muted); font-size: 15px; max-width: 28ch; }
+
+/* Covers (real samples) */
+.covers {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+}
+.cover {
+  display: block; border-radius: 16px; overflow: hidden; position: relative;
+  aspect-ratio: 210 / 297; background: #fff;
+  box-shadow: 0 16px 36px rgba(42,31,26,.12);
+  transition: transform .25s ease, box-shadow .25s ease;
+  border: 0; padding: 0; cursor: pointer; width: 100%;
+  font: inherit; color: inherit; text-align: start;
+}
+.cover:hover { transform: translateY(-4px); box-shadow: 0 22px 44px rgba(42,31,26,.18); }
+.cover img { width: 100%; height: 100%; object-fit: cover; }
+.cover-meta {
+  position: absolute; inset-inline: 0; bottom: 0;
+  padding: 28px 12px 12px;
+  background: linear-gradient(180deg, transparent, rgba(42,31,26,.82));
+  color: #fff;
+}
+.cover-meta strong { display: block; font-family: var(--display); font-size: 18px; }
+.cover-meta small { opacity: .85; font-size: 12px; font-weight: 600; }
+
+.sample-links {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px;
+}
+.sample-links a {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 12px;
+  background: #fff; border: 1px solid var(--line);
+  font-weight: 700; font-size: 14px;
+}
+.sample-links a:hover { border-color: var(--coral); }
+.sample-links em { font-style: normal; color: var(--coral); font-size: 12px; }
+
+/* Sample gallery lightbox */
+.gallery-modal {
+  position: fixed; inset: 0; z-index: 80;
+  display: none; align-items: center; justify-content: center;
+  padding: 18px;
+  background: rgba(26, 18, 14, .72);
+  backdrop-filter: blur(8px);
+}
+.gallery-modal.open { display: flex; }
+.gallery-panel {
+  width: min(1120px, 100%);
+  max-height: min(92vh, 820px);
+  background: #fffaf6;
+  border-radius: 22px;
+  box-shadow: 0 28px 60px rgba(0,0,0,.28);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+.gallery-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.gallery-head h3 {
+  font-family: var(--display); font-size: 22px; font-weight: 800;
+  margin: 0;
+}
+.gallery-head p {
+  margin: 2px 0 0; color: var(--muted); font-size: 13px; font-weight: 600;
+}
+.gallery-close {
+  width: 40px; height: 40px; border-radius: 999px; border: 0;
+  background: rgba(42,31,26,.06); color: var(--ink);
+  font-size: 22px; line-height: 1; cursor: pointer; font-weight: 700;
+}
+.gallery-close:hover { background: rgba(232,93,76,.12); color: var(--coral-deep); }
+.gallery-strip {
+  display: flex; gap: 12px; align-items: stretch;
+  overflow-x: auto; overflow-y: hidden;
+  padding: 16px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.gallery-strip img {
+  flex: 0 0 auto;
+  height: min(68vh, 560px);
+  width: auto;
+  max-width: min(42vw, 280px);
+  object-fit: cover;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(42,31,26,.12);
+  scroll-snap-align: start;
+}
+body.gallery-open { overflow: hidden; }
+@media (max-width: 720px) {
+  .gallery-strip img {
+    max-width: min(72vw, 240px);
+    height: min(58vh, 420px);
+  }
+}
+/* Offer */
+.offer-box {
+  display: grid; grid-template-columns: 1.2fr .8fr; gap: 28px; align-items: stretch;
+}
+.offer-list { list-style: none; display: grid; gap: 12px; margin: 18px 0 0; }
+.offer-list li {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 16px; font-weight: 600;
+}
+.offer-list li::before {
+  content: ""; width: 10px; height: 10px; margin-top: 8px; flex: 0 0 auto;
+  border-radius: 50%; background: #ffb4a8;
+  box-shadow: 0 0 0 4px rgba(255,180,168,.18);
+}
+.price-panel {
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 22px; padding: 28px 24px;
+  display: flex; flex-direction: column; justify-content: center; gap: 10px;
+}
+.price-panel .pair {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin: 4px 0 2px;
+}
+.price-panel .pair .col {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px; padding: 12px 14px;
+}
+.price-panel .lbl {
+  display: block; font-size: 11px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase;
+  opacity: .7; margin-bottom: 4px;
+}
+.price-panel .was {
+  font-family: var(--display); font-size: 22px; font-weight: 800;
+  color: rgba(255,255,255,.5);
+  text-decoration: line-through; text-decoration-thickness: 2px;
+}
+.price-panel .amount {
+  font-family: var(--display); font-size: clamp(34px, 5vw, 44px);
+  font-weight: 800; line-height: 1; letter-spacing: -0.03em; color: #ffb4a8;
+}
+.price-panel .amount small { font-size: .42em; font-weight: 700; opacity: .9; }
+.price-panel .save-pill {
+  display: inline-flex; align-self: flex-start;
+  font-size: 13px; font-weight: 800;
+  background: rgba(232,93,76,.95); color: #fff;
+  padding: 6px 12px; border-radius: 999px;
+}
+.price-panel .note { color: rgba(255,255,255,.7); font-size: 14px; }
+
+.final { padding: 80px 0 48px; }
+.final .lead-copy .lead { margin-inline: 0; }
+.foot {
+  padding: 28px 0 40px; text-align: center; color: var(--muted); font-size: 13px;
+}
+.foot-row {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 12px 18px;
+}
+.foot a { font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--line); }
+.foot .social-icons { display: inline-flex; align-items: center; gap: 10px; }
+.foot .social-icons a { border-bottom: 0; }
+.social-ico {
+  display: inline-grid; place-items: center;
+  width: 42px; height: 42px; border-radius: 999px;
+  color: #fff !important; border: 0 !important;
+  transition: transform .2s ease, filter .15s ease;
+}
+.social-ico:hover { transform: translateY(-2px); filter: brightness(1.05); }
+.social-ico svg { width: 18px; height: 18px; }
+.social-ico.fb { background: #1877f2; box-shadow: 0 8px 18px rgba(24,119,242,.28); }
+.social-ico.ig {
+  background: linear-gradient(135deg,#f58529 0%,#dd2a7b 45%,#8134af 75%,#515bd4 100%);
+}
+.social-ico.tt { background: #010101; }
+.social-ico.wa { background: #25d366; box-shadow: 0 8px 18px rgba(37,211,102,.28); }
+.btn-fb {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 999px;
+  background: #1877f2; color: #fff !important; border: 0 !important;
+  font-weight: 700; font-size: 14px;
+  box-shadow: 0 8px 20px rgba(24,119,242,.28);
+  transition: transform .2s ease, background .2s ease, filter .15s;
+}
+.btn-fb:hover { background: #166fe5; transform: translateY(-2px); }
+.btn-fb svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.btn-ig {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 999px;
+  background: linear-gradient(135deg,#f58529 0%,#dd2a7b 45%,#8134af 75%,#515bd4 100%);
+  color: #fff !important; border: 0 !important;
+  font-weight: 700; font-size: 14px;
+  transition: transform .2s ease, filter .15s;
+}
+.btn-ig:hover { transform: translateY(-2px); filter: brightness(1.05); }
+.btn-ig svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.btn-tt {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 999px;
+  background: #010101; color: #fff !important; border: 0 !important;
+  font-weight: 700; font-size: 14px;
+  transition: transform .2s ease, background .2s ease;
+}
+.btn-tt:hover { background: #222; transform: translateY(-2px); }
+.btn-tt svg { width: 16px; height: 16px; flex: 0 0 auto; }
+
+/* Lead form */
+.lead-wrap {
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap: 28px;
+  align-items: start;
+  text-align: start;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.lead-copy h2 { max-width: 14ch; }
+.wa-chip {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin-top: 14px; padding: 12px 16px;
+  background: rgba(18,140,126,.08);
+  border: 1.5px solid rgba(18,140,126,.22);
+  border-radius: 14px;
+  font-weight: 700;
+}
+.wa-chip a {
+  color: var(--wa-deep); font-weight: 800;
+  direction: ltr; unicode-bidi: plaintext;
+  border-bottom: 1px dashed rgba(11,107,96,.35);
+}
+.lead-form {
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: 22px;
+  padding: 22px 20px;
+  box-shadow: 0 16px 40px rgba(42,31,26,.07);
+  display: grid; gap: 12px;
+  align-content: start;
+}
+.lead-form .hint { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+@media (max-width: 900px) {
+  .lead-wrap { grid-template-columns: 1fr; }
+}
+
+.reveal {
+  opacity: 0; transform: translateY(18px);
+  transition: opacity .6s ease, transform .6s ease;
+}
+.reveal.in { opacity: 1; transform: none; }
+
+@media (max-width: 900px) {
+  .nav-inner { grid-template-columns: auto auto; }
+  .nav-links { display: none; }
+  .hero { min-height: auto; }
+  .hero-inner {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 14px 0 36px;
+  }
+  .hero-visual { order: -1; min-height: 320px; }
+  .hero-stage { width: min(100%, 340px); height: 340px; }
+  .price-card { max-width: none; }
+  .values, .box-grid, .steps, .covers, .offer-box { grid-template-columns: 1fr; }
+  .covers { grid-template-columns: repeat(2, 1fr); }
+  .box-visual, .box-visual img { min-height: 240px; }
+  .reels { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .reel { max-width: none; border-radius: 20px; }
+}
+@media (max-width: 640px) {
+  .reels {
+    grid-template-columns: 1fr;
+    max-width: 280px;
+    margin-inline: auto;
+  }
+}
+@media (max-width: 520px) {
+  .covers { gap: 10px; }
+  .hero h1 { font-size: 32px; }
+  .hero-stage { height: 300px; }
+  .hero-visual { min-height: 300px; }
+  .hero-float { inset-inline-end: 2%; bottom: 8px; }
+  .btn { width: 100%; }
+  .hero-cta .btn { flex: 1 1 100%; }
+  .price-card {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+  }
+  .price-card .divider { display: none; }
+  .price-card .save-row { grid-column: 1 / -1; }
+  .reels { gap: 10px; }
+  .reel-cap { font-size: 13px; padding: 36px 12px 12px; }
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/" aria-label="لوني">
+      <img src="{{ url_for('static', filename='img/lony-logo.png') }}" alt="لوني" width="48" height="60">
+    </a>
+    <nav class="nav-links" aria-label="أقسام الصفحة">
+      <a href="#box">البوكس</a>
+      <a href="#videos">فيديوهات</a>
+      <a href="#how">إزاي بنعمله</a>
+      <a href="/checkout">احجز دلوقتي</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="lang-switch" href="/en" hreflang="en" lang="en">English</a>
+      <a class="btn btn-coral" href="/checkout">احجز الكتاب</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero" aria-label="البداية">
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <div class="badge">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2zm7 10l.9 2.9L23 16l-3.1.9L19 20l-.9-3.1L15 16l3.1-.9L19 12zM5 14l.8 2.5L8 17.2 5.8 18 5 20.5 4.2 18 2 17.2l2.2-.7L5 14z"/></svg>
+        كتب أطفال مخصصة بصورة طفلك
+      </div>
+      <h1>طفلك بطل قصته…<br>وبطل كتاب التلوين كمان!</h1>
+      <p class="hero-sub">في Lony بنحوّل صورة طفلك لرسومات تلوين وقصة تحمل اسمه، مع بوكس هدية فيه ألوان وستيكرز وبوستر بصورته.</p>
+
+      {% if sales_compare_at_egp %}
+      <div class="price-card" aria-label="السعر قبل وبعد الخصم">
+        <div class="col">
+          <span class="lbl">قبل</span>
+          <span class="was-val">{{ sales_compare_at_egp }} ج.م</span>
+        </div>
+        <div class="divider" aria-hidden="true"></div>
+        <div class="col">
+          <span class="lbl">دلوقتي</span>
+          <span class="now-val">{{ sales_price_egp }} <small>ج.م</small></span>
+        </div>
+        {% if sales_save_egp %}
+        <div class="save-row">
+          <span>عرض لفترة محدودة · شامل الشحن مجانًا</span>
+          <span class="save-pill">وفّر {{ sales_save_egp }} جنيه</span>
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="price-card" aria-label="السعر">
+        <div class="col" style="grid-column:1/-1">
+          <span class="lbl">السعر</span>
+          <span class="now-val">{{ sales_price_egp }} <small>ج.م</small></span>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="hero-cta">
+        <a class="btn btn-coral" href="/checkout">احجز البوكس دلوقتي</a>
+        <a class="btn btn-ghost" href="{{ sales_inquiry_whatsapp_url }}" target="_blank" rel="noopener">سؤال؟ واتساب</a>
+      </div>
+    </div>
+
+    <div class="hero-visual" aria-label="عيّنات أغلفة كتب حقيقية">
+      <div class="hero-stage">
+        <div class="hero-cover c1">
+          <img src="{{ url_for('static', filename='img/samples/asia_p1.jpg') }}" alt="غلاف كتاب آسية" loading="eager">
+        </div>
+        <div class="hero-cover c2">
+          <img src="{{ url_for('static', filename='img/samples/ryan_p1.jpg') }}" alt="غلاف كتاب ريان" loading="eager">
+        </div>
+        <div class="hero-cover c3">
+          <img src="{{ url_for('static', filename='img/samples/farida_p1.jpg') }}" alt="غلاف كتاب فريدة" loading="eager">
+        </div>
+        {% if sales_compare_at_egp %}
+        <div class="hero-float" aria-hidden="true">
+          <span class="f-was">{{ sales_compare_at_egp }} ج.م</span>
+          <span class="f-now">{{ sales_price_egp }} <small>ج.م</small></span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" style="padding-top:28px;padding-bottom:28px">
+  <div class="wrap values reveal">
+    <div class="value">
+      <div class="value-num">٠١</div>
+      <h3>تصميم مخصص</h3>
+      <p>نحّول صورة طفلك لرسومات تلوين بلمسة فنية وملامحه واضحة.</p>
+    </div>
+    <div class="value">
+      <div class="value-num">٠٢</div>
+      <h3>قصة باسمه</h3>
+      <p>طفلك هو بطل الكتاب من الغلاف لأول آخر صفحة.</p>
+    </div>
+    <div class="value">
+      <div class="value-num">٠٣</div>
+      <h3>توصيل لكل المحافظات</h3>
+      <p>تغليف أنيق — السعر شامل الشحن مجانًا، والدفع عند الاستلام.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec-alt" id="box">
+  <div class="wrap box-grid">
+    <div class="reveal">
+      <div class="kicker">البوكس</div>
+      <h2>إيه اللي جوه بوكس Lony؟</h2>
+      <p class="lead">كل حاجة في البوكس متعملة مخصوص لطفلك، من الرسمة لحد الاسم على الغلاف.</p>
+      <ul class="box-list">
+        <li>
+          <div>
+            <strong>كتاب تلوين بصورة طفلك</strong>
+            <span>رسومات مستوحاة من صورة طفلك على كل صفحة.</span>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>علبة ألوان ١٢ لون</strong>
+            <span>ألوان آمنة وسهلة الإمساك للأطفال الصغار.</span>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>شيت ستيكرز</strong>
+            <span>ستيكرز مرحة ورسومات ملونة.</span>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>بوستر كبير</strong>
+            <span>بوستر بصورة طفلك جاهز للتعليق في غرفته.</span>
+          </div>
+        </li>
+      </ul>
+      <div style="margin-top:24px">
+        <a class="btn btn-coral" href="/checkout">احجز البوكس دلوقتي</a>
+      </div>
+    </div>
+    <div class="box-visual reveal">
+      <img src="{{ url_for('static', filename='img/sales/lony-box.jpg') }}" alt="بوكس لونّي الحقيقي" loading="lazy" style="object-position: center 40%;">
+    </div>
+  </div>
+</section>
+
+<section class="sec sec-soft" id="videos" aria-label="فيديوهات المنتج">
+  <div class="wrap">
+    <div class="reveal" style="text-align:center;margin-inline:auto">
+      <div class="kicker">شوف بنفسك</div>
+      <h2 style="max-width:none;margin-inline:auto">البوكس والكتب… على الطبيعة</h2>
+      <p class="lead" style="margin-inline:auto">فيديوهات حقيقية من طلبات لونّي — مش صور ديكور.</p>
+    </div>
+    <div class="reels">
+      <figure class="reel" data-reel>
+        <video
+          playsinline
+          muted
+          loop
+          preload="metadata"
+          poster="{{ url_for('static', filename='video/sales/lony-reel-2.jpg') }}"
+          aria-label="فيديو بوكس لونّي الحقيقي">
+          <source src="{{ url_for('static', filename='video/sales/lony-reel-2.mp4') }}" type="video/mp4">
+        </video>
+        <figcaption class="reel-cap">بوكس لونّي الحقيقي</figcaption>
+      </figure>
+      <figure class="reel" data-reel>
+        <video
+          playsinline
+          muted
+          loop
+          preload="metadata"
+          poster="{{ url_for('static', filename='video/sales/lony-reel-1.jpg') }}"
+          aria-label="فيديو كتب تلوين مطبوعة بأسماء الأطفال">
+          <source src="{{ url_for('static', filename='video/sales/lony-reel-1.mp4') }}" type="video/mp4">
+        </video>
+        <figcaption class="reel-cap">كتب بأسماء الأطفال</figcaption>
+      </figure>
+      <figure class="reel" data-reel>
+        <video
+          playsinline
+          muted
+          loop
+          preload="metadata"
+          poster="{{ url_for('static', filename='video/sales/lony-reel-3.jpg') }}"
+          aria-label="فيديو تعريفي عن لونّي">
+          <source src="{{ url_for('static', filename='video/sales/lony-reel-3.mp4') }}" type="video/mp4">
+        </video>
+        <figcaption class="reel-cap">تعرّف على لونّي</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="how">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="kicker">٣ خطوات بس</div>
+      <h2>إزاي بنعمل الكتاب؟</h2>
+      <p class="lead">من غير تسجيل. رسالة واحدة على واتساب تكفي تبدأ بيها.</p>
+    </div>
+    <div class="steps reveal">
+      <div class="step">
+        <h3>ابعت صورة طفلك</h3>
+        <p>صورة واضحة لوجه الطفل تكفي + الاسم على واتساب.</p>
+      </div>
+      <div class="step">
+        <h3>نرسم ونصمّم</h3>
+        <p>نحوّلها لرسومات تلوين وكتاب باسمه، ونبعتلك معاينة.</p>
+      </div>
+      <div class="step">
+        <h3>يوصلك الكتاب</h3>
+        <p>بعد التأكيد: طباعة وتوصيل لحد باب البيت.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec-soft" id="examples">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="kicker">عيّنات حقيقية</div>
+      <h2>كتب عملناها فعلًا… بأسماء الأطفال</h2>
+      <p class="lead">دي أغلفة وصفحات من طلبات حقيقية — مش صور ديكور.</p>
+    </div>
+
+    <div class="covers reveal">
+      <button type="button" class="cover" data-open-gallery data-title="آسية"
+        data-imgs='["{{ url_for('static', filename='img/samples/asia_p1.jpg') }}","{{ url_for('static', filename='img/samples/asia_p2.jpg') }}","{{ url_for('static', filename='img/samples/asia_p3.jpg') }}","{{ url_for('static', filename='img/samples/asia_p4.jpg') }}","{{ url_for('static', filename='img/samples/asia_p5.jpg') }}"]'>
+        <img src="{{ url_for('static', filename='img/samples/asia_p1.jpg') }}" alt="غلاف كتاب آسية" loading="lazy">
+        <div class="cover-meta"><strong>آسية</strong><small>شوف عيّنة الصفحات</small></div>
+      </button>
+      <button type="button" class="cover" data-open-gallery data-title="ريان"
+        data-imgs='["{{ url_for('static', filename='img/samples/ryan_p1.jpg') }}","{{ url_for('static', filename='img/samples/ryan_p2.jpg') }}","{{ url_for('static', filename='img/samples/ryan_p3.jpg') }}","{{ url_for('static', filename='img/samples/ryan_p4.jpg') }}","{{ url_for('static', filename='img/samples/ryan_p5.jpg') }}"]'>
+        <img src="{{ url_for('static', filename='img/samples/ryan_p1.jpg') }}" alt="غلاف كتاب ريان" loading="lazy">
+        <div class="cover-meta"><strong>ريان</strong><small>شوف عيّنة الصفحات</small></div>
+      </button>
+      <button type="button" class="cover" data-open-gallery data-title="فريدة"
+        data-imgs='["{{ url_for('static', filename='img/samples/farida_p1.jpg') }}","{{ url_for('static', filename='img/samples/farida_p2.jpg') }}","{{ url_for('static', filename='img/samples/farida_p3.jpg') }}","{{ url_for('static', filename='img/samples/farida_p4.jpg') }}","{{ url_for('static', filename='img/samples/farida_p5.jpg') }}"]'>
+        <img src="{{ url_for('static', filename='img/samples/farida_p1.jpg') }}" alt="غلاف كتاب فريدة" loading="lazy">
+        <div class="cover-meta"><strong>فريدة</strong><small>شوف عيّنة الصفحات</small></div>
+      </button>
+      <button type="button" class="cover" data-open-gallery data-title="غاليه"
+        data-imgs='["{{ url_for('static', filename='img/samples/ghaliya_cover.jpg') }}","{{ url_for('static', filename='img/samples/ghaliya_page.jpg') }}","{{ url_for('static', filename='img/samples/ghaliya_photo.jpg') }}"]'>
+        <img src="{{ url_for('static', filename='img/samples/ghaliya_cover.jpg') }}" alt="غلاف كتاب غاليه" loading="lazy">
+        <div class="cover-meta"><strong>غاليه</strong><small>شوف عيّنة الصفحات</small></div>
+      </button>
+      <button type="button" class="cover" data-open-gallery data-title="يزن"
+        data-imgs='["{{ url_for('static', filename='img/samples/yazan_cover.jpg') }}","{{ url_for('static', filename='img/samples/yazan_page.jpg') }}","{{ url_for('static', filename='img/samples/yazan_photo.jpg') }}"]'>
+        <img src="{{ url_for('static', filename='img/samples/yazan_cover.jpg') }}" alt="غلاف كتاب يزن" loading="lazy">
+        <div class="cover-meta"><strong>يزن</strong><small>شوف عيّنة الصفحات</small></div>
+      </button>
+      <button type="button" class="cover" data-open-gallery data-title="تيا"
+        data-imgs='["{{ url_for('static', filename='img/samples/tia_cover.jpg') }}","{{ url_for('static', filename='img/samples/tia_page.jpg') }}","{{ url_for('static', filename='img/samples/tia_photo.jpg') }}"]'>
+        <img src="{{ url_for('static', filename='img/samples/tia_cover.jpg') }}" alt="غلاف كتاب تيا" loading="lazy">
+        <div class="cover-meta"><strong>تيا</strong><small>شوف عيّنة الصفحات</small></div>
+      </button>
+    </div>
+  </div>
+</section>
+
+<div class="gallery-modal" id="sample-gallery" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="gallery-title">
+  <div class="gallery-panel">
+    <div class="gallery-head">
+      <div>
+        <h3 id="gallery-title">عيّنة الكتاب</h3>
+        <p>اسحب يمين وشمال عشان تشوف الصفحات</p>
+      </div>
+      <button type="button" class="gallery-close" id="gallery-close" aria-label="إغلاق">×</button>
+    </div>
+    <div class="gallery-strip" id="gallery-strip"></div>
+  </div>
+</div>
+
+<section class="sec sec-dark" id="offer">
+  <div class="wrap offer-box">
+    <div class="reveal">
+      <div class="kicker">العرض</div>
+      <h2>احجز كتاب طفلك دلوقتي</h2>
+      <ul class="offer-list">
+        <li>كتاب تلوين مطبوع باسمه وملامحه</li>
+        <li>معاينة قبل الاعتماد</li>
+        <li>الدفع عند الاستلام متاح</li>
+        <li>شحن مجاني شامل في السعر</li>
+        <li>توصيل حسب عنوانك</li>
+      </ul>
+    </div>
+    <div class="price-panel reveal">
+      <div style="font-weight:700;opacity:.85">سعر العرض</div>
+      {% if sales_compare_at_egp %}
+      <div class="pair">
+        <div class="col">
+          <span class="lbl">قبل</span>
+          <div class="was">{{ sales_compare_at_egp }} ج.م</div>
+        </div>
+        <div class="col">
+          <span class="lbl">دلوقتي</span>
+          <div class="amount">{{ sales_price_egp }} <small>ج.م</small></div>
+        </div>
+      </div>
+      {% if sales_save_egp %}
+      <div class="save-pill">وفّر {{ sales_save_egp }} جنيه</div>
+      {% endif %}
+      {% else %}
+      <div class="amount">{{ sales_price_egp }} <small>ج.م</small></div>
+      {% endif %}
+      <div class="note">يشمل التخصيص والطباعة + الشحن مجانًا. السعر النهائي {{ sales_price_egp }} ج.م.</div>
+      <a class="btn btn-coral" href="/checkout" style="margin-top:8px">احجز من الفورم دلوقتي</a>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec-alt final" id="order">
+  <div class="wrap lead-wrap reveal">
+    <div class="lead-copy">
+      <div class="kicker">احجز دلوقتي</div>
+      <h2>صفحة الحجز جاهزة… كمّل طلبك في دقيقة</h2>
+      <p class="lead">هتفتح صفحة حجز كاملة: فيديو للبوكس + السعر + فورم الصورة والعنوان. بعد الإرسال هنتواصل معاك للمراجعة.</p>
+      <div style="margin-top:18px;display:flex;flex-wrap:wrap;gap:10px">
+        <a class="btn btn-coral" href="/checkout">روح لصفحة الحجز</a>
+        <a class="btn btn-ghost" href="{{ sales_inquiry_whatsapp_url }}" target="_blank" rel="noopener">استفسار على واتساب</a>
+      </div>
+      <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:10px" class="social-icons" aria-label="سوشيال ميديا">
+        <a class="social-ico wa" href="{{ sales_inquiry_whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="واتساب">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
+        <a class="social-ico fb" href="https://www.facebook.com/LONYapp" target="_blank" rel="noopener noreferrer" aria-label="فيسبوك">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </a>
+        <a class="social-ico ig" href="https://www.instagram.com/lony_apps/" target="_blank" rel="noopener noreferrer" aria-label="إنستجرام">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+        </a>
+        <a class="social-ico tt" href="https://www.tiktok.com/@lony.app" target="_blank" rel="noopener noreferrer" aria-label="تيك توك">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.8a6.34 6.34 0 0010.86 4.49V13.2a8.28 8.28 0 004.88 1.58v-3.45a4.85 4.85 0 01-2.3-.64z"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="lead-form">
+      <p style="font-weight:800;font-family:var(--display);font-size:22px;margin:0">جاهز تحجز؟</p>
+      <p class="hint" style="margin:0">صفحة الحجز فيها فيديو للبوكس والسعر والفورم كامل.</p>
+      <a class="btn btn-coral" href="/checkout">افتح صفحة الحجز</a>
+      <div class="hint">صورة الطفل + بيانات التوصيل — السعر شامل الشحن مجانًا، والدفع عند الاستلام.</div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap foot-row">
+    <span>Lony — كتب أطفال مخصصة © 2026</span>
+    <a href="/privacy">سياسة الخصوصية</a>
+    <a href="/buy">اصنع كتابك أونلاين</a>
+    <div class="social-icons" aria-label="سوشيال ميديا">
+      <a class="social-ico wa" href="{{ sales_inquiry_whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="واتساب">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      </a>
+      <a class="social-ico fb" href="https://www.facebook.com/LONYapp" target="_blank" rel="noopener noreferrer" aria-label="فيسبوك">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      </a>
+      <a class="social-ico ig" href="https://www.instagram.com/lony_apps/" target="_blank" rel="noopener noreferrer" aria-label="إنستجرام">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+      </a>
+      <a class="social-ico tt" href="https://www.tiktok.com/@lony.app" target="_blank" rel="noopener noreferrer" aria-label="تيك توك">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.8a6.34 6.34 0 0010.86 4.49V13.2a8.28 8.28 0 004.88 1.58v-3.45a4.85 4.85 0 01-2.3-.64z"/></svg>
+      </a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  const els = document.querySelectorAll('.reveal');
+  if (!('IntersectionObserver' in window)) {
+    els.forEach(el => el.classList.add('in'));
+  } else {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.14 });
+    els.forEach(el => io.observe(el));
+  }
+
+  if (location.hash === '#order') {
+    location.replace('/checkout');
+    return;
+  }
+
+  const reels = document.querySelectorAll('[data-reel]');
+  if (reels.length) {
+    const playSafe = (v) => { v.play().catch(() => {}); };
+    if (!('IntersectionObserver' in window)) {
+      reels.forEach((reel) => {
+        reel.classList.add('in');
+        const v = reel.querySelector('video');
+        if (v) playSafe(v);
+      });
+    } else {
+      const rio = new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+          const reel = e.target;
+          const v = reel.querySelector('video');
+          if (!v) return;
+          if (e.isIntersecting && e.intersectionRatio >= 0.35) {
+            reel.classList.add('in');
+            playSafe(v);
+          } else {
+            v.pause();
+          }
+        });
+      }, { threshold: [0, 0.35, 0.6] });
+      reels.forEach((reel) => rio.observe(reel));
+    }
+  }
+
+  const gallery = document.getElementById('sample-gallery');
+  const strip = document.getElementById('gallery-strip');
+  const titleEl = document.getElementById('gallery-title');
+  const closeBtn = document.getElementById('gallery-close');
+
+  function closeGallery() {
+    if (!gallery) return;
+    gallery.classList.remove('open');
+    gallery.hidden = true;
+    gallery.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('gallery-open');
+    if (strip) strip.innerHTML = '';
+  }
+
+  function openGallery(title, imgs) {
+    if (!gallery || !strip || !imgs.length) return;
+    titleEl.textContent = 'عيّنة كتاب ' + title;
+    strip.innerHTML = imgs.map((src, i) =>
+      `<img src="${src}" alt="صفحة ${i + 1} من كتاب ${title}" loading="${i < 2 ? 'eager' : 'lazy'}">`
+    ).join('');
+    gallery.hidden = false;
+    gallery.classList.add('open');
+    gallery.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('gallery-open');
+    strip.scrollLeft = 0;
+  }
+
+  document.querySelectorAll('[data-open-gallery]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      let imgs = [];
+      try { imgs = JSON.parse(btn.getAttribute('data-imgs') || '[]'); } catch (_) {}
+      openGallery(btn.getAttribute('data-title') || '', imgs);
+    });
+  });
+  if (closeBtn) closeBtn.addEventListener('click', closeGallery);
+  if (gallery) {
+    gallery.addEventListener('click', (e) => {
+      if (e.target === gallery) closeGallery();
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeGallery();
+  });
+
+})();
+</script>
+</body>
+</html>

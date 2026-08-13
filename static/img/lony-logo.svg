@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 56" fill="none" role="img" aria-label="لوني">
+  <!-- heart -->
+  <path d="M78 11.5c0-2.6 2-4.7 4.5-4.7 1.4 0 2.6.7 3.4 1.7.8-1 2-1.7 3.4-1.7 2.5 0 4.5 2.1 4.5 4.7 0 5.2-7.9 9.2-7.9 9.2S78 16.7 78 11.5z" fill="#e85d4c"/>
+  <!-- Arabic wordmark لوني (RTL visual order as drawn LTR positions) -->
+  <text x="84" y="42" text-anchor="middle" direction="rtl" unicode-bidi="bidi-override"
+        font-family="'Baloo Bhaijaan 2', 'Segoe UI', Tahoma, sans-serif"
+        font-size="34" font-weight="800" letter-spacing="1.5">
+    <tspan fill="#7c3aed">ل</tspan><tspan fill="#e85d4c">و</tspan><tspan fill="#0ea5e9">ن</tspan><tspan fill="#f59e0b">ي</tspan>
+  </text>
+</svg>

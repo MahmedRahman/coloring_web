@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>احجز بوكس لونّي — {{ sales_price_egp }} ج.م</title>
+<meta name="description" content="احجز بوكس لونّي المخصص لطفلك. ارفع الصورة واملأ بيانات التوصيل — السعر {{ sales_price_egp }} جنيه.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --display: "Baloo Bhaijaan 2", "SF Arabic", sans-serif;
+  --font: "IBM Plex Sans Arabic", "SF Arabic", Tahoma, sans-serif;
+  --ink: #2a1f1a;
+  --muted: #6b5e56;
+  --coral: #e85d4c;
+  --coral-deep: #d24a3a;
+  --peach: #fff1ea;
+  --cream: #fffaf6;
+  --paper: #ffffff;
+  --line: rgba(42, 31, 26, 0.1);
+  --wa: #128c7e;
+  --mint: #0d9488;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(900px 420px at 100% -10%, rgba(232,93,76,.12), transparent 55%),
+    radial-gradient(700px 380px at 0% 30%, rgba(18,140,126,.08), transparent 50%),
+    var(--cream);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100svh;
+}
+a { color: inherit; text-decoration: none; }
+img, video { max-width: 100%; display: block; }
+.wrap { width: min(1120px, calc(100% - 32px)); margin-inline: auto; }
+
+.nav {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(255,246,240,.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(42,31,26,.05);
+}
+.nav-inner {
+  width: min(1120px, calc(100% - 32px));
+  margin-inline: auto;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 14px 0; min-height: 64px;
+}
+.brand {
+  display: inline-flex; align-items: center; line-height: 1;
+}
+.brand img {
+  height: 56px;
+  width: auto;
+  display: block;
+}
+.nav-back {
+  font-weight: 700; font-size: 14px; color: var(--muted);
+  padding: 8px 12px; border-radius: 999px;
+}
+.nav-back:hover { background: rgba(42,31,26,.05); color: var(--ink); }
+
+.checkout {
+  padding: 28px 0 56px;
+  display: grid;
+  grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.product-panel {
+  position: sticky; top: 88px;
+  display: grid; gap: 16px;
+}
+.product-card, .form-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: 0 18px 40px rgba(42,31,26,.07);
+}
+.product-card { overflow: hidden; }
+.video-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  background: #1a1411;
+}
+.video-wrap {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  max-height: 420px;
+  background: #1a1411;
+  min-width: 0;
+}
+.video-wrap + .video-wrap {
+  border-inline-start: 1px solid rgba(255,255,255,.08);
+}
+.video-wrap video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.video-cap {
+  position: absolute; inset-inline: 0; bottom: 0;
+  padding: 36px 12px 12px;
+  background: linear-gradient(180deg, transparent, rgba(26,20,17,.78));
+  color: #fff;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.product-body { padding: 20px 20px 22px; display: grid; gap: 14px; }
+.kicker {
+  display: inline-block;
+  font-size: 12px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--coral);
+}
+.product-body h1 {
+  font-family: var(--display);
+  font-size: clamp(26px, 3.5vw, 34px);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+.product-body .lead { color: var(--muted); font-size: 15px; }
+
+.price-box {
+  display: grid; gap: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff1ea, #fff8f4);
+  border: 1px solid rgba(232,93,76,.16);
+}
+.price-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+}
+.price-row .was {
+  color: var(--muted);
+  text-decoration: line-through;
+  font-weight: 700;
+}
+.price-row .now {
+  font-family: var(--display);
+  font-size: 34px; font-weight: 800; color: var(--coral);
+  line-height: 1;
+}
+.price-row .now small { font-size: .42em; }
+.save-pill {
+  display: inline-flex; align-self: flex-start;
+  font-size: 12px; font-weight: 800;
+  background: var(--coral); color: #fff;
+  padding: 5px 10px; border-radius: 999px;
+}
+
+.includes { list-style: none; display: grid; gap: 8px; }
+.includes li {
+  display: grid; grid-template-columns: 18px 1fr; gap: 8px;
+  font-size: 14px; font-weight: 600;
+}
+.includes li::before {
+  content: "✓";
+  color: var(--mint);
+  font-weight: 800;
+}
+.trust {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.trust span {
+  font-size: 12px; font-weight: 700; color: var(--muted);
+  background: rgba(42,31,26,.04);
+  border-radius: 999px; padding: 6px 10px;
+}
+
+.form-card { padding: 22px 20px 24px; }
+.form-card h2 {
+  font-family: var(--display);
+  font-size: 26px;
+  margin-bottom: 4px;
+}
+.form-card .sub {
+  color: var(--muted); font-size: 14px; margin-bottom: 18px;
+}
+
+.lead-form { display: grid; gap: 12px; }
+.lead-form label {
+  display: grid; gap: 6px;
+  font-size: 13px; font-weight: 700; color: var(--ink);
+}
+.lead-form .row-2 {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.lead-form input[type="text"],
+.lead-form input[type="tel"],
+.lead-form textarea {
+  width: 100%; padding: 12px 14px;
+  border-radius: 12px; border: 1.5px solid var(--line);
+  font-family: var(--font); font-size: 15px; font-weight: 600;
+  background: #fffaf6; color: var(--ink);
+}
+.lead-form textarea { min-height: 84px; resize: vertical; }
+.lead-form input:focus,
+.lead-form textarea:focus {
+  outline: none; border-color: var(--coral);
+  box-shadow: 0 0 0 3px rgba(232,93,76,.12);
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.theme-card {
+  position: relative;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  border: 1.5px solid var(--line);
+  background: #fffaf6;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.theme-card:hover { border-color: rgba(232,93,76,.35); transform: translateY(-1px); }
+.theme-card input { position: absolute; opacity: 0; pointer-events: none; }
+.theme-card .emoji { font-size: 22px; line-height: 1; }
+.theme-card .name { font-weight: 800; font-size: 14px; }
+.theme-card .desc { font-size: 12px; color: var(--muted); font-weight: 600; }
+.theme-card:has(input:checked) {
+  border-color: var(--coral);
+  background: rgba(232,93,76,.08);
+  box-shadow: 0 0 0 3px rgba(232,93,76,.12);
+}
+.theme-card:has(input:checked) .name { color: var(--coral-deep); }
+
+.gov-picks {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.gov-picks label {
+  display: flex; align-items: center; justify-content: center;
+  padding: 12px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: #fffaf6; cursor: pointer; font-weight: 700;
+}
+.gov-picks input { position: absolute; opacity: 0; pointer-events: none; }
+.gov-picks label:has(input:checked) {
+  border-color: var(--coral);
+  background: rgba(232,93,76,.08);
+  color: var(--coral-deep);
+}
+
+.photo-drop {
+  position: relative;
+  border: 1.5px dashed rgba(232,93,76,.35);
+  background: rgba(232,93,76,.04);
+  border-radius: 14px;
+  padding: 18px 14px;
+  text-align: center;
+  cursor: pointer;
+}
+.photo-drop input {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+}
+.photo-drop .ph { color: var(--muted); font-size: 14px; font-weight: 600; }
+.photo-drop .ph strong { display: block; color: var(--coral); margin-bottom: 4px; }
+.photo-drop.has-file {
+  border-style: solid; border-color: var(--mint);
+  background: rgba(13,148,136,.06);
+}
+.photo-preview {
+  display: none; width: 96px; height: 96px; margin: 0 auto 8px;
+  border-radius: 14px; object-fit: cover;
+}
+.photo-drop.has-file .photo-preview { display: block; }
+
+.hint { font-size: 12px; color: var(--muted); font-weight: 600; }
+.hint a { color: var(--coral); font-weight: 700; border-bottom: 1px solid rgba(232,93,76,.25); }
+.err {
+  display: none; color: #b42318; font-size: 13px; font-weight: 700;
+  background: #fef3f2; border-radius: 10px; padding: 10px 12px;
+}
+.err.show { display: block; }
+.ok {
+  display: none; color: #027a48; font-size: 14px; font-weight: 700;
+  background: #ecfdf3; border-radius: 10px; padding: 12px;
+}
+.ok.show { display: block; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 28px; border-radius: 999px; font-family: var(--font);
+  font-weight: 700; font-size: 16px; border: 0; cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn-coral {
+  background: var(--coral);
+  color: #fff; box-shadow: 0 10px 24px rgba(232,93,76,.28);
+  width: 100%;
+}
+.btn-coral:hover { background: var(--coral-deep); }
+.btn[disabled] { opacity: .6; cursor: wait; transform: none; }
+.btn-ghost {
+  background: #fff; color: var(--ink);
+  border: 1.5px solid rgba(42,31,26,.14);
+  width: 100%;
+}
+
+.side-note {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.side-note a { color: var(--wa); font-weight: 800; }
+
+/* Upload loading overlay */
+.upload-overlay {
+  display: none;
+  position: absolute; inset: 0; z-index: 5;
+  align-items: center; justify-content: center;
+  padding: 24px;
+  background: rgba(255,250,246,.92);
+  backdrop-filter: blur(6px);
+  border-radius: 24px;
+}
+.upload-overlay.show { display: flex; }
+.upload-card {
+  width: min(340px, 100%);
+  text-align: center;
+  display: grid; gap: 12px;
+}
+.upload-card h3 {
+  font-family: var(--display);
+  font-size: 24px; font-weight: 800; line-height: 1.25;
+}
+.upload-card p { color: var(--muted); font-size: 14px; font-weight: 600; }
+.spinner {
+  width: 44px; height: 44px; margin: 0 auto 4px;
+  border-radius: 50%;
+  border: 3.5px solid rgba(232,93,76,.18);
+  border-top-color: var(--coral);
+  animation: spin .75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-track {
+  height: 10px; border-radius: 999px;
+  background: rgba(42,31,26,.08); overflow: hidden;
+}
+.progress-bar {
+  height: 100%; width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--coral), #f59e0b);
+  transition: width .2s ease;
+}
+.progress-label {
+  font-size: 13px; font-weight: 800; color: var(--coral-deep);
+}
+
+/* Success state */
+.success-panel {
+  display: none;
+  text-align: center;
+  padding: 18px 8px 8px;
+  gap: 12px;
+}
+.success-panel.show { display: grid; animation: rise .55s ease both; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.success-emoji {
+  font-size: 42px; line-height: 1;
+  animation: pop .5s ease .1s both;
+}
+@keyframes pop {
+  0% { transform: scale(.6); opacity: 0; }
+  70% { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.success-panel h2 {
+  font-family: var(--display);
+  font-size: clamp(26px, 4vw, 34px);
+  line-height: 1.25; margin: 0;
+}
+.success-panel .lead {
+  color: var(--muted); font-size: 15px; max-width: 34ch; margin-inline: auto;
+}
+.success-steps {
+  list-style: none; display: grid; gap: 8px;
+  text-align: start; margin: 8px 0 4px;
+}
+.success-steps li {
+  display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: start;
+  background: rgba(232,93,76,.06);
+  border-radius: 14px; padding: 12px 14px;
+  font-size: 14px; font-weight: 600;
+}
+.success-steps .n {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--coral); color: #fff;
+  font-weight: 800; font-size: 13px;
+}
+.form-card { position: relative; }
+.form-card.is-loading .lead-form { pointer-events: none; opacity: .35; }
+.form-card.is-done .form-live { display: none; }
+.form-card.is-done .success-panel { display: grid; }
+
+.foot {
+  padding: 8px 0 36px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.foot a { font-weight: 700; color: var(--ink); }
+
+@media (max-width: 900px) {
+  .checkout { grid-template-columns: 1fr; gap: 18px; padding-top: 18px; }
+  .product-panel { position: static; }
+  .video-wrap { max-height: 280px; }
+  .video-cap { font-size: 12px; padding: 28px 10px 10px; }
+  .lead-form .row-2 { grid-template-columns: 1fr; }
+}
+.foot {
+  padding: 8px 0 36px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.foot a { font-weight: 700; color: var(--ink); }
+
+@media (max-width: 900px) {
+  .checkout { grid-template-columns: 1fr; gap: 18px; padding-top: 18px; }
+  .product-panel { position: static; }
+  .video-wrap { max-height: 280px; }
+  .video-cap { font-size: 12px; padding: 28px 10px 10px; }
+  .lead-form .row-2 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/" aria-label="لوني">
+      <img src="{{ url_for('static', filename='img/lony-logo.png') }}" alt="لوني" width="48" height="60" fetchpriority="high">
+    </a>
+    <div style="display:flex;align-items:center;gap:10px">
+      <a class="nav-back" href="/en/checkout" hreflang="en" lang="en">English</a>
+      <a class="nav-back" href="/">← الرجوع للموقع</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap checkout">
+  <aside class="product-panel">
+    <div class="product-card">
+      <div class="video-duo" aria-label="فيديوهات البوكس">
+        <div class="video-wrap">
+          <video
+            class="checkout-video"
+            playsinline
+            muted
+            loop
+            preload="none"
+            poster="{{ url_for('static', filename='video/sales/lony-reel-2.jpg') }}"
+            data-src="{{ url_for('static', filename='video/sales/lony-reel-2.mp4') }}"
+            aria-label="فيديو بوكس لونّي">
+          </video>
+          <div class="video-cap">شوف البوكس على الطبيعة</div>
+        </div>
+        <div class="video-wrap">
+          <video
+            class="checkout-video"
+            playsinline
+            muted
+            loop
+            preload="none"
+            poster="{{ url_for('static', filename='video/sales/lony-reel-1.jpg') }}"
+            data-src="{{ url_for('static', filename='video/sales/lony-reel-1.mp4') }}"
+            aria-label="فيديو محتويات بوكس لونّي">
+          </video>
+          <div class="video-cap">محتويات البوكس من جوه</div>
+        </div>
+      </div>
+      <div class="product-body">
+        <div class="kicker">صفحة الحجز</div>
+        <h1>بوكس لونّي المخصص لطفلك</h1>
+        <p class="lead">كتاب تلوين باسمه وملامحه + ألوان + ستيكرز + بوستر — جاهز كهدية متكاملة.</p>
+
+        <div class="price-box" aria-label="السعر">
+          <div class="price-row">
+            {% if sales_compare_at_egp %}
+            <span class="was">{{ sales_compare_at_egp }} ج.م</span>
+            {% else %}
+            <span></span>
+            {% endif %}
+            <span class="now">{{ sales_price_egp }} <small>ج.م</small></span>
+          </div>
+          {% if sales_save_egp %}
+          <span class="save-pill">وفّر {{ sales_save_egp }} جنيه</span>
+          {% endif %}
+        </div>
+
+        <ul class="includes">
+          <li>كتاب تلوين بصورة طفلك</li>
+          <li>علبة ألوان ١٢ لون</li>
+          <li>شيت ستيكرز مرحة</li>
+          <li>بوستر كبير بصورته</li>
+        </ul>
+
+        <div class="trust">
+          <span>معاينة قبل الاعتماد</span>
+          <span>الدفع عند الاستلام</span>
+          <span>شحن مجاني</span>
+          <span>القاهرة والجيزة</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <section class="form-card" id="order-card" aria-label="فورم الحجز">
+    <div class="form-live" id="form-live">
+      <h2>أكمل طلبك</h2>
+      <p class="sub">ارفع صورة الطفل واملأ بيانات التوصيل — وهنتواصل معاك بعد المراجعة.</p>
+
+      <form class="lead-form" id="lead-form" enctype="multipart/form-data" novalidate>
+        <input type="hidden" name="lang" value="ar">
+        <div class="photo-drop" id="photo-drop">
+          <input type="file" name="photo" id="photo-input" accept="image/jpeg,image/png,image/webp,image/*" required>
+          <img class="photo-preview" id="photo-preview" alt="">
+          <div class="ph"><strong>صورة الطفل</strong>اضغط أو اسحب صورة واضحة لوجه الطفل</div>
+        </div>
+        <div class="hint">الصورة للتنفيذ فقط — <a href="/privacy">سياسة الخصوصية</a>.</div>
+
+        <div class="row-2">
+          <label>
+            اسم ولي الأمر
+            <input type="text" name="parent_name" required maxlength="80" placeholder="مثال: مها خالد" autocomplete="name">
+          </label>
+          <label>
+            رقم الموبايل / واتساب
+            <input type="tel" name="phone" required maxlength="20" placeholder="01xxxxxxxxx" inputmode="tel" autocomplete="tel">
+          </label>
+        </div>
+
+        <label>
+          اسم الطفل (هيتكتب على الكتاب)
+          <input type="text" name="child_name" required maxlength="80" placeholder="مثال: لؤي">
+        </label>
+
+        <div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:8px">المحافظة</div>
+          <div class="gov-picks" role="radiogroup" aria-label="المحافظة">
+            <label>
+              <input type="radio" name="governorate" value="القاهرة" required>
+              القاهرة
+            </label>
+            <label>
+              <input type="radio" name="governorate" value="الجيزة">
+              الجيزة
+            </label>
+          </div>
+        </div>
+
+        <label>
+          العنوان بالتفصيل
+          <textarea name="address" required maxlength="300" placeholder="المنطقة، الشارع، رقم العقار، علامة مميزة…"></textarea>
+        </label>
+        <label>
+          ملاحظات إضافية (اختياري)
+          <textarea name="customer_notes" maxlength="400" placeholder="أي تفاصيل مهمة للتنفيذ أو التوصيل"></textarea>
+        </label>
+
+        <div class="err" id="lead-err"></div>
+        <button class="btn btn-coral" type="submit" id="lead-submit">أكد الحجز دلوقتي — {{ sales_price_egp }} ج.م</button>
+        <p class="side-note">عندك سؤال؟ <a href="{{ sales_inquiry_whatsapp_url }}" target="_blank" rel="noopener">كلّمنا على واتساب</a></p>
+      </form>
+    </div>
+
+    <div class="upload-overlay" id="upload-overlay" aria-live="polite" aria-busy="true">
+      <div class="upload-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <h3 id="upload-title">بنبعت الطلب دلوقتي…</h3>
+        <p id="upload-sub">بنرفع الصورة بأمان — ثواني وهنخلص.</p>
+        <div class="progress-track" aria-hidden="true"><div class="progress-bar" id="progress-bar"></div></div>
+        <div class="progress-label" id="progress-label">0%</div>
+      </div>
+    </div>
+
+    <div class="success-panel" id="success-panel" role="status" aria-live="polite">
+      <div class="success-emoji" aria-hidden="true">🎨✨</div>
+      <h2>وصلنا الطلب… شكرًا ليك!</h2>
+      <p class="lead" id="success-lead">
+        طلبك وصلنا بنجاح، وفريق لونّي بدأ يشتغل على كتاب تلوين سعيد مخصوص لطفلك.
+      </p>
+      <ul class="success-steps">
+        <li><span class="n">1</span><span>استلمنا الصورة والبيانات بأمان.</span></li>
+        <li><span class="n">2</span><span>بنصمّم الكتاب باسم الطفل وملامحه.</span></li>
+        <li><span class="n">3</span><span>حد من لونّي هيتواصل معاك قريبًا على واتساب.</span></li>
+      </ul>
+      <a class="btn btn-coral" href="/">الرجوع للرئيسية</a>
+      <a class="btn btn-ghost" href="{{ sales_inquiry_whatsapp_url }}" target="_blank" rel="noopener">كلّمنا على واتساب</a>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <a href="/">الموقع الرئيسي</a>
+    ·
+    <a href="/privacy">سياسة الخصوصية</a>
+    ·
+    Lony © 2026
+  </div>
+</footer>
+
+<script>
+(function () {
+  const videos = document.querySelectorAll('.checkout-video');
+  const loadVideo = (v) => {
+    if (v.dataset.loaded) return;
+    const src = v.getAttribute('data-src');
+    if (!src) return;
+    const s = document.createElement('source');
+    s.src = src;
+    s.type = 'video/mp4';
+    v.appendChild(s);
+    v.dataset.loaded = '1';
+    v.load();
+    v.play().catch(() => {});
+  };
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          loadVideo(e.target);
+          io.unobserve(e.target);
+        }
+      });
+    }, { rootMargin: '80px' });
+    videos.forEach((v) => io.observe(v));
+  } else {
+    requestAnimationFrame(() => videos.forEach(loadVideo));
+  }
+
+  const form = document.getElementById('lead-form');
+  if (!form) return;
+  const card = document.getElementById('order-card');
+  const drop = document.getElementById('photo-drop');
+  const input = document.getElementById('photo-input');
+  const preview = document.getElementById('photo-preview');
+  const err = document.getElementById('lead-err');
+  const btn = document.getElementById('lead-submit');
+  const overlay = document.getElementById('upload-overlay');
+  const bar = document.getElementById('progress-bar');
+  const label = document.getElementById('progress-label');
+  const uploadTitle = document.getElementById('upload-title');
+  const uploadSub = document.getElementById('upload-sub');
+
+  function showErr(msg) {
+    err.textContent = msg || '';
+    err.classList.toggle('show', !!msg);
+  }
+  function setProgress(pct) {
+    const p = Math.max(0, Math.min(100, Math.round(pct)));
+    bar.style.width = p + '%';
+    label.textContent = p + '%';
+  }
+  function showLoading(on) {
+    card.classList.toggle('is-loading', on);
+    overlay.classList.toggle('show', on);
+    btn.disabled = on;
+  }
+
+  input.addEventListener('change', () => {
+    const f = input.files && input.files[0];
+    if (!f) {
+      drop.classList.remove('has-file');
+      preview.removeAttribute('src');
+      return;
+    }
+    preview.src = URL.createObjectURL(f);
+    drop.classList.add('has-file');
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    showErr('');
+    if (!form.querySelector('input[name="governorate"]:checked')) {
+      showErr('اختار المحافظة (القاهرة أو الجيزة).');
+      return;
+    }
+    if (!(form.address.value || '').trim() || (form.address.value || '').trim().length < 5) {
+      showErr('اكتب العنوان بالتفصيل.');
+      return;
+    }
+    if (!input.files || !input.files[0]) {
+      showErr('ارفع صورة الطفل أولاً.');
+      return;
+    }
+
+    const child = (form.child_name.value || '').trim() || 'طفلك';
+    uploadTitle.textContent = 'بنبعت الطلب دلوقتي…';
+    uploadSub.textContent = 'بنرفع الصورة بأمان — ثواني وهنخلص.';
+    setProgress(0);
+    showLoading(true);
+
+    const fd = new FormData(form);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/sales-lead');
+    xhr.upload.onprogress = (ev) => {
+      if (!ev.lengthComputable) { setProgress(35); return; }
+      setProgress((ev.loaded / ev.total) * 90);
+      if (ev.loaded / ev.total > 0.85) {
+        uploadTitle.textContent = 'خلّصت تقريبًا…';
+        uploadSub.textContent = 'بنسجّل الطلب ونجهّز الفرحة.';
+      }
+    };
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== 4) return;
+      let data = {};
+      try { data = JSON.parse(xhr.responseText || '{}'); } catch (_) {}
+      if (xhr.status >= 200 && xhr.status < 300) {
+        setProgress(100);
+        uploadTitle.textContent = 'تم استلام الطلب!';
+        uploadSub.textContent = 'شكرًا ليك — بنودّيك لصفحة التأكيد…';
+        const oid = (data && data.order_id) ? String(data.order_id) : '';
+        const q = new URLSearchParams();
+        if (child && child !== 'طفلك') q.set('child', child);
+        if (oid) q.set('order', oid);
+        const url = '/thankyou' + (q.toString() ? ('?' + q.toString()) : '');
+        setTimeout(() => { location.href = url; }, 350);
+        return;
+      }
+      showLoading(false);
+      setProgress(0);
+      showErr((data && data.error) || 'حصل خطأ، جرّب تاني.');
+      btn.disabled = false;
+    };
+    xhr.onerror = () => {
+      showLoading(false);
+      setProgress(0);
+      showErr('مشكلة في الشبكة. تأكد من الاتصال وحاول تاني.');
+      btn.disabled = false;
+    };
+    xhr.send(fd);
+  });
+})();
+</script>
+</body>
+</html>

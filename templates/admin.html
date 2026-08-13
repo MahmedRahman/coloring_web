@@ -285,6 +285,7 @@
     font-family: var(--mono); font-size: 11px; font-weight: 600;
   }
   .badge-green  { background: var(--ok-dim); color: var(--ok); }
+  .badge-blue   { background: rgba(59,130,246,0.15); color: #60a5fa; }
   .badge-red    { background: var(--danger-dim); color: var(--danger); }
   .badge-yellow { background: var(--warn-dim); color: var(--warn); }
   .badge-violet { background: var(--violet-dim); color: var(--violet); }
@@ -424,6 +425,15 @@
   .filter-btn.active-pending {
     background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.4); color: var(--warn);
   }
+  .filter-btn.active-shipping {
+    background: rgba(56,189,248,0.14); border-color: rgba(56,189,248,0.45); color: var(--primary);
+  }
+  .filter-btn .filter-count {
+    display: inline-block; min-width: 1.4em;
+    margin-inline-start: 6px; padding: 1px 7px;
+    border-radius: 999px; font-size: 11px; font-weight: 800;
+    background: rgba(255,255,255,0.08); color: inherit;
+  }
   .so-search-wrap {
     position: relative; flex: 1; min-width: min(100%, 280px); max-width: 420px;
   }
@@ -449,142 +459,163 @@
     min-height: 18px;
   }
 
-  /* Parent / guardian filter */
-  .so-parents-bar {
-    display: flex; flex-direction: column; gap: 8px;
-    padding: 12px 14px;
-    background: var(--surface);
-    border: 1px solid var(--border-2);
-    border-radius: 14px;
-  }
-  .so-parents-head {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; flex-wrap: wrap;
-  }
-  .so-parents-title {
-    font-size: 12.5px; font-weight: 800; color: var(--text);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .so-parents-title span.muted { font-weight: 600; color: var(--muted); font-size: 12px; }
-  .so-parents-clear {
-    font-size: 12px; font-weight: 700; color: var(--primary);
-    background: transparent; border: none; cursor: pointer;
-    padding: 4px 8px; border-radius: 8px;
-  }
-  .so-parents-clear:hover { background: var(--primary-dim); }
-  .so-parents-clear[hidden] { display: none !important; }
-  .so-parents-list {
-    display: flex; align-items: stretch; gap: 8px;
-    overflow-x: auto; padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-  }
-  .so-parent-chip {
-    display: inline-flex; align-items: center; gap: 8px;
-    flex: 0 0 auto;
-    max-width: 260px;
-    padding: 8px 12px;
-    border-radius: 12px;
-    border: 1.5px solid var(--border-2);
-    background: var(--surface-2);
-    color: var(--text);
-    font-family: inherit;
-    cursor: pointer;
-    transition: border-color .15s, background .15s, box-shadow .15s;
-    text-align: right;
-  }
-  .so-parent-chip:hover {
-    border-color: rgba(56,189,248,0.55);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
-  }
-  .so-parent-chip.active {
-    background: var(--primary-dim);
-    border-color: rgba(56,189,248,0.55);
-    color: var(--primary);
-  }
-  .so-parent-chip-main {
-    display: flex; flex-direction: column; gap: 2px; min-width: 0;
-  }
-  .so-parent-name {
-    font-size: 13px; font-weight: 800;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    max-width: 170px;
-  }
-  .so-parent-sub {
-    font-size: 11px; font-weight: 600; color: var(--muted);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    max-width: 170px;
-  }
-  .so-parent-chip.active .so-parent-sub { color: rgba(56,189,248,0.85); }
-  .so-parent-count {
-    flex-shrink: 0;
-    min-width: 28px;
-    height: 28px;
-    padding: 0 8px;
-    border-radius: 999px;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 800;
-    background: rgba(148,163,184,0.15);
-    color: var(--text);
-  }
-  .so-parent-chip.active .so-parent-count {
-    background: rgba(56,189,248,0.22);
-    color: var(--primary);
-  }
-  .so-parent-chip.is-all .so-parent-name { font-size: 12.5px; }
-  .so-client-filter-link {
-    margin-inline-start: 6px;
-    padding: 1px 8px;
-    border-radius: 999px;
-    border: 1px solid var(--border-2);
-    background: var(--surface-2);
-    color: var(--primary);
-    font-size: 11px;
-    font-weight: 800;
-    font-family: inherit;
-    cursor: pointer;
-    vertical-align: middle;
-  }
-  .so-client-filter-link:hover {
-    border-color: rgba(56,189,248,0.5);
-    background: var(--primary-dim);
-  }
-  .so-parent-name-btn {
-    display: inline;
-    border: none;
-    background: transparent;
-    padding: 0;
+  /* Parent → children family list */
+  .so-view-hint {
     margin: 0;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-    vertical-align: baseline;
-  }
-  .so-parent-name-btn strong {
-    color: var(--primary);
-    text-decoration: underline;
-    text-decoration-color: rgba(56,189,248,0.35);
-    text-underline-offset: 2px;
-  }
-  .so-parent-name-btn:hover strong {
-    color: var(--text);
-  }
-  .so-parent-kids-count {
-    color: var(--muted);
-    font-weight: 700;
     font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
   }
-
   .so-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 16px;
   }
+  .so-grid.so-grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    align-items: stretch;
+  }
+  .so-family {
+    background: var(--surface);
+    border: 1px solid var(--border-2);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .so-family.is-focus {
+    border-color: rgba(56,189,248,0.55);
+    box-shadow: 0 0 0 1px rgba(56,189,248,0.2);
+  }
+  .so-family-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    background: linear-gradient(180deg, rgba(56,189,248,0.07), transparent);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .so-family-head:hover { background: rgba(56,189,248,0.1); }
+  .so-family-main {
+    display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;
+  }
+  .so-family-avatar {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    display: grid; place-items: center;
+    background: var(--primary-dim);
+    color: var(--primary);
+    font-size: 18px; font-weight: 800;
+  }
+  .so-family-meta { min-width: 0; }
+  .so-family-name {
+    margin: 0; font-size: 16px; font-weight: 800; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .so-family-sub {
+    margin: 3px 0 0; font-size: 12.5px; color: var(--muted); font-weight: 600;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  }
+  .so-family-phone {
+    color: var(--text-2); text-decoration: none; font-variant-numeric: tabular-nums;
+  }
+  .so-family-phone:hover { color: var(--primary); }
+  .so-family-side {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .so-family-stats {
+    display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .so-family-chevron {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: grid; place-items: center;
+    background: var(--bg-2); border: 1px solid var(--border);
+    color: var(--muted); font-size: 12px; transition: transform .18s;
+  }
+  .so-family.collapsed .so-family-chevron { transform: rotate(-90deg); }
+  .so-family-kids {
+    padding: 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    background: var(--bg-2);
+  }
+  .so-family.collapsed .so-family-kids { display: none; }
+  .so-family-empty {
+    grid-column: 1 / -1;
+    padding: 18px; text-align: center; color: var(--muted); font-size: 13px;
+  }
+  .so-family-clear {
+    font-size: 12px; font-weight: 700; color: var(--primary);
+    background: transparent; border: 1px solid rgba(56,189,248,0.35);
+    border-radius: 8px; padding: 5px 10px; cursor: pointer; font-family: inherit;
+  }
+  .so-family-clear:hover { background: var(--primary-dim); }
+  .so-family .so-card { cursor: pointer; }
+  .so-family .so-child-name-text { font-size: 17px; }
+  .so-family .so-client-line { display: none; }
+
   .so-empty {
     grid-column: 1 / -1; text-align: center; padding: 48px 20px;
     color: var(--muted); font-size: 14px;
   }
   .so-empty-ico { display: block; font-size: 36px; margin-bottom: 10px; }
+
+  .so-group {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .so-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border-2);
+  }
+  .so-group-pending .so-group-head {
+    background: rgba(251,191,36,0.08);
+    border-color: rgba(251,191,36,0.28);
+  }
+  .so-group-done .so-group-head {
+    background: rgba(52,211,153,0.08);
+    border-color: rgba(52,211,153,0.28);
+  }
+  .so-group-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .so-group-pending .so-group-title { color: var(--warn); }
+  .so-group-done .so-group-title { color: var(--ok); }
+  .so-group-count {
+    font-size: 12px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    color: var(--muted);
+  }
+  .so-group-empty {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 18px 8px;
+    text-align: center;
+  }
+  .so-grid-inner {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
 
   /* Clearer list card */
   .so-card {
@@ -602,6 +633,7 @@
     position: absolute; top: 0; right: 0; left: 0; height: 3px;
   }
   .so-card.status-pending::before { background: var(--warn); }
+  .so-card.status-shipping::before { background: var(--primary); }
   .so-card.status-done::before { background: var(--ok); }
   .so-card:hover {
     border-color: rgba(56,189,248,0.45);
@@ -848,12 +880,58 @@
   .ob-tag.seasonal    { background: rgba(236,72,153,0.14);  color: #f472b6; border-color: rgba(236,72,153,0.32); }
   .ob-tag.educational { background: rgba(132,204,22,0.14);  color: #a3e635; border-color: rgba(132,204,22,0.32); }
   .ob-tag.owned       { background: rgba(34,197,94,0.18);   color: #4ade80; border-color: rgba(34,197,94,0.4); }
+  .ob-tag.poster      { background: rgba(234,179,8,0.16); color: #facc15; border-color: rgba(234,179,8,0.4); }
   .ob-product.story {
     border-color: rgba(168,85,247,0.3);
     background: linear-gradient(160deg, rgba(168,85,247,0.09), rgba(15,25,45,0.2));
   }
   .ob-product.story:hover { border-color: rgba(168,85,247,0.6); }
   .ob-product.story.owned { border-color: rgba(34,197,94,0.4); }
+  .ob-product.poster {
+    border-color: rgba(234,179,8,0.35);
+    background: linear-gradient(160deg, rgba(234,179,8,0.1), rgba(15,25,45,0.2));
+  }
+  .ob-product.poster:hover { border-color: rgba(234,179,8,0.65); }
+  .ob-product.poster.owned { border-color: rgba(34,197,94,0.4); }
+  .ob-product.custom-mix {
+    border-color: rgba(232,93,76,0.35);
+    background: linear-gradient(160deg, rgba(232,93,76,0.08), rgba(124,58,237,0.06));
+  }
+  .ob-product.custom-mix:hover { border-color: rgba(232,93,76,0.65); }
+  .ob-mix-group {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-2);
+  }
+  .ob-mix-group:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .ob-mix-head {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 800; font-size: 14px; color: var(--text);
+    margin-bottom: 10px;
+  }
+  .ob-mix-head small {
+    font-weight: 600; color: var(--muted); font-size: 12px;
+  }
+  .ob-mix-order {
+    margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+    background: var(--bg-2); border: 1px solid var(--border-2);
+    font-size: 13px; color: var(--muted);
+  }
+  .ob-mix-order strong { color: var(--text); }
+  .ob-mix-order ol {
+    margin: 8px 0 0; padding-inline-start: 22px;
+    display: grid; gap: 4px;
+  }
+  .ob-mix-order li { color: var(--text); font-weight: 600; }
+  .ob-poster-preview {
+    min-height: 280px; border-radius: 14px; border: 1px dashed var(--border-2);
+    background: var(--bg-2); display: flex; align-items: center; justify-content: center;
+    overflow: hidden; margin-top: 12px;
+  }
+  .ob-poster-preview img {
+    max-width: 100%; max-height: 70vh; object-fit: contain; cursor: zoom-in;
+  }
+  .ob-poster-preview .slot-placeholder { color: var(--muted); padding: 28px; text-align: center; }
   .ob-product-moral {
     margin-top: 8px; color: #c084fc; font-size: 11.5px;
     font-weight: 700; line-height: 1.45;
@@ -1233,28 +1311,43 @@
     margin: 6px 0 0; font-size: 14px; font-weight: 800;
     color: var(--primary); font-family: var(--mono);
   }
-  /* Order form page (add / edit) */
-  .of-page { max-width: 760px; }
+  /* Order form page (add / edit) — wide two-column layout */
+  .of-page { max-width: 1180px; width: 100%; }
+  .of-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+  .of-span-2 { grid-column: 1 / -1; }
   .of-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 18px 18px 16px;
-    margin-bottom: 14px;
+    padding: 18px 20px 16px;
+    margin-bottom: 0;
+    min-width: 0;
   }
   .of-card h3 {
-    margin: 0 0 14px; font-size: 14px; font-weight: 800; color: var(--text);
+    margin: 0 0 4px; font-size: 14px; font-weight: 800; color: var(--text);
   }
   .of-card .modal-sub {
-    margin: -8px 0 14px; color: var(--muted); font-size: 13px;
+    margin: 0 0 14px; color: var(--muted); font-size: 12.5px; line-height: 1.45;
   }
-  .of-card label {
-    display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 6px;
+  .of-card > h3 + :not(.modal-sub) { margin-top: 12px; }
+  .of-field {
+    display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  }
+  .of-field label,
+  .of-card > label {
+    display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 0;
   }
   .of-card input[type="text"],
   .of-card input[type="tel"],
   .of-card input[type="email"],
   .of-card input[type="number"],
+  .of-card input[type="date"],
+  .of-card select,
   .of-card textarea {
     width: 100%;
     background: var(--bg-2);
@@ -1264,26 +1357,114 @@
     padding: 10px 12px;
     font-size: 14px;
     font-family: inherit;
-    margin-bottom: 12px;
+    margin: 0;
+    box-sizing: border-box;
   }
-  .of-card input:focus, .of-card textarea:focus {
+  .of-card input:focus, .of-card textarea:focus, .of-card select:focus {
     outline: none; border-color: var(--primary);
   }
-  .of-card textarea { min-height: 96px; resize: vertical; }
+  .of-card textarea { min-height: 88px; resize: vertical; }
+  .of-card textarea.of-addr { min-height: 110px; }
+  .of-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+  }
+  .of-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px 16px;
+  }
+  .of-span-full { grid-column: 1 / -1; }
+  .of-check-row {
+    display: flex; align-items: center; gap: 10px;
+    margin: 0 0 12px; padding: 10px 12px;
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .of-check-row input[type="checkbox"] {
+    width: 18px; height: 18px; margin: 0; accent-color: var(--primary); flex-shrink: 0;
+  }
+  .of-check-row label { margin: 0; color: var(--text); font-size: 13.5px; font-weight: 700; }
+  .of-total-box {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; flex-wrap: wrap;
+    margin-top: 4px; padding: 12px 14px;
+    background: var(--bg-2); border: 1px solid var(--border-2);
+    border-radius: 10px;
+  }
+  .of-total-box .lbl { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .of-total-box .val { font-size: 18px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+  .of-ro {
+    width: 100%; padding: 10px 12px; box-sizing: border-box;
+    background: var(--bg); border: 1px dashed var(--border-2); border-radius: 10px;
+    color: var(--muted); font-size: 13.5px; font-weight: 600; min-height: 42px;
+    display: flex; align-items: center;
+  }
+  .of-toggle-block { display: flex; flex-direction: column; gap: 6px; }
+  .of-toggle-block .status-toggle { margin-bottom: 0; }
+  /* legacy alias used elsewhere */
   .modal-grid-2 {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px;
+  }
+  @media (max-width: 980px) {
+    .of-layout { grid-template-columns: 1fr; }
+    .of-span-2 { grid-column: auto; }
   }
   @media (max-width: 640px) {
-    .modal-grid-2 { grid-template-columns: 1fr; }
+    .of-grid, .of-grid-3, .modal-grid-2 { grid-template-columns: 1fr; }
   }
   .of-actions {
     display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
-    margin-top: 4px; padding-bottom: 24px;
+    margin-top: 4px; padding: 14px 0 28px;
+    position: sticky; bottom: 0;
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
+    z-index: 5;
   }
-  .of-actions .btn { min-width: 120px; justify-content: center; }
-  .of-msg { margin: 0 0 12px; font-size: 13.5px; font-weight: 600; min-height: 1.2em; }
+  .of-actions .btn { min-width: 140px; justify-content: center; }
+  .of-msg { margin: 0 0 8px; font-size: 13.5px; font-weight: 600; min-height: 1.2em; }
   .of-msg.err { color: var(--danger); }
   .of-msg.ok { color: var(--ok); }
+
+  /* Two-step wizard: parent → child */
+  .of-steps {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin: 0 0 16px; padding: 12px 14px;
+    background: var(--surface); border: 1px solid var(--border-2);
+    border-radius: 14px;
+  }
+  .of-steps[hidden] { display: none !important; }
+  .of-step-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 999px;
+    border: 1.5px solid var(--border-2);
+    background: var(--bg-2); color: var(--muted);
+    font-size: 13px; font-weight: 700;
+  }
+  .of-step-pill .n {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: rgba(148,163,184,0.2); font-size: 12px;
+  }
+  .of-step-pill.active {
+    border-color: rgba(56,189,248,0.55);
+    background: var(--primary-dim); color: var(--primary);
+  }
+  .of-step-pill.active .n { background: rgba(56,189,248,0.25); }
+  .of-step-pill.done { border-color: rgba(52,211,153,0.4); color: var(--ok); }
+  .of-step-sep { color: var(--muted); font-weight: 700; }
+  .of-parent-summary {
+    display: none;
+    align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    margin: 0 0 14px; padding: 12px 14px;
+    background: var(--primary-dim); border: 1px solid rgba(56,189,248,0.35);
+    border-radius: 12px;
+  }
+  .of-parent-summary.show { display: flex; }
+  .of-parent-summary strong { color: var(--text); font-size: 14px; }
+  .of-parent-summary .meta { color: var(--muted); font-size: 12.5px; font-weight: 600; margin-top: 2px; }
+  .of-layout[data-step="1"] > [data-of-step="2"] { display: none !important; }
+  .of-layout[data-step="2"] > [data-of-step="1"] { display: none !important; }
   /* Full-size photo lightbox */
   .lightbox {
     display: none; position: fixed; inset: 0; z-index: 400;
@@ -1343,10 +1524,15 @@
     background: var(--warn-dim); border-color: rgba(251,191,36,0.45);
     color: var(--warn);
   }
+  .status-opt.sel-shipping {
+    background: var(--primary-dim); border-color: rgba(56,189,248,0.45);
+    color: var(--primary);
+  }
   .status-opt.sel-done {
     background: var(--ok-dim); border-color: rgba(52,211,153,0.45);
     color: var(--ok);
   }
+  .status-toggle-3 .status-opt { font-size: 12px; padding: 9px 6px; }
   /* PDF */
   .pdf-zone {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -1369,6 +1555,49 @@
   .so-pdf-row {
     display: flex; align-items: center; gap: 8px; padding: 8px 0 6px;
   }
+
+  /* ── Sales leads (/buy) ── */
+  .sl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .sl-card {
+    background: var(--surface);
+    border: 1px solid var(--border-2);
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .sl-card-photo {
+    aspect-ratio: 1; background: var(--bg-2);
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .sl-card-photo img {
+    width: 100%; height: 100%; object-fit: cover; cursor: zoom-in;
+  }
+  .sl-card-photo .ph { color: var(--muted); font-size: 13px; }
+  .sl-card-body { padding: 14px 14px 12px; display: grid; gap: 6px; }
+  .sl-card-body .name {
+    font-size: 16px; font-weight: 800; color: var(--text);
+  }
+  .sl-card-body .meta {
+    font-size: 12.5px; color: var(--muted); line-height: 1.5;
+  }
+  .sl-card-body .meta strong { color: var(--text-2); font-weight: 700; }
+  .sl-card-actions {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 0 14px 14px;
+  }
+  .sl-badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 800;
+  }
+  .sl-badge.new { background: rgba(56,189,248,.15); color: var(--primary); }
+  .sl-badge.contacted { background: rgba(251,191,36,.15); color: #fbbf24; }
+  .sl-badge.done { background: var(--ok-dim); color: var(--ok); }
+  .sl-badge.archived { background: rgba(148,163,184,.15); color: var(--muted); }
 
   /* ── Quick Book ── */
   .qb-wrap { max-width: 820px; display: flex; flex-direction: column; gap: 14px; }
@@ -1406,7 +1635,7 @@
   .qb-field input[type="text"]:focus {
     border-color: var(--primary); box-shadow: 0 0 0 3px rgba(56,189,248,0.12);
   }
-  .qb-page-opts { display: flex; gap: 10px; flex-wrap: wrap; }
+  .qb-page-opts { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
   .qb-page-opt {
     min-width: 120px; padding: 12px 16px; border-radius: 12px;
     border: 1.5px solid var(--border-2); background: var(--bg-2);
@@ -1416,6 +1645,27 @@
   .qb-page-opt small { display: block; font-size: 11px; font-weight: 500; margin-top: 4px; opacity: .8; }
   .qb-page-opt.active {
     border-color: rgba(56,189,248,0.55); background: var(--primary-dim); color: var(--primary);
+  }
+  .qb-page-custom {
+    min-width: 140px; padding: 10px 14px; border-radius: 12px;
+    border: 1.5px solid var(--border-2); background: var(--bg-2);
+    display: flex; flex-direction: column; justify-content: center; gap: 6px;
+  }
+  .qb-page-custom.active {
+    border-color: rgba(56,189,248,0.55); background: var(--primary-dim);
+  }
+  .qb-page-custom label {
+    font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .02em;
+  }
+  .qb-page-custom.active label { color: var(--primary); }
+  .qb-page-custom input {
+    width: 72px; padding: 6px 8px; border-radius: 8px;
+    border: 1px solid var(--border-2); background: var(--bg);
+    color: var(--text); font-weight: 800; font-size: 16px; text-align: center;
+  }
+  .qb-page-custom input:focus {
+    outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(56,189,248,0.12);
   }
   .qb-packs {
     display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
@@ -1545,6 +1795,10 @@
   <button type="button" class="mobile-nav-btn active" data-section="overview" href="#overview" onclick="event.preventDefault();navigateAdmin('#overview')">◆ الرئيسية</button>
   <button type="button" class="mobile-nav-btn" data-section="quick-book" onclick="event.preventDefault();navigateAdmin('#quick-book')">⚡ كتاب سريع</button>
   <button type="button" class="mobile-nav-btn" data-section="special-orders" onclick="event.preventDefault();navigateAdmin('#special-orders')">📱 طلبات خاصة</button>
+  <button type="button" class="mobile-nav-btn" data-section="sales-leads" onclick="event.preventDefault();navigateAdmin('#sales-leads')">🛒 طلبات المبيعات</button>
+  <button type="button" class="mobile-nav-btn" data-section="orders-pending" onclick="event.preventDefault();navigateAdmin('#orders-pending')">⏳ غير مكتملة</button>
+  <button type="button" class="mobile-nav-btn" data-section="orders-shipping" onclick="event.preventDefault();navigateAdmin('#orders-shipping')">🚚 قيد الشحن</button>
+  <button type="button" class="mobile-nav-btn" data-section="orders-done" onclick="event.preventDefault();navigateAdmin('#orders-done')">✓ مكتملة</button>
   <button type="button" class="mobile-nav-btn" data-section="users" onclick="event.preventDefault();navigateAdmin('#users')">◎ المستخدمين</button>
   <button type="button" class="mobile-nav-btn" data-section="books" onclick="event.preventDefault();navigateAdmin('#books')">▤ الكتب</button>
   <button type="button" class="mobile-nav-btn" data-section="payments" onclick="event.preventDefault();navigateAdmin('#payments')">💳 المدفوعات</button>
@@ -1569,6 +1823,18 @@
       </button>
       <button type="button" class="nav-item" data-section="special-orders" id="nav-special-orders" onclick="navigateAdmin('#special-orders')">
         <span class="nav-ico">📱</span> طلبات خاصة
+      </button>
+      <button type="button" class="nav-item" data-section="sales-leads" id="nav-sales-leads" onclick="navigateAdmin('#sales-leads')">
+        <span class="nav-ico">🛒</span> طلبات المبيعات
+      </button>
+      <button type="button" class="nav-item" data-section="orders-pending" id="nav-orders-pending" onclick="navigateAdmin('#orders-pending')">
+        <span class="nav-ico">⏳</span> طلبات غير مكتملة
+      </button>
+      <button type="button" class="nav-item" data-section="orders-shipping" id="nav-orders-shipping" onclick="navigateAdmin('#orders-shipping')">
+        <span class="nav-ico">🚚</span> طلبات قيد الشحن
+      </button>
+      <button type="button" class="nav-item" data-section="orders-done" id="nav-orders-done" onclick="navigateAdmin('#orders-done')">
+        <span class="nav-ico">✓</span> طلبات مكتملة
       </button>
       <button type="button" class="nav-item" data-section="users" onclick="navigateAdmin('#users')">
         <span class="nav-ico">◎</span> المستخدمون
@@ -2029,7 +2295,7 @@
         <div class="qb-card">
           <h3>3. عدد الصفحات</h3>
           <p class="hint">غلاف + صفحات التلوين (تختار الوظائف تحت)</p>
-          <div class="qb-page-opts">
+          <div class="qb-page-opts" id="qb-page-opts">
             <button type="button" class="qb-page-opt" data-pages="1" onclick="qbSetPageCount(1, this)">
               1 صفحة
               <small>للتجربة</small>
@@ -2042,6 +2308,13 @@
               12 صفحة
               <small>كل الوظائف</small>
             </button>
+            <div class="qb-page-custom" id="qb-page-custom">
+              <label for="qb-page-count-input">عدد مخصص</label>
+              <input type="number" id="qb-page-count-input" min="1" max="40" step="1" value="8"
+                     inputmode="numeric"
+                     onchange="qbApplyCustomPageCount()"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();qbApplyCustomPageCount();}">
+            </div>
           </div>
         </div>
 
@@ -2103,22 +2376,12 @@
       <div class="so-toolbar">
         <div class="so-toolbar-row">
           <div class="so-filters">
-            <button class="filter-btn active" data-filter="all" onclick="filterOrders('all', this)">الكل</button>
-            <button class="filter-btn" data-filter="pending" onclick="filterOrders('pending', this)">معلّق</button>
-            <button class="filter-btn" data-filter="done" onclick="filterOrders('done', this)">مكتمل</button>
+            <button class="filter-btn active" data-filter="all" onclick="filterOrders('all', this)">الكل <span class="filter-count" id="so-count-all">0</span></button>
+            <button class="filter-btn" data-filter="pending" onclick="filterOrders('pending', this)">غير مكتملة <span class="filter-count" id="so-count-pending">0</span></button>
+            <button class="filter-btn" data-filter="shipping" onclick="filterOrders('shipping', this)">قيد الشحن <span class="filter-count" id="so-count-shipping">0</span></button>
+            <button class="filter-btn" data-filter="done" onclick="filterOrders('done', this)">مكتملة <span class="filter-count" id="so-count-done">0</span></button>
           </div>
           <button class="btn btn-primary" onclick="openOrderModal(null)">+ طلب جديد</button>
-        </div>
-        <div class="so-parents-bar" id="so-parents-bar">
-          <div class="so-parents-head">
-            <div class="so-parents-title">
-              👨‍👩‍👧 أولياء الأمور
-              <span class="muted" id="so-parents-meta"></span>
-            </div>
-            <button type="button" class="so-parents-clear" id="so-parents-clear" hidden
-                    onclick="clearParentFilter()">عرض كل الأطفال</button>
-          </div>
-          <div class="so-parents-list" id="so-parents-list" role="listbox" aria-label="فلتر ولي الأمر"></div>
         </div>
         <div class="so-toolbar-row">
           <div class="so-search-wrap">
@@ -2130,9 +2393,107 @@
           </div>
           <div class="so-results-note" id="so-results-note"></div>
         </div>
+        <p class="so-view-hint" id="so-view-hint">العرض حسب ولي الأمر — فلتر: غير مكتملة / قيد الشحن / مكتملة</p>
       </div>
       <div class="so-grid" id="so-grid">
         <div class="so-empty"><span class="so-empty-ico">📱</span>جاري التحميل...</div>
+      </div>
+    </section>
+
+    <!-- SALES LEADS from /buy -->
+    <section class="section" id="section-sales-leads">
+      <div class="so-toolbar">
+        <div class="so-toolbar-row">
+          <div class="so-filters">
+            <button class="filter-btn active" data-sl-filter="all" onclick="filterSalesLeads('all', this)">الكل</button>
+            <button class="filter-btn" data-sl-filter="new" onclick="filterSalesLeads('new', this)">جديدة</button>
+            <button class="filter-btn" data-sl-filter="contacted" onclick="filterSalesLeads('contacted', this)">تم التواصل</button>
+            <button class="filter-btn" data-sl-filter="done" onclick="filterSalesLeads('done', this)">منتهية</button>
+            <button class="filter-btn" data-sl-filter="archived" onclick="filterSalesLeads('archived', this)">مؤرشفة</button>
+          </div>
+          <button class="btn btn-sm btn-ghost" onclick="loadSalesLeads()">↻ تحديث</button>
+        </div>
+        <div class="so-toolbar-row">
+          <div class="so-search-wrap">
+            <span class="so-search-ico">⌕</span>
+            <input id="sl-search" class="so-search" type="search"
+                   placeholder="بحث: ولي الأمر، الطفل، الموبايل، رقم الطلب..."
+                   oninput="searchSalesLeads(this.value)"
+                   autocomplete="off">
+          </div>
+          <div class="so-results-note" id="sl-results-note"></div>
+        </div>
+        <p class="so-view-hint">طلبات فورم الصفحة الرئيسية <code>/</code> — مرتبطة بالطلبات الخاصة تلقائيًا</p>
+      </div>
+      <div class="sl-grid" id="sl-grid">
+        <div class="so-empty"><span class="so-empty-ico">🛒</span>جاري التحميل...</div>
+      </div>
+    </section>
+
+    <!-- STATUS BOARDS: flat child cards (one page per status) -->
+    <section class="section" id="section-orders-pending">
+      <div class="so-toolbar">
+        <div class="so-toolbar-row">
+          <div class="so-results-note" id="osp-results-note"></div>
+          <button class="btn btn-primary" onclick="openOrderModal(null)">+ طلب جديد</button>
+        </div>
+        <div class="so-toolbar-row">
+          <div class="so-search-wrap">
+            <span class="so-search-ico">⌕</span>
+            <input id="osp-search" class="so-search" type="search"
+                   placeholder="بحث داخل غير المكتملة..."
+                   oninput="searchStatusBoard('pending', this.value)"
+                   autocomplete="off">
+          </div>
+        </div>
+        <p class="so-view-hint">كروت الأطفال — الطلبات غير المكتملة فقط</p>
+      </div>
+      <div class="so-grid so-grid-cards" id="osp-grid">
+        <div class="so-empty"><span class="so-empty-ico">⏳</span>جاري التحميل...</div>
+      </div>
+    </section>
+
+    <section class="section" id="section-orders-shipping">
+      <div class="so-toolbar">
+        <div class="so-toolbar-row">
+          <div class="so-results-note" id="oss-results-note"></div>
+          <button class="btn btn-primary" onclick="openOrderModal(null)">+ طلب جديد</button>
+        </div>
+        <div class="so-toolbar-row">
+          <div class="so-search-wrap">
+            <span class="so-search-ico">⌕</span>
+            <input id="oss-search" class="so-search" type="search"
+                   placeholder="بحث داخل قيد الشحن..."
+                   oninput="searchStatusBoard('shipping', this.value)"
+                   autocomplete="off">
+          </div>
+        </div>
+        <p class="so-view-hint">كروت الأطفال — الطلبات قيد الشحن فقط</p>
+      </div>
+      <div class="so-grid so-grid-cards" id="oss-grid">
+        <div class="so-empty"><span class="so-empty-ico">🚚</span>جاري التحميل...</div>
+      </div>
+    </section>
+
+    <section class="section" id="section-orders-done">
+      <div class="so-toolbar">
+        <div class="so-toolbar-row">
+          <div class="so-results-note" id="osd-results-note"></div>
+          <button class="btn btn-primary" onclick="openOrderModal(null)">+ طلب جديد</button>
+        </div>
+        <div class="so-toolbar-row">
+          <div class="so-search-wrap">
+            <span class="so-search-ico">⌕</span>
+            <input id="osd-search" class="so-search" type="search"
+                   placeholder="بحث داخل المكتملة..."
+                   oninput="searchStatusBoard('done', this.value)"
+                   autocomplete="off">
+          </div>
+        </div>
+        <p class="so-view-hint">كروت الأطفال — الطلبات المكتملة فقط</p>
+      </div>
+      <div class="so-grid so-grid-cards" id="osd-grid">
+        <div class="so-empty"><span class="so-empty-ico">✓</span>جاري التحميل...</div>
       </div>
     </section>
 
@@ -2153,82 +2514,209 @@
             <div class="so-detail-icon" id="of-hero-icon">📱</div>
             <div>
               <h2 id="order-form-title">طلب جديد</h2>
-              <p class="sub" id="order-form-sub">اسم الطفل مطلوب، باقي الحقول اختيارية</p>
+              <p class="sub" id="order-form-sub">أولاً بيانات ولي الأمر، وبعدين الطفل</p>
             </div>
           </div>
         </div>
 
-        <div class="of-card">
-          <h3>البيانات الأساسية</h3>
-          <div class="modal-grid-2">
-            <div>
-              <label for="o-child">اسم الطفل *</label>
-              <input type="text" id="o-child" placeholder="اسم الطفل" required autocomplete="name">
-            </div>
-            <div>
-              <label for="o-client">اسم العميل</label>
-              <input type="text" id="o-client" placeholder="اسم ولي الأمر" autocomplete="name">
-            </div>
-            <div>
-              <label for="o-phone">رقم التليفون</label>
-              <input type="tel" id="o-phone" placeholder="01xxxxxxxxx" autocomplete="tel">
-            </div>
-            <div>
-              <label for="o-email">البريد الإلكتروني</label>
-              <input type="email" id="o-email" placeholder="example@email.com" autocomplete="email">
-            </div>
-          </div>
-          <label for="o-notes">ملاحظات</label>
-          <textarea id="o-notes" placeholder="أي تفاصيل إضافية عن الطلب..."></textarea>
-
-          <label for="o-assigned">الشخص المسؤول <span style="color:var(--muted);font-weight:400">(اختياري)</span></label>
-          <input type="text" id="o-assigned" placeholder="اسم الشخص المسؤول عن التنفيذ">
-
-          <label>حالة الطلب</label>
-          <div class="status-toggle">
-            <button type="button" id="o-status-pending" class="status-opt sel-pending"
-                    onclick="setOrderStatus('pending')">
-              ⏳ معلّق
-            </button>
-            <button type="button" id="o-status-done" class="status-opt"
-                    onclick="setOrderStatus('done')">
-              ✅ مكتمل
-            </button>
-          </div>
+        <div class="of-steps" id="of-steps">
+          <div class="of-step-pill active" id="of-step-pill-1"><span class="n">1</span> ولي الأمر</div>
+          <span class="of-step-sep">←</span>
+          <div class="of-step-pill" id="of-step-pill-2"><span class="n">2</span> الطفل والطلب</div>
         </div>
 
-        <div class="of-card">
-          <h3>الصور</h3>
-          <div id="o-existing-photos-wrap" style="display:none">
-            <label>صور مرفوعة — اضغط ✕ لحذف أي صورة</label>
-            <div id="o-existing-photos" class="o-photo-preview" style="margin-bottom:10px"></div>
+        <div class="of-parent-summary" id="of-parent-summary">
+          <div>
+            <strong id="of-parent-summary-name">—</strong>
+            <div class="meta" id="of-parent-summary-meta">—</div>
           </div>
-          <label>إضافة صور <span id="o-slots-label" style="color:var(--muted);font-weight:400">(حتى 8 صور)</span></label>
-          <label id="o-photo-drop" class="o-photo-drop">
-            <span id="o-photo-drop-text">
-              اختر صور أو اسحبها هنا — يمكن تحديد أكتر من صورة في نفس الوقت
-            </span>
-            <input type="file" id="o-photos" accept="image/*" multiple hidden onchange="previewModalPhotos(this)">
-          </label>
-          <div id="o-photo-preview" class="o-photo-preview"></div>
+          <button type="button" class="btn btn-sm btn-ghost" onclick="setOrderFormStep(1)">تعديل ولي الأمر</button>
         </div>
 
-        <div class="of-card">
-          <h3>ملف PDF</h3>
-          <label>PDF <span style="color:var(--muted);font-weight:400">(اختياري — حتى 50 MB)</span></label>
-          <div id="o-pdf-zone" class="pdf-zone">
-            <span id="o-pdf-current"></span>
-            <label style="margin:0">
-              <span class="btn btn-sm btn-ghost" style="pointer-events:none">📤 اختر ملف PDF</span>
-              <input type="file" id="o-pdf-input" accept=".pdf,application/pdf" hidden onchange="previewPdf(this)">
-            </label>
-            <span id="o-pdf-selected" style="font-size:12px;color:var(--ok);display:none"></span>
+        <div class="of-layout" id="of-layout" data-step="1">
+          <div class="of-card of-span-2" data-of-step="1">
+            <h3>بيانات ولي الأمر</h3>
+            <p class="modal-sub">سجّل ولي أمر جديد أو اختار واحد موجود من قبل</p>
+            <div class="of-grid">
+              <div class="of-field of-span-full">
+                <label for="o-guardian-id">اختيار من أولياء الأمور الحاليين</label>
+                <select id="o-guardian-id" onchange="onGuardianSelectChange()">
+                  <option value="">+ ولي أمر جديد</option>
+                </select>
+              </div>
+              <div class="of-field">
+                <label for="o-client">اسم ولي الأمر *</label>
+                <input type="text" id="o-client" placeholder="اسم ولي الأمر" autocomplete="name">
+              </div>
+              <div class="of-field">
+                <label for="o-phone">رقم التليفون</label>
+                <input type="tel" id="o-phone" placeholder="01xxxxxxxxx" autocomplete="tel">
+              </div>
+              <div class="of-field of-span-full">
+                <label for="o-email">البريد الإلكتروني</label>
+                <input type="email" id="o-email" placeholder="example@email.com" autocomplete="email">
+              </div>
+            </div>
+          </div>
+
+          <div class="of-card" data-of-step="2">
+            <h3>بيانات الطفل</h3>
+            <p class="modal-sub">كل طفل = طلب مستقل تحت نفس ولي الأمر</p>
+            <div class="of-grid">
+              <div class="of-field of-span-full">
+                <label for="o-child">اسم الطفل *</label>
+                <input type="text" id="o-child" placeholder="اسم الطفل" required autocomplete="name">
+                <label style="margin-top:12px">نوع الطفل *</label>
+                <div class="status-toggle" id="o-gender-toggle" style="margin-top:6px">
+                  <button type="button" id="o-gender-boy" class="status-opt sel-pending"
+                          onclick="setOrderChildGender('boy')">ولد</button>
+                  <button type="button" id="o-gender-girl" class="status-opt"
+                          onclick="setOrderChildGender('girl')">بنت</button>
+                </div>
+              </div>
+              <div class="of-field of-span-full">
+                <label for="o-assigned">الشخص المسؤول <span style="color:var(--muted);font-weight:400">(اختياري)</span></label>
+                <input type="text" id="o-assigned" placeholder="اسم الشخص المسؤول عن التنفيذ">
+              </div>
+              <div class="of-field of-span-full">
+                <label for="o-notes">ملاحظات على طلب الطفل</label>
+                <textarea id="o-notes" placeholder="أي تفاصيل إضافية عن الطلب..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="of-card" data-of-step="2">
+            <h3>الشحن والتسليم</h3>
+            <p class="modal-sub">عنوان التوصيل والمستلم لهذا الطلب</p>
+            <div class="of-grid">
+              <div class="of-field">
+                <label for="o-recipient">اسم المستلم</label>
+                <input type="text" id="o-recipient" placeholder="لو مختلف عن ولي الأمر">
+              </div>
+              <div class="of-field">
+                <label for="o-alt-phone">تليفون بديل للتوصيل</label>
+                <input type="tel" id="o-alt-phone" placeholder="01xxxxxxxxx">
+              </div>
+              <div class="of-field of-span-full">
+                <label for="o-ship-address">عنوان الشحن</label>
+                <textarea id="o-ship-address" class="of-addr" placeholder="المحافظة · المدينة · الشارع · رقم العقار / علامة مميزة"></textarea>
+              </div>
+              <div class="of-field">
+                <label for="o-expected-delivery">ميعاد التسليم المتوقع</label>
+                <input type="date" id="o-expected-delivery">
+              </div>
+              <div class="of-field">
+                <label for="o-delivered-at">تاريخ التسليم الفعلي</label>
+                <input type="date" id="o-delivered-at">
+              </div>
+            </div>
+          </div>
+
+          <div class="of-card" data-of-step="2">
+            <h3>الحالة والأولوية</h3>
+            <p class="modal-sub">متابعة التنفيذ ودرجة الاستعجال</p>
+            <div class="of-grid">
+              <div class="of-toggle-block of-span-full">
+                <label>حالة الطلب</label>
+                <div class="status-toggle status-toggle-3">
+                  <button type="button" id="o-status-pending" class="status-opt sel-pending"
+                          onclick="setOrderStatus('pending')">غير مكتمل</button>
+                  <button type="button" id="o-status-shipping" class="status-opt"
+                          onclick="setOrderStatus('shipping')">قيد الشحن</button>
+                  <button type="button" id="o-status-done" class="status-opt"
+                          onclick="setOrderStatus('done')">مكتمل</button>
+                </div>
+              </div>
+              <div class="of-toggle-block">
+                <label>الأولوية</label>
+                <div class="status-toggle">
+                  <button type="button" id="o-priority-normal" class="status-opt sel-pending"
+                          onclick="setOrderPriority('normal')">عادي</button>
+                  <button type="button" id="o-priority-urgent" class="status-opt"
+                          onclick="setOrderPriority('urgent')">مستعجل</button>
+                </div>
+              </div>
+              <div class="of-field">
+                <label>تاريخ الطلب</label>
+                <div class="of-ro" id="o-created-at">يُسجَّل تلقائياً عند الحفظ</div>
+              </div>
+              <div class="of-field">
+                <label for="o-payment">طريقة الدفع</label>
+                <select id="o-payment">
+                  <option value="cod" selected>عند الاستلام (COD)</option>
+                  <option value="transfer">تحويل بنكي</option>
+                  <option value="other">أخرى</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="of-card" data-of-step="2">
+            <h3>الحساب والأسعار</h3>
+            <p class="modal-sub">بالجنيه المصري — الإجمالي يتحسب تلقائي</p>
+            <div class="of-check-row">
+              <input type="checkbox" id="o-is-free" onchange="onOrderFreeToggle()">
+              <label for="o-is-free">طلب مجاني (سعر المنتج = 0)</label>
+            </div>
+            <div class="of-grid">
+              <div class="of-field">
+                <label for="o-order-price">سعر الطلب (ج.م)</label>
+                <input type="number" id="o-order-price" min="0" step="0.01" placeholder="0"
+                       oninput="updateOrderTotalPreview()">
+              </div>
+              <div class="of-field">
+                <label for="o-ship-price">سعر الشحن (ج.م)</label>
+                <input type="number" id="o-ship-price" min="0" step="0.01" placeholder="0"
+                       oninput="updateOrderTotalPreview()">
+              </div>
+            </div>
+            <div class="of-total-box">
+              <span class="lbl">الإجمالي المتوقع</span>
+              <span class="val" id="o-total-preview">0 ج.م</span>
+            </div>
+          </div>
+
+          <div class="of-card of-span-2" data-of-step="2">
+            <h3>الصور</h3>
+            <p class="modal-sub">صور الطفل المرجعية للطلب</p>
+            <div id="o-existing-photos-wrap" style="display:none">
+              <div class="of-field" style="margin-bottom:10px">
+                <label>صور مرفوعة — اضغط ✕ لحذف أي صورة</label>
+                <div id="o-existing-photos" class="o-photo-preview" style="margin-bottom:0"></div>
+              </div>
+            </div>
+            <div class="of-field">
+              <label>إضافة صور <span id="o-slots-label" style="color:var(--muted);font-weight:400">(حتى 8 صور)</span></label>
+              <label id="o-photo-drop" class="o-photo-drop">
+                <span id="o-photo-drop-text">
+                  اختر صور أو اسحبها هنا — يمكن تحديد أكتر من صورة في نفس الوقت
+                </span>
+                <input type="file" id="o-photos" accept="image/*" multiple hidden onchange="previewModalPhotos(this)">
+              </label>
+            </div>
+            <div id="o-photo-preview" class="o-photo-preview"></div>
+          </div>
+
+          <div class="of-card of-span-2" data-of-step="2">
+            <h3>ملف PDF</h3>
+            <p class="modal-sub">اختياري — حتى 50 MB</p>
+            <div id="o-pdf-zone" class="pdf-zone">
+              <span id="o-pdf-current"></span>
+              <label style="margin:0">
+                <span class="btn btn-sm btn-ghost" style="pointer-events:none">📤 اختر ملف PDF</span>
+                <input type="file" id="o-pdf-input" accept=".pdf,application/pdf" hidden onchange="previewPdf(this)">
+              </label>
+              <span id="o-pdf-selected" style="font-size:12px;color:var(--ok);display:none"></span>
+            </div>
           </div>
         </div>
 
         <div class="of-msg modal-msg" id="order-msg"></div>
         <div class="of-actions">
-          <button type="button" class="btn btn-primary" id="of-save-btn" onclick="submitOrderForm()">حفظ الطلب</button>
+          <button type="button" class="btn btn-ghost" id="of-back-step-btn" onclick="setOrderFormStep(1)" hidden>← رجوع لولي الأمر</button>
+          <button type="button" class="btn btn-primary" id="of-next-btn" onclick="goOrderFormNextStep()">التالي: بيانات الطفل ←</button>
+          <button type="button" class="btn btn-primary" id="of-save-btn" onclick="submitOrderForm(false)" hidden>حفظ الطلب</button>
+          <button type="button" class="btn btn-ghost" id="of-save-another-btn" onclick="submitOrderForm(true)" hidden>حفظ وإضافة طفل آخر</button>
           <button type="button" class="btn btn-ghost" onclick="cancelOrderForm()">إلغاء</button>
         </div>
       </div>
@@ -2290,6 +2778,10 @@
 let _soAll = [];          // all loaded special orders (status/search — full set)
 let _soFilter = 'all';    // current filter (all/pending/done)
 let _soParentKey = null;  // selected guardian key (null = all)
+let _soBoardCache = { pending: [], shipping: [], done: [] };
+let _soCollapsedParents = new Set(); // parent keys currently collapsed
+let _soGuardians = [];    // cached guardians list for the form picker
+let _soPrefillGuardianId = null; // when opening #order/new/g/<id>
 let _soEditId = null;     // null = new order, number = edit
 let _modalOrderId = null;
 let _existingPhotos = []; // filenames currently on server
@@ -2301,6 +2793,8 @@ let _obSessionId = null;
 let _obPhoto = null;
 let _obPageCount = 8;
 let _obBusy = false;
+let _obAbortBatch = false;
+let _obSlotErrors = {};
 let _obView = 'detail'; // detail | products | books-list | coloring
 let _obPackId = 'jobs';       // selected book type (scene pack)
 let _obPackExplicit = false;  // true when the admin just picked a type from the picker
@@ -2308,9 +2802,11 @@ let _obBookId = null;         // special_order_books.id — each child can have 
 let _obPdfUrl = null;
 let _obPdfFilename = null;
 let _obProvider = 'chatgpt';   // chatgpt | nanobanana | mock
+let _obGender = 'boy';         // boy | girl — for story Arabic conjugation
 let _obCoverMode = 'both';     // none | cover | ending | both
 let _obSlots = [];             // [{ id, kind, scene_id, title, status }]
 let _obLastScenes = []; // planned / generated scene ids
+let _obPickOrder = [];   // click-order for custom_mix (and general selection order)
 let _obStep = 'setup'; // setup|cover|pages|ending|pdf|done
 let _obState = {
   hasCover: false,
@@ -2505,6 +3001,7 @@ const SCENE_PACKS = [
     tags: {{ p.tags | tojson }}, age: {{ p.age | tojson }},
     kind: {{ p.kind | tojson }}, pages: {{ p.scenes | length }},
     {% if p.kind == 'story' %}moral: {{ p.moral | tojson }},{% endif %}
+    {% if p.kind == 'poster' %}orientation: {{ p.orientation | tojson }},{% endif %}
     scenes: [
       {% for s in p.scenes %}
       { id: {{ s.id | tojson }}, title: {{ s.title | tojson }}, emoji: {{ s.emoji | tojson }} },
@@ -2520,11 +3017,68 @@ function packById(id) {
   return SCENE_PACKS.find(p => p.id === id) || SCENE_PACKS[0];
 }
 
+function isPosterPack(packOrId) {
+  const p = typeof packOrId === 'string' ? packById(packOrId) : packOrId;
+  return !!(p && p.kind === 'poster');
+}
+
+function isStoryPack(packOrId) {
+  const p = typeof packOrId === 'string' ? packById(packOrId) : packOrId;
+  return !!(p && p.kind === 'story');
+}
+
+function posterSceneId(packOrId) {
+  const p = typeof packOrId === 'string' ? packById(packOrId) : packOrId;
+  if (p && p.scenes && p.scenes[0] && p.scenes[0].id) return p.scenes[0].id;
+  return 'poster';
+}
+
 /** Which pack do these scene ids belong to? Used when resuming a saved book. */
 function packForScenes(ids) {
   if (!ids || !ids.length) return null;
-  const first = ids[0];
-  return SCENE_PACKS.find(p => p.scenes.some(s => s.id === first)) || null;
+  const packs = new Set();
+  ids.forEach((id) => {
+    const p = SCENE_PACKS.find(pack =>
+      pack.id !== 'custom_mix' && (pack.scenes || []).some(s => s.id === id)
+    );
+    if (p) packs.add(p.id);
+  });
+  if (packs.size > 1) return packById('custom_mix');
+  if (packs.size === 1) return packById([...packs][0]);
+  return null;
+}
+
+function isCustomMixPack(packOrId) {
+  const id = typeof packOrId === 'string' ? packOrId : (packOrId && packOrId.id);
+  return id === 'custom_mix';
+}
+
+function coloringPacksForMix() {
+  return SCENE_PACKS.filter(p =>
+    (p.kind === 'coloring' || !p.kind) &&
+    p.id !== 'custom_mix' &&
+    Array.isArray(p.scenes) && p.scenes.length
+  );
+}
+
+function obMixedJobsHTML() {
+  return coloringPacksForMix().map(p => `
+    <div class="ob-mix-group" data-pack="${escHtml(p.id)}">
+      <div class="ob-mix-head">
+        <span>${p.emoji || ''}</span>
+        <span>${escHtml(p.title)}</span>
+        <small>${p.scenes.length} موقف</small>
+      </div>
+      <div class="qb-jobs">
+        ${p.scenes.map(s => `
+          <div class="qb-job" data-id="${escHtml(s.id)}" data-title="${escHtml(s.title)}"
+               data-from-pack="${escHtml(p.id)}"
+               onclick="obToggleJob(this); obEstimateCost()">
+            <span class="emoji">${s.emoji || ''}</span>
+            <span class="title">${escHtml(s.title)}</span>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
 }
 
 const sectionMeta = {
@@ -2535,17 +3089,23 @@ const sectionMeta = {
   payments:        { title: 'المدفوعات',       sub: 'سجل المعاملات المالية' },
   jobs:            { title: 'الوظائف',         sub: 'ترتيب الوظائف حسب الاستخدام' },
   'special-orders':{ title: 'طلبات خاصة',      sub: 'طلبات الواتساب — تسجيل وإدارة' },
+  'sales-leads':   { title: 'طلبات المبيعات',  sub: 'فورم الصفحة الرئيسية — صورة وبيانات العميل' },
+  'orders-pending':{ title: 'طلبات غير مكتملة', sub: 'كروت الأطفال — الحالة: غير مكتمل' },
+  'orders-shipping':{ title: 'طلبات قيد الشحن', sub: 'كروت الأطفال — الحالة: قيد الشحن' },
+  'orders-done':   { title: 'طلبات مكتملة',    sub: 'كروت الأطفال — الحالة: مكتمل' },
   'order-detail':  { title: 'تفاصيل الطلب',    sub: 'عرض وإدارة الطلب' },
   'order-form':    { title: 'طلب خاص',         sub: 'إضافة أو تعديل بيانات الطلب' },
 };
 
 function parseRoute(hash) {
   const h = (hash || '').replace(/^#/, '');
-  // #order/new — add order
-  if (h === 'order/new' || h === 'order-new') {
+  // #order/new[/g/123] — add order (optionally under existing guardian)
+  const mNew = h.match(/^order\/new(?:\/g\/(\d+))?$/);
+  if (mNew || h === 'order-new') {
     return {
       section: 'order-form', orderId: null, book: false, bookId: null, bookNew: false,
       formMode: 'new', status: null, parentKey: null,
+      guardianId: mNew && mNew[1] ? parseInt(mNew[1], 10) : null,
     };
   }
   // #order/123/book/new | #order/123/book/45 | #order/123/book | #order/123/edit | #order/123
@@ -2570,7 +3130,7 @@ function parseRoute(hash) {
         section: 'order-form',
         orderId: parseInt(m[1], 10),
         book: false, bookId: null, bookNew: false,
-        formMode: 'edit', status: null, parentKey: null,
+      formMode: 'edit', status: null, parentKey: null, guardianId: null,
       };
     }
     return {
@@ -2581,7 +3141,7 @@ function parseRoute(hash) {
     };
   }
   // #special-orders[/pending|done][/p/<parentKey>]
-  const mSo = h.match(/^special-orders(?:\/(pending|done|all))?(?:\/p\/(.+))?$/);
+  const mSo = h.match(/^special-orders(?:\/(pending|shipping|done|all))?(?:\/p\/(.+))?$/);
   if (mSo) {
     let parentKey = null;
     if (mSo[2]) {
@@ -2612,7 +3172,7 @@ function parseRoute(hash) {
 /** Canonical URL for the special-orders list (status + guardian filter). */
 function specialOrdersHash() {
   let h = '#special-orders';
-  if (_soFilter === 'pending' || _soFilter === 'done') h += '/' + _soFilter;
+  if (_soFilter === 'pending' || _soFilter === 'shipping' || _soFilter === 'done') h += '/' + _soFilter;
   if (_soParentKey) h += '/p/' + encodeURIComponent(_soParentKey);
   return h;
 }
@@ -2627,12 +3187,13 @@ function setAdminHash(nextHash, { replace = false } = {}) {
 
 function setStatusFilterUi(f) {
   document.querySelectorAll('#section-special-orders .filter-btn').forEach(b => {
-    b.classList.remove('active', 'active-done', 'active-pending');
+    b.classList.remove('active', 'active-done', 'active-pending', 'active-shipping');
     const df = b.getAttribute('data-filter');
     if (df === f) {
       if (f === 'all') b.classList.add('active');
       else if (f === 'done') b.classList.add('active-done');
       else if (f === 'pending') b.classList.add('active-pending');
+      else if (f === 'shipping') b.classList.add('active-shipping');
     }
   });
 }
@@ -2705,6 +3266,14 @@ function showSection(id, orderId) {
     setStatusFilterUi(_soFilter || 'all');
     loadOrders();
   }
+  if (id === 'sales-leads') {
+    loadSalesLeads();
+  }
+  const boardStatus = statusFromSection(id);
+  if (boardStatus) {
+    _obView = 'detail';
+    loadStatusBoard(boardStatus);
+  }
   if (id === 'order-detail' && orderId) {
     openOrderDetailPage(orderId);
   }
@@ -2713,13 +3282,18 @@ function showSection(id, orderId) {
   }
 }
 
-function showToast(msg, type = '') {
+function showToast(msg, type = '', ms) {
   const wrap = document.getElementById('toast-wrap');
+  if (!wrap) {
+    try { console.warn('[toast]', msg); } catch (_) {}
+    return;
+  }
   const t = document.createElement('div');
   t.className = 'toast' + (type ? ' ' + type : '');
   t.textContent = msg;
   wrap.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 350); }, 3000);
+  const hold = ms != null ? ms : (type === 'err' ? 7000 : 3500);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 350); }, hold);
 }
 
 /* ════════════════ Quick Book ════════════════ */
@@ -2745,22 +3319,36 @@ function qbUpdateSelCount() {
 }
 
 function qbSetPageCount(n, btn) {
+  n = parseInt(n, 10);
+  if (!Number.isFinite(n) || n < 1) n = 1;
+  const maxJobs = document.querySelectorAll('#qb-jobs .qb-job').length || 12;
+  if (n > maxJobs) n = maxJobs;
   _qbPageCount = n;
-  document.querySelectorAll('.qb-page-opt').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  else {
-    document.querySelectorAll('.qb-page-opt').forEach(b => {
-      b.classList.toggle('active', parseInt(b.dataset.pages, 10) === n);
-    });
+  const presets = [1, 8, 12];
+  document.querySelectorAll('#qb-page-opts .qb-page-opt').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.pages, 10) === n);
+  });
+  const custom = document.getElementById('qb-page-custom');
+  if (custom) custom.classList.toggle('active', !presets.includes(n));
+  const input = document.getElementById('qb-page-count-input');
+  if (input) {
+    input.max = String(maxJobs);
+    if (String(input.value) !== String(n)) input.value = String(n);
   }
   // trim selection if over limit
-  const selected = document.querySelectorAll('.qb-job.selected');
+  const selected = document.querySelectorAll('#qb-jobs .qb-job.selected');
   if (selected.length > n) {
     Array.from(selected).slice(n).forEach(el => el.classList.remove('selected'));
   }
   // auto-fill if empty or under
   if (qbSelectedIds().length < n) qbSelectAuto();
   else qbUpdateSelCount();
+}
+
+function qbApplyCustomPageCount() {
+  const input = document.getElementById('qb-page-count-input');
+  if (!input) return;
+  qbSetPageCount(input.value, null);
 }
 
 function qbToggleJob(el) {
@@ -3313,15 +3901,144 @@ async function submitDelete() {
 
 /* Status helper */
 function setOrderStatus(val) {
-  const btnPending = document.getElementById('o-status-pending');
-  const btnDone    = document.getElementById('o-status-done');
+  const btnPending  = document.getElementById('o-status-pending');
+  const btnShipping = document.getElementById('o-status-shipping');
+  const btnDone     = document.getElementById('o-status-done');
+  if (btnPending) btnPending.classList.remove('sel-pending');
+  if (btnShipping) btnShipping.classList.remove('sel-shipping');
+  if (btnDone) btnDone.classList.remove('sel-done');
   if (val === 'done') {
-    btnPending.classList.remove('sel-pending');
-    btnDone.classList.add('sel-done');
-  } else {
+    if (btnDone) btnDone.classList.add('sel-done');
+  } else if (val === 'shipping') {
+    if (btnShipping) btnShipping.classList.add('sel-shipping');
+  } else if (btnPending) {
     btnPending.classList.add('sel-pending');
-    btnDone.classList.remove('sel-done');
   }
+}
+
+function getOrderStatus() {
+  if (document.getElementById('o-status-done')?.classList.contains('sel-done')) return 'done';
+  if (document.getElementById('o-status-shipping')?.classList.contains('sel-shipping')) return 'shipping';
+  return 'pending';
+}
+
+function soStatusLabel(st) {
+  if (st === 'done') return 'مكتمل';
+  if (st === 'shipping') return 'قيد الشحن';
+  return 'غير مكتمل';
+}
+
+function soStatusBadge(st, big) {
+  const style = big ? ' style="font-size:13px"' : '';
+  if (st === 'done') return `<span class="badge badge-green"${style}>مكتمل</span>`;
+  if (st === 'shipping') return `<span class="badge"${style}>قيد الشحن</span>`;
+  return `<span class="badge badge-yellow"${style}>غير مكتمل</span>`;
+}
+
+function setOrderPriority(val) {
+  const n = document.getElementById('o-priority-normal');
+  const u = document.getElementById('o-priority-urgent');
+  if (!n || !u) return;
+  if (val === 'urgent') {
+    n.classList.remove('sel-pending');
+    u.classList.add('sel-done');
+  } else {
+    n.classList.add('sel-pending');
+    u.classList.remove('sel-done');
+  }
+}
+
+function getOrderPriority() {
+  const u = document.getElementById('o-priority-urgent');
+  return (u && u.classList.contains('sel-done')) ? 'urgent' : 'normal';
+}
+
+function formatEgp(val) {
+  if (val == null || val === '' || Number.isNaN(Number(val))) return '—';
+  const n = Number(val);
+  const s = Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
+  return s + ' ج.م';
+}
+
+function paymentMethodLabel(m) {
+  if (m === 'transfer') return 'تحويل بنكي';
+  if (m === 'other') return 'أخرى';
+  return 'عند الاستلام';
+}
+
+function onOrderFreeToggle() {
+  const free = document.getElementById('o-is-free')?.checked;
+  const price = document.getElementById('o-order-price');
+  if (price) {
+    price.disabled = !!free;
+    if (free) price.value = '0';
+  }
+  updateOrderTotalPreview();
+}
+
+function updateOrderTotalPreview() {
+  const el = document.getElementById('o-total-preview');
+  if (!el) return;
+  const free = !!document.getElementById('o-is-free')?.checked;
+  const orderP = free ? 0 : (parseFloat(document.getElementById('o-order-price')?.value) || 0);
+  const shipP = parseFloat(document.getElementById('o-ship-price')?.value) || 0;
+  el.textContent = formatEgp(orderP + shipP);
+}
+
+function resetOrderCommerceFields() {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('o-ship-address', '');
+  set('o-recipient', '');
+  set('o-alt-phone', '');
+  set('o-expected-delivery', '');
+  set('o-delivered-at', '');
+  set('o-order-price', '');
+  set('o-ship-price', '');
+  const free = document.getElementById('o-is-free');
+  if (free) free.checked = false;
+  const pay = document.getElementById('o-payment');
+  if (pay) pay.value = 'cod';
+  setOrderPriority('normal');
+  const created = document.getElementById('o-created-at');
+  if (created) created.textContent = 'يُسجَّل تلقائياً عند الحفظ';
+  onOrderFreeToggle();
+}
+
+function fillOrderCommerceFields(o) {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  set('o-ship-address', o.shipping_address || '');
+  set('o-recipient', o.recipient_name || '');
+  set('o-alt-phone', o.alt_phone || '');
+  set('o-expected-delivery', (o.expected_delivery_at || '').slice(0, 10));
+  set('o-delivered-at', (o.delivered_at || '').slice(0, 10));
+  set('o-order-price', o.order_price_egp != null ? o.order_price_egp : '');
+  set('o-ship-price', o.shipping_price_egp != null ? o.shipping_price_egp : '');
+  const free = document.getElementById('o-is-free');
+  if (free) free.checked = !!o.is_free;
+  const pay = document.getElementById('o-payment');
+  if (pay) pay.value = (o.payment_method || 'cod');
+  setOrderPriority(o.priority === 'urgent' ? 'urgent' : 'normal');
+  const created = document.getElementById('o-created-at');
+  if (created) created.textContent = o.created_at ? formatOrderDate(o.created_at) : 'يُسجَّل تلقائياً عند الحفظ';
+  onOrderFreeToggle();
+}
+
+function collectOrderCommercePayload() {
+  const free = !!document.getElementById('o-is-free')?.checked;
+  const orderRaw = document.getElementById('o-order-price')?.value;
+  const shipRaw = document.getElementById('o-ship-price')?.value;
+  return {
+    shipping_address: (document.getElementById('o-ship-address')?.value || '').trim(),
+    recipient_name: (document.getElementById('o-recipient')?.value || '').trim(),
+    alt_phone: (document.getElementById('o-alt-phone')?.value || '').trim(),
+    expected_delivery_at: (document.getElementById('o-expected-delivery')?.value || '').trim(),
+    delivered_at: (document.getElementById('o-delivered-at')?.value || '').trim(),
+    is_free: free,
+    order_price_egp: free ? 0 : (orderRaw === '' ? null : Number(orderRaw)),
+    shipping_price_egp: shipRaw === '' ? null : Number(shipRaw),
+    payment_method: document.getElementById('o-payment')?.value || 'cod',
+    priority: getOrderPriority(),
+  };
 }
 
 /* Existing photos in modal */
@@ -3369,7 +4086,8 @@ async function deleteModalPhoto(filename) {
 async function loadOrders(filter) {
   if (filter !== undefined) _soFilter = filter;
   const params = new URLSearchParams();
-  if (_soFilter && _soFilter !== 'all') params.set('status', _soFilter);
+  // Always load the full set (status filtered client-side) so we can split
+  // «شغّال / خلص» and keep accurate toolbar counts.
   const q = (document.getElementById('so-search')?.value || '').trim();
   if (q) params.set('q', q);
   const url = '/admin/api/special-orders' + (params.toString() ? '?' + params.toString() : '');
@@ -3387,7 +4105,6 @@ async function loadOrders(filter) {
     if (_soParentKey && !soBuildGuardians(_soAll).some(g => g.key === _soParentKey)) {
       _soParentKey = null;
     }
-    renderParentsBar();
     applyOrdersView();
   } catch(e) {
     console.error('loadOrders error:', e);
@@ -3410,7 +4127,138 @@ function filterOrders(f, btn) {
   _soFilter = f || 'all';
   setStatusFilterUi(_soFilter);
   setAdminHash(specialOrdersHash());
-  loadOrders();
+  // Status is filtered client-side — no need to refetch
+  applyOrdersView();
+}
+
+/* ── Status board pages (flat child cards) ── */
+const SO_STATUS_BOARDS = {
+  pending: {
+    section: 'orders-pending',
+    grid: 'osp-grid',
+    search: 'osp-search',
+    note: 'osp-results-note',
+    emptyIco: '⏳',
+    emptyMsg: 'مفيش طلبات غير مكتملة.',
+    label: 'غير مكتمل',
+  },
+  shipping: {
+    section: 'orders-shipping',
+    grid: 'oss-grid',
+    search: 'oss-search',
+    note: 'oss-results-note',
+    emptyIco: '🚚',
+    emptyMsg: 'مفيش طلبات قيد الشحن.',
+    label: 'قيد الشحن',
+  },
+  done: {
+    section: 'orders-done',
+    grid: 'osd-grid',
+    search: 'osd-search',
+    note: 'osd-results-note',
+    emptyIco: '✓',
+    emptyMsg: 'مفيش طلبات مكتملة.',
+    label: 'مكتمل',
+  },
+};
+
+function statusFromSection(id) {
+  if (id === 'orders-pending') return 'pending';
+  if (id === 'orders-shipping') return 'shipping';
+  if (id === 'orders-done') return 'done';
+  return null;
+}
+
+function activeStatusBoard() {
+  const active = document.querySelector('.section.active');
+  if (!active || !active.id) return null;
+  return statusFromSection(active.id.replace(/^section-/, ''));
+}
+
+function searchStatusBoard(status, val) {
+  clearTimeout(window._soBoardSearchTimer);
+  window._soBoardSearchTimer = setTimeout(() => loadStatusBoard(status), 300);
+}
+
+function soMatchQuery(o, q) {
+  if (!q) return true;
+  const hay = [
+    o.id, o.child_name, o.client_name, o.phone, o.assigned_to,
+    o.email, o.recipient_name, o.alt_phone, o.shipping_address,
+  ].map(x => String(x || '').toLowerCase()).join(' ');
+  return hay.includes(q.toLowerCase());
+}
+
+function renderStatusBoard(status, orders) {
+  const cfg = SO_STATUS_BOARDS[status];
+  if (!cfg) return;
+  const grid = document.getElementById(cfg.grid);
+  const note = document.getElementById(cfg.note);
+  if (!grid) return;
+  const q = (document.getElementById(cfg.search)?.value || '').trim();
+  const list = (orders || []).filter(o => soMatchQuery(o, q));
+  if (!list.length) {
+    grid.innerHTML = q
+      ? `<div class="so-empty"><span class="so-empty-ico">⌕</span>مفيش نتائج مطابقة للبحث.</div>`
+      : `<div class="so-empty"><span class="so-empty-ico">${cfg.emptyIco}</span>${cfg.emptyMsg}</div>`;
+  } else {
+    grid.innerHTML = list.map(o => orderCardHTML(o, {
+      idPrefix: status,
+      showParent: true,
+    })).join('');
+  }
+  if (note) {
+    note.textContent = q
+      ? `${list.length} نتيجة · حالة: ${cfg.label}`
+      : `${list.length} طلب · كروت أطفال · ${cfg.label}`;
+  }
+}
+
+async function loadStatusBoard(status) {
+  const cfg = SO_STATUS_BOARDS[status];
+  if (!cfg) return;
+  const grid = document.getElementById(cfg.grid);
+  const note = document.getElementById(cfg.note);
+  const params = new URLSearchParams();
+  params.set('status', status);
+  const q = (document.getElementById(cfg.search)?.value || '').trim();
+  if (q) params.set('q', q);
+  try {
+    const res = await fetch('/admin/api/special-orders?' + params.toString());
+    if (res.status === 401) {
+      window.location.href = '/admin/login';
+      return;
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'فشل التحميل');
+    const orders = data.orders || [];
+    _soBoardCache[status] = orders;
+    // Keep main cache loosely in sync for detail toggles
+    for (const o of orders) {
+      const i = _soAll.findIndex(x => x.id === o.id);
+      if (i >= 0) _soAll[i] = o;
+      else _soAll.push(o);
+    }
+    renderStatusBoard(status, orders);
+  } catch (e) {
+    console.error('loadStatusBoard error:', e);
+    if (grid) {
+      grid.innerHTML = `<div class="so-empty"><span class="so-empty-ico">⚠️</span>حدث خطأ أثناء التحميل. حاول مجدداً.</div>`;
+    }
+    if (note) note.textContent = '';
+  }
+}
+
+function refreshActiveOrdersView() {
+  const board = activeStatusBoard();
+  if (board) {
+    loadStatusBoard(board);
+    return;
+  }
+  const soSec = document.getElementById('section-special-orders');
+  if (soSec && soSec.classList.contains('active')) {
+    loadOrders();
+  }
 }
 
 /** Normalize phone digits for grouping the same guardian across kids. */
@@ -3423,8 +4271,11 @@ function soNormPhone(phone) {
   return d;
 }
 
-/** Group key: same phone (preferred) or same client_name; else "unknown". */
+/** Group key: real guardian_id when present, else phone/name fallback. */
 function soParentKey(o) {
+  if (o && o.guardian_id != null && o.guardian_id !== '') {
+    return 'g:' + String(o.guardian_id);
+  }
   const phone = soNormPhone(o && o.phone);
   if (phone && phone.length >= 8) return 'p:' + phone;
   const name = String((o && o.client_name) || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -3448,14 +4299,23 @@ function soBuildGuardians(orders) {
     if (!g) {
       g = {
         key,
+        guardianId: o.guardian_id || null,
         name: (o.client_name || '').trim() || 'غير محدد',
         phone: (o.phone || '').trim(),
         childNames: [],
         count: 0,
+        pending: 0,
+        shipping: 0,
+        done: 0,
+        orders: [],
       };
       map.set(key, g);
     }
     g.count += 1;
+    g.orders.push(o);
+    if (o.status === 'done') g.done += 1;
+    else if (o.status === 'shipping') g.shipping += 1;
+    else g.pending += 1;
     const cn = (o.child_name || '').trim();
     if (cn && !g.childNames.includes(cn)) g.childNames.push(cn);
     const nm = (o.client_name || '').trim();
@@ -3463,116 +4323,175 @@ function soBuildGuardians(orders) {
     if (!g.phone && o.phone) g.phone = String(o.phone).trim();
   }
   return [...map.values()].sort((a, b) => {
+    const aOpen = (a.pending || 0) + (a.shipping || 0);
+    const bOpen = (b.pending || 0) + (b.shipping || 0);
+    if ((bOpen > 0) !== (aOpen > 0)) return bOpen > 0 ? 1 : -1;
+    if (bOpen !== aOpen) return bOpen - aOpen;
     if (b.count !== a.count) return b.count - a.count;
     return a.name.localeCompare(b.name, 'ar');
   });
 }
 
 function soFilteredOrders() {
-  if (!_soParentKey) return _soAll.slice();
-  return _soAll.filter(o => soParentKey(o) === _soParentKey);
+  let list = _soAll.slice();
+  if (_soFilter === 'pending' || _soFilter === 'shipping' || _soFilter === 'done') {
+    list = list.filter(o => (o.status || 'pending') === _soFilter);
+  }
+  if (_soParentKey) list = list.filter(o => soParentKey(o) === _soParentKey);
+  return list;
 }
 
-/** Select guardian filter (+ update URL). Use null/'all' for everyone. */
+/** Focus one guardian family (+ update URL). Use null/'all' for everyone. */
 function selectParentFilter(key) {
   if (key === 'all' || key === '' || key == null) _soParentKey = null;
   else _soParentKey = String(key);
+  if (_soParentKey) _soCollapsedParents.delete(_soParentKey);
   setAdminHash(specialOrdersHash());
-  renderParentsBar();
   applyOrdersView();
-  // Scroll chips into view if needed
-  try {
-    const el = document.querySelector(
-      _soParentKey
-        ? `.so-parent-chip[data-parent-select="${CSS.escape(_soParentKey)}"]`
-        : '.so-parent-chip.is-all'
-    );
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-  } catch (_) {}
-  const g = _soParentKey && soBuildGuardians(_soAll).find(x => x.key === _soParentKey);
-  if (g) showToast(`أولاد «${g.name}» · ${soChildCountLabel(g.count)}`, 'ok');
+  if (_soParentKey) {
+    try {
+      const fam = document.querySelector(`.so-family[data-parent-key="${CSS.escape(_soParentKey)}"]`);
+      if (fam) fam.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (_) {}
+    const g = soBuildGuardians(_soAll).find(x => x.key === _soParentKey);
+    if (g) showToast(`أولاد «${g.name}» · ${soChildCountLabel(g.count)}`, 'ok');
+  }
 }
 
 function clearParentFilter() {
   selectParentFilter(null);
 }
 
-function renderParentsBar() {
-  const list = document.getElementById('so-parents-list');
-  const meta = document.getElementById('so-parents-meta');
-  const clearBtn = document.getElementById('so-parents-clear');
-  if (!list) return;
-
-  const guardians = soBuildGuardians(_soAll);
-  if (meta) {
-    meta.textContent = guardians.length
-      ? `· ${guardians.length} ولي أمر · ${_soAll.length} طفل`
-      : '';
+function toggleFamilyCollapse(key, ev) {
+  if (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
   }
-  if (clearBtn) clearBtn.hidden = !_soParentKey;
-
-  if (!_soAll.length) {
-    list.innerHTML = '<div class="muted" style="font-size:12.5px;padding:6px 2px">مفيش طلبات لعرض أولياء الأمور.</div>';
-    return;
-  }
-
-  const allActive = !_soParentKey ? ' active' : '';
-  const chips = [
-    `<button type="button" class="so-parent-chip is-all${allActive}"
-       role="option" aria-selected="${!_soParentKey}"
-       data-parent-select="all">
-      <div class="so-parent-chip-main">
-        <span class="so-parent-name">كل أولياء الأمور</span>
-        <span class="so-parent-sub">كل الأطفال في الفلتر</span>
-      </div>
-      <span class="so-parent-count">${_soAll.length}</span>
-    </button>`,
-  ];
-
-  for (const g of guardians) {
-    const active = _soParentKey === g.key ? ' active' : '';
-    const sub = g.phone
-      ? escHtml(g.phone)
-      : escHtml(g.childNames.slice(0, 2).join(' · ') || '—');
-    chips.push(`
-      <button type="button" class="so-parent-chip${active}"
-        role="option" aria-selected="${_soParentKey === g.key}"
-        title="${escHtml(g.name)} — ${soChildCountLabel(g.count)}"
-        data-parent-select="${escHtml(g.key)}">
-        <div class="so-parent-chip-main">
-          <span class="so-parent-name">${escHtml(g.name)}</span>
-          <span class="so-parent-sub">${sub} · ${soChildCountLabel(g.count)}</span>
-        </div>
-        <span class="so-parent-count" title="${soChildCountLabel(g.count)}">${g.count}</span>
-      </button>`);
-  }
-  list.innerHTML = chips.join('');
+  if (!key) return;
+  if (_soCollapsedParents.has(key)) _soCollapsedParents.delete(key);
+  else _soCollapsedParents.add(key);
+  try {
+    const fam = document.querySelector(`.so-family[data-parent-key="${CSS.escape(key)}"]`);
+    if (fam) fam.classList.toggle('collapsed', _soCollapsedParents.has(key));
+  } catch (_) {}
 }
 
 function applyOrdersView() {
   const note = document.getElementById('so-results-note');
+  const hint = document.getElementById('so-view-hint');
   const visible = soFilteredOrders();
   renderOrders(visible);
+  updateSoFilterCounts();
 
+  const guardians = soBuildGuardians(visible);
   if (!note) return;
   const q = (document.getElementById('so-search')?.value || '').trim();
+  const pendingN = _soAll.filter(o => (o.status || 'pending') === 'pending').length;
+  const shippingN = _soAll.filter(o => o.status === 'shipping').length;
+  const doneN = _soAll.filter(o => o.status === 'done').length;
   let base = '';
   if (q) base = `${_soAll.length} نتيجة بحث`;
-  else if (_soFilter === 'pending') base = `${_soAll.length} طلب معلّق`;
-  else if (_soFilter === 'done') base = `${_soAll.length} طلب مكتمل`;
-  else base = `${_soAll.length} طلب`;
+  else if (_soFilter === 'pending') base = `${pendingN} طلب غير مكتمل`;
+  else if (_soFilter === 'shipping') base = `${shippingN} طلب قيد الشحن`;
+  else if (_soFilter === 'done') base = `${doneN} طلب مكتمل`;
+  else base = `${_soAll.length} طلب · ${pendingN} غير مكتمل · ${shippingN} شحن · ${doneN} مكتمل`;
 
   if (_soParentKey) {
     const g = soBuildGuardians(_soAll).find(x => x.key === _soParentKey);
     const gName = g ? g.name : 'ولي الأمر';
-    note.textContent = `${soChildCountLabel(visible.length)} · ولي الأمر: ${gName} · (من ${base})`;
+    note.textContent = `${soChildCountLabel(visible.length)} · ولي الأمر: ${gName}`;
+    if (hint) {
+      hint.innerHTML = 'عرض ولي أمر واحد — <button type="button" class="so-family-clear" onclick="clearParentFilter()">عرض كل أولياء الأمور</button>';
+    }
   } else {
-    note.textContent = base;
+    note.textContent = `${guardians.length} ولي أمر · ${base}`;
+    if (hint) hint.textContent = 'العرض حسب ولي الأمر — فلتر: غير مكتملة / قيد الشحن / مكتملة';
   }
+}
+
+/** Toolbar counts from the full loaded set. */
+function updateSoFilterCounts() {
+  const allN = _soAll.length;
+  const pendingN = _soAll.filter(o => (o.status || 'pending') === 'pending').length;
+  const shippingN = _soAll.filter(o => o.status === 'shipping').length;
+  const doneN = _soAll.filter(o => o.status === 'done').length;
+  const set = (id, n) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(n);
+  };
+  set('so-count-all', allN);
+  set('so-count-pending', pendingN);
+  set('so-count-shipping', shippingN);
+  set('so-count-done', doneN);
+}
+
+function soFamilyHTML(g, kids) {
+  const collapsed = _soCollapsedParents.has(g.key) && !_soParentKey;
+  const focus = _soParentKey === g.key ? ' is-focus' : '';
+  const initial = (g.name || '?').trim().charAt(0) || '?';
+  let phoneHTML = '<span>—</span>';
+  if (g.phone) {
+    const rawPhone = String(g.phone).replace(/[^0-9]/g, '');
+    const waPhone = rawPhone.startsWith('0') ? '2' + rawPhone : rawPhone;
+    phoneHTML = `
+      <a class="so-family-phone" href="tel:${escHtml(g.phone)}" onclick="event.stopPropagation()">${escHtml(g.phone)}</a>
+      <a href="https://wa.me/${waPhone}" target="_blank" class="btn-whatsapp-icon"
+         title="واتساب" onclick="event.stopPropagation()">💬</a>`;
+  }
+  const stats = `
+    <span class="badge badge-yellow">${g.pending || 0} غير مكتمل</span>
+    <span class="badge">${g.shipping || 0} شحن</span>
+    <span class="badge badge-green">${g.done || 0} مكتمل</span>
+    <span class="badge">${soChildCountLabel(kids.length)}</span>`;
+
+  const sorted = kids.slice().sort((a, b) => {
+    const rank = (s) => (s === 'done' ? 2 : s === 'shipping' ? 1 : 0);
+    const ar = rank(a.status || 'pending');
+    const br = rank(b.status || 'pending');
+    if (ar !== br) return ar - br;
+    return (b.id || 0) - (a.id || 0);
+  });
+
+  const kidsHTML = sorted.length
+    ? sorted.map(o => orderCardHTML(o)).join('')
+    : '<div class="so-family-empty">مفيش أطفال في الفلتر الحالي.</div>';
+
+  const keyAttr = escHtml(g.key);
+  const focusBtn = _soParentKey === g.key
+    ? '<button type="button" class="so-family-clear" onclick="clearParentFilter()">عرض الكل</button>'
+    : `<button type="button" class="so-family-clear" data-parent-select="${keyAttr}">تركيز</button>`;
+  const addChildBtn = g.guardianId
+    ? `<button type="button" class="btn btn-sm btn-primary" onclick="openNewChildForGuardian(${Number(g.guardianId)})">+ طفل</button>`
+    : '';
+
+  return `
+  <section class="so-family${collapsed ? ' collapsed' : ''}${focus}" data-parent-key="${keyAttr}">
+    <div class="so-family-head" data-family-toggle="${keyAttr}" role="button" tabindex="0">
+      <div class="so-family-main">
+        <div class="so-family-avatar">${escHtml(initial)}</div>
+        <div class="so-family-meta">
+          <h3 class="so-family-name">${escHtml(g.name || 'غير محدد')}</h3>
+          <div class="so-family-sub">
+            ${phoneHTML}
+            <span>· ${escHtml(g.childNames.slice(0, 4).join('، ') || '—')}</span>
+          </div>
+        </div>
+      </div>
+      <div class="so-family-side" onclick="event.stopPropagation()">
+        <div class="so-family-stats">${stats}</div>
+        ${addChildBtn}
+        ${focusBtn}
+        <span class="so-family-chevron" aria-hidden="true">▾</span>
+      </div>
+    </div>
+    <div class="so-family-kids">${kidsHTML}</div>
+  </section>`;
 }
 
 function renderOrders(orders) {
   const grid = document.getElementById('so-grid');
+  if (!grid) return;
+
   if (!orders.length) {
     const q = (document.getElementById('so-search')?.value || '').trim();
     if (_soParentKey) {
@@ -3584,7 +4503,9 @@ function renderOrders(orders) {
     }
     return;
   }
-  grid.innerHTML = orders.map(o => orderCardHTML(o)).join('');
+
+  const guardians = soBuildGuardians(orders);
+  grid.innerHTML = guardians.map(g => soFamilyHTML(g, g.orders)).join('');
 }
 
 function photoURL(orderId, filename) {
@@ -3596,23 +4517,15 @@ function formatOrderDate(raw) {
   return String(raw).slice(0, 16).replace('T', ' ');
 }
 
-function orderCardHTML(o) {
-  const isDone = o.status === 'done';
-  const statusBadge = isDone
-    ? '<span class="badge badge-green">مكتمل</span>'
-    : '<span class="badge badge-yellow">معلّق</span>';
-
-  let phoneCell = '<span class="so-info-value muted">—</span>';
-  if (o.phone) {
-    const rawPhone = String(o.phone).replace(/[^0-9]/g, '');
-    const waPhone = rawPhone.startsWith('0') ? '2' + rawPhone : rawPhone;
-    phoneCell = `
-      <div class="so-info-phone">
-        <a class="phone-num" href="tel:${escHtml(o.phone)}" onclick="event.stopPropagation()">${escHtml(o.phone)}</a>
-        <a href="https://wa.me/${waPhone}" target="_blank" class="btn-whatsapp-icon"
-           title="واتساب" onclick="event.stopPropagation()">💬</a>
-      </div>`;
-  }
+function orderCardHTML(o, opts = {}) {
+  const st = o.status || 'pending';
+  const statusBadge = soStatusBadge(st);
+  const urgentBadge = o.priority === 'urgent'
+    ? '<span class="badge badge-red">مستعجل</span>'
+    : '';
+  const freeBadge = o.is_free
+    ? '<span class="badge badge-blue">مجاني</span>'
+    : '';
 
   const flags = [];
   if (o.photos && o.photos.length) {
@@ -3625,17 +4538,17 @@ function orderCardHTML(o) {
     flags.push('<span class="so-flag on-share">رابط نشط</span>');
   }
 
-  const toggleLabel = isDone ? '↩ معلّق' : '✓ مكتمل';
-  const toggleClass = isDone ? 'btn-ghost' : 'btn-success';
+  const toggleLabel = st === 'pending' ? '→ للشحن' : (st === 'shipping' ? '✓ مكتمل' : '↩ غير مكتمل');
+  const toggleClass = st === 'done' ? 'btn-ghost' : (st === 'shipping' ? 'btn-success' : 'btn-primary');
   const date = formatOrderDate(o.created_at);
-  const parentKey = soParentKey(o);
-  const siblings = _soAll.filter(x => soParentKey(x) === parentKey).length;
-  const kidsNote = siblings > 1
-    ? `<span class="so-parent-kids-count"> · ${soChildCountLabel(siblings)}</span>`
+  const cardId = (opts.idPrefix ? opts.idPrefix + '-' : '') + 'so-card-' + o.id;
+  const showParent = !!opts.showParent;
+  const parentLine = showParent
+    ? `<div class="so-client-line">ولي الأمر: <strong>${escHtml(o.client_name || '—')}</strong>${o.phone ? ' · ' + escHtml(o.phone) : ''}</div>`
     : '';
 
   return `
-  <div class="so-card status-${escHtml(o.status || 'pending')}" id="so-card-${o.id}"
+  <div class="so-card status-${escHtml(o.status || 'pending')}" id="${escHtml(cardId)}"
        onclick="openOrderDetailPage(${o.id})" role="button" tabindex="0"
        onkeydown="if(event.key==='Enter')openOrderDetailPage(${o.id})">
     <div class="so-card-head">
@@ -3643,33 +4556,27 @@ function orderCardHTML(o) {
         <div class="so-card-meta-top">
           <span class="so-id-badge">#${o.id}</span>
           ${statusBadge}
+          ${urgentBadge}
+          ${freeBadge}
         </div>
         <div class="so-child-name-text">${escHtml(o.child_name || 'بدون اسم')}</div>
-        <div class="so-client-line">
-          ولي الأمر:
-          <button type="button" class="so-parent-name-btn"
-            data-parent-select="${escHtml(parentKey)}"
-            title="عرض أطفال ولي الأمر ده"
-            onclick="event.stopPropagation()">
-            <strong>${escHtml(o.client_name || 'غير محدد')}</strong>
-          </button>${kidsNote}
-          <button type="button" class="so-client-filter-link"
-            data-parent-select="${escHtml(parentKey)}"
-            title="عرض أطفال ولي الأمر ده"
-            onclick="event.stopPropagation()">فلتر</button>
-        </div>
+        ${parentLine}
       </div>
     </div>
 
     <div class="so-card-body">
       <div class="so-info-list">
         <div class="so-info-row">
-          <span class="so-info-label">التليفون</span>
-          ${phoneCell}
-        </div>
-        <div class="so-info-row">
           <span class="so-info-label">المسؤول</span>
           <span class="so-info-value ${o.assigned_to ? '' : 'muted'}">${escHtml(o.assigned_to || 'غير معيّن')}</span>
+        </div>
+        <div class="so-info-row">
+          <span class="so-info-label">الإجمالي</span>
+          <span class="so-info-value">${o.is_free && !(o.shipping_price_egp > 0) ? 'مجاني' : formatEgp(o.order_total_egp)}</span>
+        </div>
+        <div class="so-info-row">
+          <span class="so-info-label">التسليم</span>
+          <span class="so-info-value mono" style="font-size:12px">${o.delivered_at ? ('تم ' + String(o.delivered_at).slice(0,10)) : (o.expected_delivery_at ? String(o.expected_delivery_at).slice(0,10) : '—')}</span>
         </div>
         <div class="so-info-row">
           <span class="so-info-label">التاريخ</span>
@@ -3694,6 +4601,9 @@ async function openOrderDetailPage(id, opts = {}) {
   const openBook = !!(opts.openBook || opts.book);
   const bookId = opts.bookId != null ? opts.bookId : null;
   const bookNew = !!opts.bookNew;
+  if (opts.productHint === 'poster') {
+    try { sessionStorage.setItem('obProductHint', 'poster'); } catch (_) {}
+  }
   let routeHash = '#order/' + id;
   if (openBook) {
     if (bookId) routeHash = '#order/' + id + '/book/' + bookId;
@@ -3714,12 +4624,12 @@ async function openOrderDetailPage(id, opts = {}) {
   const subEl   = document.getElementById('page-sub');
   if (titleEl) {
     titleEl.textContent = openBook
-      ? (bookId ? `كتاب #${bookId} · طلب #${id}` : `كتب الطفل · طلب #${id}`)
+      ? (bookId ? `منتج #${bookId} · طلب #${id}` : `كتب وبوسترات · طلب #${id}`)
       : 'تفاصيل الطلب #' + id;
   }
   if (subEl) {
     subEl.textContent = openBook
-      ? (bookId ? 'توليد وحفظ الكتاب' : 'كل كتاب في صفحة مستقلة — والطفل ممكن يكون ليه أكتر من كتاب')
+      ? (bookId ? 'توليد وحفظ المنتج' : 'كتب تلوين وقصص وبوسترات A3 — كل منتج مستقل')
       : 'عرض وإدارة الطلب';
   }
 
@@ -3774,12 +4684,16 @@ function renderOrderDetail(o) {
   const root = document.getElementById('so-detail-root');
   if (!root || !o) return;
 
-  const isDone = o.status === 'done';
-  const statusBadge = isDone
-    ? '<span class="badge badge-green" style="font-size:13px">مكتمل</span>'
-    : '<span class="badge badge-yellow" style="font-size:13px">معلّق</span>';
-  const toggleLabel = isDone ? '↩ تحويل لمعلّق' : '✓ تحديد كمكتمل';
-  const toggleClass = isDone ? 'btn-ghost' : 'btn-success';
+  const st = o.status || 'pending';
+  const statusBadge = soStatusBadge(st, true);
+  const urgentBadge = o.priority === 'urgent'
+    ? '<span class="badge badge-red" style="font-size:13px">مستعجل</span>'
+    : '';
+  const freeBadge = o.is_free
+    ? '<span class="badge badge-blue" style="font-size:13px">مجاني</span>'
+    : '';
+  const toggleLabel = st === 'pending' ? '→ تحويل لقيد الشحن' : (st === 'shipping' ? '✓ تحديد كمكتمل' : '↩ غير مكتمل');
+  const toggleClass = st === 'done' ? 'btn-ghost' : (st === 'shipping' ? 'btn-success' : 'btn-primary');
 
   let phoneHTML = '<span class="muted">—</span>';
   let waBtn = '';
@@ -3866,6 +4780,8 @@ function renderOrderDetail(o) {
       </div>
       <div class="so-detail-hero-actions">
         ${statusBadge}
+        ${urgentBadge}
+        ${freeBadge}
         ${waBtn}
         <button class="btn btn-primary" onclick="openBookFlow(${o.id})">كتب الطفل</button>
         <button class="btn ${toggleClass}" onclick="toggleStatus(${o.id}, '${escHtml(o.status)}')">${toggleLabel}</button>
@@ -3883,8 +4799,9 @@ function renderOrderDetail(o) {
             <span>افتح كتاب محفوظ أو أضف كتاب جديد بنوع مختلف</span>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button type="button" class="btn btn-primary" onclick="openBookFlow(${o.id})">عرض كل الكتب</button>
+            <button type="button" class="btn btn-primary" onclick="openBookFlow(${o.id})">عرض كل المنتجات</button>
             <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id}, { openBook:true, bookNew:true })">+ كتاب جديد</button>
+            <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id}, { openBook:true, bookNew:true, productHint:'poster' })">+ بوستر جديد</button>
           </div>
         </div>
         <div id="so-order-books-mini">جاري تحميل الكتب...</div>
@@ -3912,6 +4829,62 @@ function renderOrderDetail(o) {
           <div class="so-detail-row">
             <span class="so-d-label">المسؤول</span>
             <span class="so-d-value">${escHtml(o.assigned_to || 'غير معيّن')}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">تاريخ الطلب</span>
+            <span class="so-d-value mono">${formatOrderDate(o.created_at)}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">الأولوية</span>
+            <span class="so-d-value">${o.priority === 'urgent' ? 'مستعجل' : 'عادي'}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="so-detail-card">
+        <h3 class="so-detail-section-title">الشحن والتسليم</h3>
+        <div class="so-detail-rows">
+          <div class="so-detail-row">
+            <span class="so-d-label">المستلم</span>
+            <span class="so-d-value">${escHtml(o.recipient_name || o.client_name || '—')}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">تليفون بديل</span>
+            <span class="so-d-value">${escHtml(o.alt_phone || '—')}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">العنوان</span>
+            <span class="so-d-value" style="white-space:pre-wrap">${escHtml(o.shipping_address || '—')}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">متوقع</span>
+            <span class="so-d-value mono">${o.expected_delivery_at ? String(o.expected_delivery_at).slice(0,10) : '—'}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">تم التسليم</span>
+            <span class="so-d-value mono">${o.delivered_at ? String(o.delivered_at).slice(0,10) : '—'}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="so-detail-card">
+        <h3 class="so-detail-section-title">الحساب والدفع</h3>
+        <div class="so-detail-rows">
+          <div class="so-detail-row">
+            <span class="so-d-label">سعر الطلب</span>
+            <span class="so-d-value">${o.is_free ? 'مجاني' : formatEgp(o.order_price_egp)}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">الشحن</span>
+            <span class="so-d-value">${formatEgp(o.shipping_price_egp)}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">الإجمالي</span>
+            <span class="so-d-value highlight">${formatEgp(o.order_total_egp)}</span>
+          </div>
+          <div class="so-detail-row">
+            <span class="so-d-label">الدفع</span>
+            <span class="so-d-value">${escHtml(paymentMethodLabel(o.payment_method))}</span>
           </div>
         </div>
       </div>
@@ -3962,12 +4935,14 @@ async function loadOrderBooksMini(orderId) {
     }
     box.innerHTML = `<div class="ob-products" style="margin:0">${books.map(b => {
       const pack = b.pack || {};
+      const kind = b.product_kind || pack.kind || 'coloring';
+      const isPoster = kind === 'poster';
       return `
-        <button type="button" class="ob-product" style="text-align:right"
+        <button type="button" class="ob-product ${isPoster ? 'poster' : (kind === 'story' ? 'story' : '')}" style="text-align:right"
                 onclick="openOrderDetailPage(${orderId}, { openBook:true, bookId:${b.id} })">
-          <span class="emoji">${escHtml(pack.emoji || '📗')}</span>
-          <div class="name">${escHtml(b.title || pack.title || 'كتاب')}</div>
-          <div class="desc">${escHtml(b.current_step_label || '—')} · صفحات ${escHtml(String(b.pages_summary || '—'))}${b.pdf_ready ? ' · PDF ✓' : ''}</div>
+          <span class="emoji">${escHtml(pack.emoji || (isPoster ? '🖼️' : '📗'))}</span>
+          <div class="name">${escHtml(b.title || pack.title || (isPoster ? 'بوستر' : 'كتاب'))}</div>
+          <div class="desc">${escHtml(b.current_step_label || '—')} · ${isPoster ? escHtml(String(b.pages_summary || 'بوستر A3')) : ('صفحات ' + escHtml(String(b.pages_summary || '—')))}${b.pdf_ready ? ' · PDF ✓' : ''}</div>
         </button>`;
     }).join('')}</div>`;
   } catch (e) {
@@ -3988,12 +4963,12 @@ async function renderOrderBooksList(o) {
   if (!root || !o) return;
   const titleEl = document.getElementById('page-title');
   const subEl = document.getElementById('page-sub');
-  if (titleEl) titleEl.textContent = `كتب «${o.child_name || 'الطفل'}» · طلب #${o.id}`;
-  if (subEl) subEl.textContent = 'كل كتاب ليه صفحة مستقلة — تقدر تفتحه أو تضيف كتاب جديد';
+  if (titleEl) titleEl.textContent = `كتب وبوسترات «${o.child_name || 'الطفل'}» · طلب #${o.id}`;
+  if (subEl) subEl.textContent = 'كل منتج ليه صفحة مستقلة — كتاب أو بوستر A3';
   if (location.hash !== '#order/' + o.id + '/book') {
     history.pushState(null, '', '#order/' + o.id + '/book');
   }
-  root.innerHTML = '<div class="so-detail-loading">جاري تحميل كتب الطفل...</div>';
+  root.innerHTML = '<div class="so-detail-loading">جاري تحميل كتب وبوسترات الطفل...</div>';
 
   let books = [];
   try {
@@ -4011,34 +4986,43 @@ async function renderOrderBooksList(o) {
   const cards = books.length
     ? books.map(b => {
         const pack = b.pack || {};
+        const kind = b.product_kind || pack.kind || 'coloring';
+        const isPoster = kind === 'poster';
         const status = b.current_step_label || b.current_step || '—';
         const pages = b.pages_summary || '—';
         const pdfBtn = b.pdf_ready && b.pdf_filename
           ? `<a class="btn btn-sm btn-success" href="/admin/special-orders/${o.id}/books/${b.id}/pdf/${encodeURIComponent(b.pdf_filename)}" target="_blank" onclick="event.stopPropagation()">PDF</a>`
           : '<span class="muted" style="font-size:12px">PDF لسه</span>';
+        const openLabel = isPoster ? 'فتح البوستر' : 'فتح الكتاب';
+        const delLabel = isPoster ? 'حذف' : 'حذف';
         return `
-        <div class="ob-product" role="button" tabindex="0"
+        <div class="ob-product ${isPoster ? 'poster' : (kind === 'story' ? 'story' : '')}" role="button" tabindex="0"
              onclick="openOrderDetailPage(${o.id}, { openBook:true, bookId:${b.id} })"
              style="text-align:right;cursor:pointer">
-          <span class="emoji">${escHtml(pack.emoji || '📗')}</span>
-          <div class="name">${escHtml(b.title || pack.title || 'كتاب')}</div>
+          <span class="ob-tags">
+            ${isPoster ? '<span class="ob-tag poster">بوستر A3</span>' : ''}
+            ${kind === 'story' ? '<span class="ob-tag new">قصة</span>' : ''}
+            ${kind === 'coloring' ? '<span class="ob-tag popular">تلوين</span>' : ''}
+          </span>
+          <span class="emoji">${escHtml(pack.emoji || (isPoster ? '🖼️' : '📗'))}</span>
+          <div class="name">${escHtml(b.title || pack.title || (isPoster ? 'بوستر' : 'كتاب'))}</div>
           <div class="desc">
             ${escHtml(pack.title || '')}<br>
             المرحلة: <strong>${escHtml(status)}</strong>
-            · صفحات: ${escHtml(String(pages))}
+            · ${isPoster ? escHtml(String(pages)) : ('صفحات: ' + escHtml(String(pages)))}
             ${b.pdf_ready ? ' · PDF ✓' : ''}
           </div>
           <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap" onclick="event.stopPropagation()">
             <button type="button" class="btn btn-sm btn-primary"
-              onclick="openOrderDetailPage(${o.id}, { openBook:true, bookId:${b.id} })">فتح الكتاب</button>
+              onclick="openOrderDetailPage(${o.id}, { openBook:true, bookId:${b.id} })">${openLabel}</button>
             ${pdfBtn}
             <button type="button" class="btn btn-sm btn-danger"
-              onclick="deleteOrderBook(${o.id}, ${b.id})">حذف</button>
+              onclick="deleteOrderBook(${o.id}, ${b.id})">${delLabel}</button>
           </div>
         </div>`;
       }).join('')
     : `<div class="so-detail-card full" style="grid-column:1/-1">
-         <p class="hint" style="margin:0">لسه مفيش كتب لهذا الطفل. اضغط «كتاب جديد» واختار النوع.</p>
+         <p class="hint" style="margin:0">لسه مفيش منتجات لهذا الطفل. اضغط «كتاب جديد» أو «بوستر جديد».</p>
        </div>`;
 
   root.innerHTML = `
@@ -4047,15 +5031,18 @@ async function renderOrderBooksList(o) {
       <div class="so-detail-hero-main">
         <div class="so-detail-icon">📚</div>
         <div>
-          <h2>كتب «${escHtml(o.child_name || 'الطفل')}»</h2>
-          <p class="sub">طلب #${o.id} · ${books.length} كتاب</p>
+          <h2>كتب وبوسترات «${escHtml(o.child_name || 'الطفل')}»</h2>
+          <p class="sub">طلب #${o.id} · ${books.length} منتج</p>
         </div>
       </div>
-      <button type="button" class="btn btn-primary" onclick="openOrderDetailPage(${o.id}, { openBook:true, bookNew:true })">+ كتاب جديد</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn btn-primary" onclick="openOrderDetailPage(${o.id}, { openBook:true, bookNew:true })">+ كتاب جديد</button>
+        <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id}, { openBook:true, bookNew:true, productHint:'poster' })">+ بوستر جديد</button>
+      </div>
     </div>
     <div class="so-detail-card full">
-      <h3 class="so-detail-section-title">الكتب المحفوظة</h3>
-      <p class="hint" style="margin:-4px 0 12px">اضغط أي كتاب يفتح في صفحة لوحده. كل كتاب مستقل (غلاف + صفحات تلوين + نهاية + PDF).</p>
+      <h3 class="so-detail-section-title">المنتجات المحفوظة</h3>
+      <p class="hint" style="margin:-4px 0 12px">اضغط أي عنصر يفتح في صفحة لوحده. الكتب والبوسترات مستقلين.</p>
       <div class="ob-products">${cards}</div>
     </div>
   `;
@@ -4082,20 +5069,24 @@ function renderBookProductPicker(o) {
   if (!root || !o) return;
   const titleEl = document.getElementById('page-title');
   const subEl = document.getElementById('page-sub');
-  if (titleEl) titleEl.textContent = 'كتاب جديد · طلب #' + o.id;
-  if (subEl) subEl.textContent = 'اختار نوع الكتاب — هيتفتح في صفحة مستقلة';
+  if (titleEl) titleEl.textContent = 'منتج جديد · طلب #' + o.id;
+  if (subEl) subEl.textContent = 'اختار كتاب تلوين أو قصة أو بوستر A3';
   if (location.hash !== '#order/' + o.id + '/book/new') {
     history.pushState(null, '', '#order/' + o.id + '/book/new');
   }
 
+  const coloring = SCENE_PACKS.filter(p => p.kind === 'coloring' || !p.kind);
+  const stories = SCENE_PACKS.filter(p => p.kind === 'story');
+  const posters = SCENE_PACKS.filter(p => p.kind === 'poster');
+
   root.innerHTML = `
-    <button type="button" class="so-detail-back" onclick="openOrderDetailPage(${o.id}, { openBook:true })">← رجوع لقائمة كتب الطفل</button>
+    <button type="button" class="so-detail-back" onclick="openOrderDetailPage(${o.id}, { openBook:true })">← رجوع لقائمة الطفل</button>
     <div class="so-detail-hero" style="margin-bottom:16px">
       <div class="so-detail-hero-main">
         <div class="so-detail-icon">✨</div>
         <div>
-          <h2>أضف كتاب جديد</h2>
-          <p class="sub">لـ «${escHtml(o.child_name || 'الطفل')}» · الكتب القديمة بتفضل زي ما هي</p>
+          <h2>أضف منتج جديد</h2>
+          <p class="sub">لـ «${escHtml(o.child_name || 'الطفل')}» · المنتجات القديمة بتفضل زي ما هي</p>
         </div>
       </div>
     </div>
@@ -4103,7 +5094,7 @@ function renderBookProductPicker(o) {
       <h3 class="so-detail-section-title">🎨 كتب التلوين</h3>
       <p class="hint" style="margin:-4px 0 12px">صفحات أبيض وأسود بخطوط واضحة — الطفل بيلوّنها. تختار المواقف اللي تحبها.</p>
       <div class="ob-products">
-        ${packCardsHTML(o, SCENE_PACKS.filter(p => p.kind !== 'story'), true)}
+        ${packCardsHTML(o, coloring, true)}
       </div>
     </div>
 
@@ -4113,17 +5104,36 @@ function renderBookProductPicker(o) {
         قصة كاملة ملوّنة والطفل هو بطلها — صفحاتها بترتيب ثابت وكل صفحة عليها سطر بالعربي.
       </p>
       <div class="ob-products">
-        ${packCardsHTML(o, SCENE_PACKS.filter(p => p.kind === 'story'), false)}
+        ${packCardsHTML(o, stories, false)}
+      </div>
+    </div>
+
+    <div class="so-detail-card full" style="margin-top:14px" id="ob-poster-picker-section">
+      <h3 class="so-detail-section-title">🖼️ البوسترات (A3)</h3>
+      <p class="hint" style="margin:-4px 0 12px">
+        صفحة تلوين واحدة بمقاس A3 — الطفل ظاهر أكتر من مرة في نفس البوستر. مفيش غلاف ولا صفحات متعددة.
+        دقتها أعلى (2K) ومناسبة للطباعة.
+      </p>
+      <div class="ob-products">
+        ${packCardsHTML(o, posters, false)}
       </div>
     </div>
   `;
 
   markOwnedPackCards(o.id);
+  // Scroll to posters if launched via «بوستر جديد»
+  try {
+    if (sessionStorage.getItem('obProductHint') === 'poster') {
+      sessionStorage.removeItem('obProductHint');
+      const el = document.getElementById('ob-poster-picker-section');
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+    }
+  } catch (_) {}
 }
 
 function packCardsHTML(o, packs, highlightFirst) {
   return packs.map((p, i) => `
-    <button type="button" class="ob-product ${highlightFirst && i === 0 ? 'primary' : ''} ${p.kind === 'story' ? 'story' : ''}"
+    <button type="button" class="ob-product ${highlightFirst && i === 0 ? 'primary' : ''} ${p.kind === 'story' ? 'story' : ''} ${p.kind === 'poster' ? 'poster' : ''} ${p.id === 'custom_mix' ? 'custom-mix' : ''}"
             data-pack="${escHtml(p.id)}"
             onclick="startOrderColoringBook(${o.id}, '${escHtml(p.id)}')">
       <span class="ob-tags" data-tags-for="${escHtml(p.id)}">
@@ -4137,7 +5147,9 @@ function packCardsHTML(o, packs, highlightFirst) {
         ? `<div class="ob-product-moral">💡 ${escHtml(p.moral)}</div>` : ''}
       <div class="ob-product-age">
         ${p.age ? `👶 ${escHtml(p.age)}` : ''}
+        ${p.id === 'custom_mix' ? ' · 🔀 امزج أكتر من نوع' : ''}
         ${p.kind === 'story' ? ` · 📄 ${p.pages} صفحات بترتيب ثابت` : ''}
+        ${p.kind === 'poster' ? ` · 🖼️ صفحة واحدة · A3${p.orientation === 'landscape' ? ' عرضي' : ''}` : ''}
       </div>
     </button>`).join('');
 }
@@ -4182,17 +5194,18 @@ async function startOrderColoringBook(orderId, packId) {
     return;
   }
   const pack = packById(packId);
+  const isPoster = isPosterPack(pack);
   try {
-    showToast('جاري إنشاء صفحة الكتاب...', 'ok');
+    showToast(isPoster ? 'جاري إنشاء صفحة البوستر...' : 'جاري إنشاء صفحة الكتاب...', 'ok');
     const res = await fetch(`/admin/api/special-orders/${orderId}/books`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pack_id: pack.id, title: pack.book_title || pack.title }),
     });
     const data = await parseJsonResponse(res);
-    if (!res.ok) throw new Error(data.error || 'فشل إنشاء الكتاب');
+    if (!res.ok) throw new Error(data.error || 'فشل إنشاء المنتج');
     const bookId = data.book_id || (data.book && data.book.id);
-    if (!bookId) throw new Error('السيرفر مرجعش رقم الكتاب');
+    if (!bookId) throw new Error('السيرفر مرجعش رقم المنتج');
     _obPackId = pack.id;
     _obPackExplicit = true;
     _obBookId = bookId;
@@ -4214,14 +5227,18 @@ async function openNamedOrderBook(orderId, bookId) {
   _obPageJobs = {};
   _obPdfUrl = null;
   _obPdfFilename = null;
+  _obSlotErrors = {};
 
   try {
     const res = await fetch(`/admin/api/special-orders/${orderId}/books/${bookId}`);
     const data = await parseJsonResponse(res);
-    if (!res.ok) throw new Error(data.error || 'الكتاب مش موجود');
+    if (!res.ok) throw new Error(data.error || 'المنتج مش موجود');
     if (data.order) _obOrder = data.order;
     if (data.pack_id) {
       _obPackId = data.pack_id;
+      _obPackExplicit = true;
+    } else if (data.book && data.book.pack_id) {
+      _obPackId = data.book.pack_id;
       _obPackExplicit = true;
     }
     // Seed progress fields onto order for wizard defaults (per book, not order-level)
@@ -4237,13 +5254,231 @@ async function openNamedOrderBook(orderId, bookId) {
     }
     if (data.download_url) _obPdfUrl = data.download_url;
     if (data.pdf_filename) _obPdfFilename = data.pdf_filename;
+
+    const pack = packById(_obPackId || progress.pack_id || (data.book && data.book.pack_id));
+    if (isPosterPack(pack)) {
+      _obCoverMode = 'none';
+      _obPageCount = 1;
+      _obLastScenes = [posterSceneId(pack)];
+      renderOrderPoster(_obOrder, data, pack);
+      obApplyStatusPayload(data);
+      await obEnsureSession({ forceNew: false });
+      opRefreshPosterPreview();
+      return;
+    }
+
     renderOrderColoringBook(_obOrder);
     obApplyStatusPayload(data);
     await obEnsureSession({ forceNew: false });
     obRenderWizardUI();
   } catch (e) {
-    showToast(e.message || 'فشل فتح الكتاب', 'err');
+    showToast(e.message || 'فشل فتح المنتج', 'err');
     openOrderDetailPage(orderId, { openBook: true });
+  }
+}
+
+/** Simplified A3 poster workspace: photo + name + one generate → one A3 PDF. */
+function renderOrderPoster(o, statusData, pack) {
+  _obView = 'poster';
+  const root = document.getElementById('so-detail-root');
+  if (!root || !o) return;
+  const titleEl = document.getElementById('page-title');
+  const subEl = document.getElementById('page-sub');
+  if (titleEl) titleEl.textContent = `${pack.emoji || '🖼️'} ${pack.title || 'بوستر'} · #${_obBookId}`;
+  if (subEl) subEl.textContent = 'بوستر تلوين A3 — صورة واحدة · دقة أعلى للطباعة';
+
+  const photos = o.photos || [];
+  if (!_obPhoto && photos.length) _obPhoto = photos[0];
+  const name = (statusData && statusData.progress && statusData.progress.child_name)
+    || o.child_name || '';
+  const cg = Number(COST_RATES.poster_chatgpt || COST_RATES.chatgpt || 0.06).toFixed(2);
+  const nb = Number(COST_RATES.poster_nanobanana || COST_RATES.nanobanana || 0.08).toFixed(2);
+  const ori = pack.orientation === 'landscape' ? 'A3 عرضي' : 'A3 طولي';
+  const photoPick = photos.length
+    ? photos.map((fn, i) => `
+        <button type="button" class="ob-photo-thumb ${_obPhoto === fn ? 'selected' : ''}"
+                data-photo="${escHtml(fn)}" onclick="obPickPhoto('${escHtml(fn)}')">
+          <img src="${photoURL(o.id, fn)}" alt="صورة ${i + 1}">
+        </button>`).join('')
+    : '<p class="muted">مفيش صور على الطلب.</p>';
+
+  root.innerHTML = `
+    <button type="button" class="so-detail-back" onclick="openOrderDetailPage(${o.id}, { openBook:true })">← رجوع لقائمة المنتجات</button>
+    <div class="qb-wrap" style="margin-top:8px">
+      <div class="qb-card">
+        <h3>🖼️ ${escHtml(pack.title || 'بوستر A3')}</h3>
+        <p class="hint" style="margin:0 0 12px">${escHtml(pack.desc || '')} · ${ori} · مفيش غلاف ولا صفحات متعددة</p>
+
+        <label style="display:block;margin-bottom:6px;font-weight:700">اسم الطفل</label>
+        <input type="text" id="ob-name" class="so-input" value="${escHtml(name)}"
+               placeholder="اسم الطفل" maxlength="40" style="max-width:320px;margin-bottom:14px">
+
+        <label style="display:block;margin-bottom:6px;font-weight:700">صورة المرجع</label>
+        <div class="ob-photo-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">${photoPick}</div>
+
+        <label style="display:block;margin-bottom:6px;font-weight:700">المزوّد</label>
+        <div class="ob-products" id="ob-provider-picks" style="margin-bottom:10px">
+          <button type="button" class="ob-product ${_obProvider==='chatgpt'?'selected primary':''}" data-provider="chatgpt"
+            onclick="obSetProvider('chatgpt')">
+            <span class="emoji">✨</span><div class="name">ChatGPT</div>
+            <div class="desc">≈ $${cg} · دقة بوستر 2K</div>
+          </button>
+          <button type="button" class="ob-product ${_obProvider==='nanobanana'?'selected primary':''}" data-provider="nanobanana"
+            onclick="obSetProvider('nanobanana')">
+            <span class="emoji">🍌</span><div class="name">Nano Banana</div>
+            <div class="desc">≈ $${nb}</div>
+          </button>
+          <button type="button" class="ob-product ${_obProvider==='mock'?'selected primary':''}" data-provider="mock"
+            onclick="obSetProvider('mock')">
+            <span class="emoji">🧪</span><div class="name">Mock · تجربة</div>
+            <div class="desc">مجاني — اختبار بدون Kie</div>
+          </button>
+        </div>
+
+        <div class="ob-cost-box" id="ob-cost-box" style="margin-bottom:12px">بوستر = صورة واحدة · تقريباً $${cg}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button type="button" class="btn btn-primary" id="op-btn-generate" onclick="opGeneratePoster()">⚡ توليد البوستر</button>
+          <button type="button" class="btn btn-ghost" id="op-btn-regen" onclick="opGeneratePoster(true)" style="display:none">↻ إعادة التوليد</button>
+          <button type="button" class="btn btn-success" id="ob-btn-pdf" onclick="obBuildPdf()" style="display:none">📄 إنشاء PDF · A3</button>
+        </div>
+        <div class="qb-progress" id="ob-progress" style="margin-top:8px;display:none">
+          <div class="qb-progress-text" id="ob-progress-text">جاري التوليد...</div>
+          <div class="qb-progress-bar"><div class="qb-progress-fill" id="ob-progress-fill"></div></div>
+        </div>
+        <div class="ob-timer-live" id="ob-timer-live" style="display:none">
+          <p class="tl-label" id="ob-timer-label">جاري التوليد</p>
+          <div class="tl-clock" id="ob-timer-clock">0:00</div>
+          <p class="tl-sub" id="ob-timer-sub">...</p>
+        </div>
+        <div class="qb-msg" id="ob-msg"></div>
+        <div class="ob-poster-preview" id="op-preview">
+          <div class="slot-placeholder">○ لسه متولدش — اضغط «توليد البوستر»</div>
+        </div>
+        <div class="qb-result" id="ob-result" style="margin-top:12px;display:none">
+          <a class="btn btn-success" id="ob-download" href="#" target="_blank" style="display:none">تحميل PDF · A3</a>
+          <a class="btn btn-sm btn-success" id="ob-saved-pdf" href="#" target="_blank" style="display:none">PDF المحفوظ</a>
+          <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id}, { openBook:true })">رجوع للمنتجات</button>
+        </div>
+      </div>
+    </div>
+  `;
+  opEstimateCost();
+}
+
+function opEstimateCost() {
+  const box = document.getElementById('ob-cost-box');
+  if (!box) return;
+  const r = COST_RATES || {};
+  let unit;
+  if (_obProvider === 'mock') unit = Number(r.poster_mock || r.mock || 0);
+  else if (_obProvider === 'nanobanana') unit = Number(r.poster_nanobanana || r.nanobanana || 0.08);
+  else unit = Number(r.poster_chatgpt || r.chatgpt || 0.06);
+  const egp = unit * Number(r.usd_to_egp || 50);
+  box.innerHTML = `بوستر A3 = <strong>صورة واحدة</strong> · ≈ <strong>$${unit.toFixed(2)}</strong>`
+    + (egp ? ` · ≈ ${Math.round(egp)} ج.م` : '')
+    + `<div class="muted" style="margin-top:4px;font-size:12px">دقة أعلى من صفحات الكتاب (2K) — أنسب للطباعة على A3</div>`;
+}
+
+function opRefreshPosterPreview() {
+  const pack = packById(_obPackId);
+  const sid = posterSceneId(pack);
+  const has = (_obState.donePages || []).includes(sid);
+  const prev = document.getElementById('op-preview');
+  const regen = document.getElementById('op-btn-regen');
+  if (regen) regen.style.display = has ? '' : 'none';
+  if (!prev) return;
+  if (has) {
+    const src = obPageSrc(sid, Date.now());
+    prev.innerHTML = src
+      ? `<img src="${escHtml(src)}" alt="بوستر" onclick="openLightbox(this.src)">`
+      : '<div class="slot-placeholder">✓ محفوظ — بنحمّل المعاينة...</div>';
+  } else {
+    prev.innerHTML = '<div class="slot-placeholder">○ لسه متولدش — اضغط «توليد البوستر»</div>';
+  }
+  // Re-bind cost / PDF button
+  opEstimateCost();
+  // For posters allOk when image exists
+  const btnPdf = document.getElementById('ob-btn-pdf');
+  if (btnPdf) {
+    if (has) {
+      btnPdf.style.display = '';
+      btnPdf.textContent = obHasSavedPdf() ? '📄 تحديث PDF · A3' : '📄 إنشاء PDF · A3';
+    } else {
+      btnPdf.style.display = 'none';
+    }
+  }
+  obUpdatePdfButton();
+}
+
+async function opGeneratePoster(force) {
+  if (_obBusy) {
+    showToast('فيه عملية شغّالة…', 'err');
+    return;
+  }
+  const pack = packById(_obPackId);
+  if (!isPosterPack(pack)) {
+    showToast('ده مش باقة بوستر', 'err');
+    return;
+  }
+  const name = obChildName();
+  if (!name) { showToast('اكتب اسم الطفل', 'err'); return; }
+  if (!_obBookId || !_obOrder) { showToast('مفيش بوستر مفتوح', 'err'); return; }
+
+  const sid = posterSceneId(pack);
+  _obBusy = true;
+  _obCoverMode = 'none';
+  _obLastScenes = [sid];
+  const btn = document.getElementById('op-btn-generate');
+  const msgEl = document.getElementById('ob-msg');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ جاري التوليد...'; }
+  if (msgEl) {
+    msgEl.textContent = 'جاري توليد بوستر A3 (دقة أعلى — ممكن ياخد وقت أكتر من صفحة الكتاب)...';
+    msgEl.className = 'qb-msg ok';
+  }
+  const prev = document.getElementById('op-preview');
+  if (prev) prev.innerHTML = '<div class="slot-placeholder">⏳ جاري التوليد...</div>';
+  showToast('بدء توليد البوستر...', 'ok', 4000);
+  obStartLiveTimer('توليد البوستر A3', sid);
+  obSetProgress(10, 'تجهيز الجلسة...');
+
+  try {
+    await obEnsureSession({ forceNew: false });
+    await obPersistProgress({
+      step: 'pages',
+      scenes: [sid],
+      child_name: name,
+      page_count: 1,
+      cover_mode: 'none',
+      pack_id: pack.id,
+    });
+    obSetProgress(30, 'توليد الصورة عبر Kie (2K)...');
+    const page = await obGenerateOnePage(sid, !!force);
+    if (!page || page.error) throw new Error((page && page.error) || 'فشل توليد البوستر');
+    if (!_obState.donePages.includes(sid)) _obState.donePages.push(sid);
+    _obState.missingPages = [];
+    const vis = await obConfirmPageVisible(sid, page, { maxMs: 90000 });
+    if (vis) _obImgCache[sid] = vis;
+    obSetProgress(100, 'البوستر جاهز ✓');
+    showToast('البوستر جاهز ✓', 'ok');
+    if (msgEl) {
+      msgEl.textContent = 'البوستر جاهز — تقدر تعمل PDF بمقاس A3.';
+      msgEl.className = 'qb-msg ok';
+    }
+    opRefreshPosterPreview();
+    setTimeout(() => obHideProgress(), 2500);
+  } catch (e) {
+    const em = e.message || 'فشل';
+    showToast(em, 'err', 9000);
+    if (msgEl) { msgEl.textContent = em; msgEl.className = 'qb-msg err'; }
+    if (prev) prev.innerHTML = `<div class="slot-placeholder">⚠️ ${escHtml(em)}</div>`;
+    setTimeout(() => obHideProgress(), 3000);
+  } finally {
+    obStopLiveTimer(true);
+    _obBusy = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '⚡ توليد البوستر';
+    }
   }
 }
 
@@ -4373,13 +5608,21 @@ async function obConfirmPageVisible(sceneId, page, { maxMs = 90000, onWait } = {
 }
 
 function obCurrentPdfUrl(filename) {
-  if (_obPdfUrl) return _obPdfUrl;
   const fn = filename || _obPdfFilename || (_obOrder && _obOrder.pdf_filename);
   if (!fn || !_obOrder) return '';
+  if (_obPdfUrl && String(_obPdfUrl).indexOf(String(fn)) !== -1) {
+    return _obPdfUrl;
+  }
   if (_obBookId) {
     return `/admin/special-orders/${_obOrder.id}/books/${_obBookId}/pdf/${encodeURIComponent(fn)}`;
   }
   return `/admin/special-orders/${_obOrder.id}/pdf/${encodeURIComponent(fn)}`;
+}
+
+/** True only when this book has a saved PDF filename (not just “pages ready”). */
+function obHasSavedPdf() {
+  const fn = _obPdfFilename || (_obOrder && _obOrder.pdf_filename) || null;
+  return !!(fn && String(fn).trim());
 }
 
 function sceneTitle(id) {
@@ -4395,6 +5638,9 @@ function sceneTitle(id) {
 /** Planned coloring pages: UI selection, saved list, or full story pack. */
 function obPlannedScenes() {
   const pack = packById(_obPackId);
+  if (pack && pack.kind === 'poster') {
+    return [posterSceneId(pack)];
+  }
   if (pack && pack.kind === 'story' && pack.scenes && pack.scenes.length) {
     return pack.scenes.map(s => s.id);
   }
@@ -4426,7 +5672,32 @@ function obClearStaleBusy() {
   });
 }
 
+/** Force-unstick a single slot so «إعادة» always works even after a crashed batch. */
+function obUnstickSlot(sceneId) {
+  if (_obPageJobs[sceneId] === 'running') delete _obPageJobs[sceneId];
+  const slot = (_obSlots || []).find(s => s.scene_id === sceneId);
+  if (slot && slot.status === 'running') {
+    slot.status = (_obState.donePages || []).includes(sceneId)
+      || (sceneId === 'cover' && _obState.hasCover)
+      || (sceneId === 'ending' && _obState.hasEnding)
+      ? 'done' : 'pending';
+  }
+  if (_obBusy && !obIsActuallyBusy()) _obBusy = false;
+}
+
+function obIsKieCreditError(msg) {
+  return /رصيد|credits|Kie\.ai خلص|خلّص/i.test(String(msg || ''));
+}
+
 function obSelectedIds() {
+  const selected = new Set(
+    Array.from(document.querySelectorAll('#ob-jobs .qb-job.selected')).map(el => el.dataset.id)
+  );
+  if (_obPickOrder && _obPickOrder.length) {
+    const ordered = _obPickOrder.filter(id => selected.has(id));
+    selected.forEach((id) => { if (!ordered.includes(id)) ordered.push(id); });
+    return ordered;
+  }
   return Array.from(document.querySelectorAll('#ob-jobs .qb-job.selected')).map(el => el.dataset.id);
 }
 
@@ -4437,42 +5708,112 @@ function obUpdateSelCount() {
   el.textContent = `مختار ${n} / ${_obPageCount}`;
   el.classList.toggle('ok', n === _obPageCount);
   el.classList.toggle('bad', n !== _obPageCount);
+  obRenderMixOrder();
 }
 
-function obSetPageCount(n, btn) {
-  _obPageCount = n;
+function obRenderMixOrder() {
+  const box = document.getElementById('ob-mix-order');
+  if (!box) return;
+  const ids = obSelectedIds();
+  const jobById = (id) => Array.from(document.querySelectorAll('#ob-jobs .qb-job')).find(el => el.dataset.id === id);
+  if (!ids.length) {
+    box.innerHTML = 'ترتيب الصفحات: اختار المواقف بالترتيب اللي تحبه (أول اختيار = الصفحة ١).';
+    return;
+  }
+  const counts = {};
+  ids.forEach((id) => {
+    const job = jobById(id);
+    const pid = (job && job.dataset.fromPack) || '';
+    const pack = pid ? packById(pid) : (packForScenes([id]) || null);
+    const key = pack ? `${pack.emoji || ''} ${pack.title}` : 'مختلط';
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  const summary = Object.keys(counts).map(k => `${counts[k]} من ${k}`).join(' · ');
+  box.innerHTML = `<strong>ترتيب الصفحات</strong> <span style="opacity:.8">(${summary})</span>
+    <ol>${ids.map((id, i) => {
+      const job = jobById(id);
+      const title = (job && job.dataset.title) || sceneTitle(id);
+      const emoji = job ? ((job.querySelector('.emoji') || {}).textContent || '') : '';
+      return `<li>${i + 1}. ${escHtml(emoji)} ${escHtml(title)}</li>`;
+    }).join('')}</ol>`;
+}
+
+function obMaxScenes() {
+  if (isCustomMixPack(_obPackId)) {
+    return coloringPacksForMix().reduce((sum, p) => sum + (p.scenes || []).length, 0) || 40;
+  }
+  const pack = SCENE_PACKS.find(p => p.id === (_obPackId || 'jobs'));
+  const n = pack && Array.isArray(pack.scenes) ? pack.scenes.length : 12;
+  return Math.max(1, n);
+}
+
+function obNormalizePageCount(n) {
+  n = parseInt(n, 10);
+  if (!Number.isFinite(n) || n < 1) n = 1;
+  return Math.min(n, obMaxScenes());
+}
+
+function obSyncPageCountUI(n) {
+  const presets = [1, 8, 12];
   document.querySelectorAll('#ob-page-opts .qb-page-opt').forEach(b => {
     b.classList.toggle('active', parseInt(b.dataset.pages, 10) === n);
   });
-  const selected = document.querySelectorAll('#ob-jobs .qb-job.selected');
-  if (selected.length > n) {
-    Array.from(selected).slice(n).forEach(el => el.classList.remove('selected'));
+  const custom = document.getElementById('ob-page-custom');
+  if (custom) custom.classList.toggle('active', !presets.includes(n));
+  const input = document.getElementById('ob-page-count-input');
+  if (input) {
+    input.max = String(obMaxScenes());
+    if (String(input.value) !== String(n)) input.value = String(n);
   }
-  if (obSelectedIds().length < n) obSelectAuto();
+}
+
+function obSetPageCount(n, btn) {
+  _obPageCount = obNormalizePageCount(n);
+  obSyncPageCountUI(_obPageCount);
+  const selected = document.querySelectorAll('#ob-jobs .qb-job.selected');
+  if (selected.length > _obPageCount) {
+    Array.from(selected).slice(_obPageCount).forEach(el => el.classList.remove('selected'));
+  }
+  if (obSelectedIds().length < _obPageCount) obSelectAuto();
   else obUpdateSelCount();
 }
 
+function obApplyCustomPageCount() {
+  const input = document.getElementById('ob-page-count-input');
+  if (!input) return;
+  const n = obNormalizePageCount(input.value);
+  input.value = String(n);
+  obSetPageCount(n, null);
+  if (typeof obEstimateCost === 'function') obEstimateCost();
+}
+
 function obToggleJob(el) {
-  if (el.classList.contains('selected')) el.classList.remove('selected');
-  else {
+  if (el.classList.contains('selected')) {
+    el.classList.remove('selected');
+    _obPickOrder = (_obPickOrder || []).filter(id => id !== el.dataset.id);
+  } else {
     if (obSelectedIds().length >= _obPageCount) {
       showToast(`الحد الأقصى ${_obPageCount} وظائف`, 'err');
       return;
     }
     el.classList.add('selected');
+    _obPickOrder = (_obPickOrder || []).filter(id => id !== el.dataset.id);
+    _obPickOrder.push(el.dataset.id);
   }
   obUpdateSelCount();
 }
 
 function obSelectAuto() {
   document.querySelectorAll('#ob-jobs .qb-job').forEach(el => el.classList.remove('selected'));
-  Array.from(document.querySelectorAll('#ob-jobs .qb-job')).slice(0, _obPageCount)
-    .forEach(el => el.classList.add('selected'));
+  const picked = Array.from(document.querySelectorAll('#ob-jobs .qb-job')).slice(0, _obPageCount);
+  picked.forEach(el => el.classList.add('selected'));
+  _obPickOrder = picked.map(el => el.dataset.id);
   obUpdateSelCount();
 }
 
 function obClearJobs() {
   document.querySelectorAll('#ob-jobs .qb-job').forEach(el => el.classList.remove('selected'));
+  _obPickOrder = [];
   obUpdateSelCount();
 }
 
@@ -4481,6 +5822,7 @@ function obSelectScenes(ids) {
   document.querySelectorAll('#ob-jobs .qb-job').forEach(el => {
     el.classList.toggle('selected', set.has(el.dataset.id));
   });
+  _obPickOrder = (ids || []).filter(id => set.has(id));
   obUpdateSelCount();
 }
 
@@ -4703,15 +6045,19 @@ function renderOrderColoringBook(o) {
   }
   const pack = packById(_obPackId);
   const isStory = pack.kind === 'story';
+  const isCustomMix = isCustomMixPack(pack);
   // A saved selection only applies to the pack it came from.
   const savedPackMatches = !savedForPack.length
+    || isCustomMix
     || pack.scenes.some(s => s.id === savedForPack[0]);
 
   const titleEl = document.getElementById('page-title');
   const subEl = document.getElementById('page-sub');
   const bookLabel = _obBookId ? `كتاب #${_obBookId}` : pack.title;
   if (titleEl) titleEl.textContent = pack.title + ' · ' + bookLabel + ' · طلب #' + o.id;
-  if (subEl) subEl.textContent = 'صفحة هذا الكتاب بس — باقي كتب نفس الطفل في قائمة منفصلة';
+  if (subEl) subEl.textContent = isCustomMix
+    ? 'كتاب مخصوص — اختار العدد وامزج مواقف من أكتر من نوع'
+    : 'صفحة هذا الكتاب بس — باقي كتب نفس الطفل في قائمة منفصلة';
   const targetHash = _obBookId
     ? '#order/' + o.id + '/book/' + _obBookId
     : '#order/' + o.id + '/book';
@@ -4731,8 +6077,12 @@ function renderOrderColoringBook(o) {
         </button>`).join('')
     : '<p class="muted">مفيش صور — ارجع وارفعي صورة على الطلب.</p>';
 
-  const jobsHTML = pack.scenes.map(s => `
-    <div class="qb-job" data-id="${escHtml(s.id)}" data-title="${escHtml(s.title)}" onclick="obToggleJob(this); obEstimateCost()">
+  const jobsHTML = isCustomMix
+    ? obMixedJobsHTML()
+    : pack.scenes.map(s => `
+    <div class="qb-job" data-id="${escHtml(s.id)}" data-title="${escHtml(s.title)}"
+         data-from-pack="${escHtml(pack.id)}"
+         onclick="obToggleJob(this); obEstimateCost()">
       <span class="emoji">${s.emoji || ''}</span>
       <span class="title">${escHtml(s.title)}</span>
     </div>`).join('');
@@ -4755,6 +6105,16 @@ function renderOrderColoringBook(o) {
         <div class="qb-field" style="margin-top:12px">
           <label for="ob-name">الاسم</label>
           <input type="text" id="ob-name" maxlength="40" value="${escHtml(o.child_name || '')}" autocomplete="off">
+        </div>
+        <div class="qb-field" style="margin-top:12px">
+          <label>نوع الطفل</label>
+          <div class="status-toggle" id="ob-gender-toggle" style="margin-top:6px">
+            <button type="button" id="ob-gender-boy" class="status-opt ${(_obGender||'boy')==='boy'?'sel-pending':''}"
+                    onclick="obSetGender('boy')">ولد</button>
+            <button type="button" id="ob-gender-girl" class="status-opt ${(_obGender||'boy')==='girl'?'sel-done':''}"
+                    onclick="obSetGender('girl')">بنت</button>
+          </div>
+          <p class="hint" style="margin-top:8px">عشان نص القصة والأفعال تناسب ${(_obGender||'boy')==='girl'?'البنت':'الولد'}</p>
         </div>
       </div>
 
@@ -4805,15 +6165,15 @@ function renderOrderColoringBook(o) {
       ${isStory ? `
       <div class="qb-card">
         <h3>4. صفحات القصة — ${escHtml(pack.emoji + ' ' + pack.title)}</h3>
-        <p class="hint">القصة بترتيب ثابت — كل الصفحات بتتولّد بالترتيب ده. النص العربي بيتحط تحت كل صورة.</p>
-        <div class="ob-story-beats">
+        <p class="hint">القصة بترتيب ثابت — النص العربي بيتظبط حسب ولد/بنت. ChatGPT بيكتب النص جوّه الصورة.</p>
+        <div class="ob-story-beats" id="ob-story-beats">
           ${pack.scenes.map((s, i) => `
             <div class="ob-beat">
               <span class="ob-beat-no">${i + 1}</span>
               <span class="ob-beat-emoji">${s.emoji || '📖'}</span>
               <div class="ob-beat-body">
                 <div class="ob-beat-title">${escHtml(s.title)}</div>
-                <div class="ob-beat-text">${escHtml((s.text || '').replace('{name}', o.child_name || 'بطلنا'))}</div>
+                <div class="ob-beat-text" data-beat-text="${escHtml(s.text || '')}">${escHtml(storyBeatPreviewText(s.text || '', o.child_name || '', _obGender || 'boy'))}</div>
               </div>
             </div>`).join('')}
         </div>
@@ -4824,25 +6184,36 @@ function renderOrderColoringBook(o) {
       ` : `
       <div class="qb-card">
         <h3>4. عدد الصفحات والمواقف — ${escHtml(pack.emoji + ' ' + pack.title)}</h3>
+        ${isCustomMix ? `
+        <p class="hint">اكتب عدد الصفحات، وبعدين اختار مواقف من أي نوع — ترتيب الاختيار = ترتيب الصفحات في الكتاب.</p>
+        ` : ''}
         <div class="qb-page-opts" id="ob-page-opts">
           <button type="button" class="qb-page-opt" data-pages="1" onclick="obSetPageCount(1, this); obEstimateCost()">
             1 صفحة <small>للتجربة</small>
           </button>
-          <button type="button" class="qb-page-opt active" data-pages="8" onclick="obSetPageCount(8, this); obEstimateCost()">
+          <button type="button" class="qb-page-opt ${isCustomMix ? '' : 'active'}" data-pages="8" onclick="obSetPageCount(8, this); obEstimateCost()">
             8 صفحات <small>كتاب قياسي</small>
           </button>
-          <button type="button" class="qb-page-opt" data-pages="12" onclick="obSetPageCount(12, this); obEstimateCost()">
-            12 صفحة <small>كل المواقف</small>
+          <button type="button" class="qb-page-opt ${isCustomMix ? 'active' : ''}" data-pages="12" onclick="obSetPageCount(12, this); obEstimateCost()">
+            12 صفحة <small>${isCustomMix ? 'مزيج شائع' : 'كل المواقف'}</small>
           </button>
+          <div class="qb-page-custom ${isCustomMix ? 'active' : ''}" id="ob-page-custom">
+            <label for="ob-page-count-input">عدد مخصص</label>
+            <input type="number" id="ob-page-count-input" min="1" max="80" step="1" value="${isCustomMix ? 12 : 8}"
+                   inputmode="numeric"
+                   onchange="obApplyCustomPageCount()"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();obApplyCustomPageCount();}">
+          </div>
         </div>
         <div class="qb-job-toolbar" style="margin-top:12px">
-          <span class="qb-sel-count" id="ob-sel-count">مختار 0 / 8</span>
+          <span class="qb-sel-count" id="ob-sel-count">مختار 0 / ${isCustomMix ? 12 : 8}</span>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button type="button" class="btn btn-sm btn-ghost" onclick="obSelectAuto(); obEstimateCost()">اختيار تلقائي</button>
             <button type="button" class="btn btn-sm btn-ghost" onclick="obClearJobs(); obEstimateCost()">مسح</button>
           </div>
         </div>
         <div class="qb-jobs ob-jobs" id="ob-jobs">${jobsHTML}</div>
+        ${isCustomMix ? `<div class="ob-mix-order" id="ob-mix-order">ترتيب الصفحات: اختار المواقف بالترتيب اللي تحبه (أول اختيار = الصفحة ١).</div>` : ''}
       </div>
       `}
 
@@ -4855,7 +6226,7 @@ function renderOrderColoringBook(o) {
             <button type="button" class="btn btn-primary" id="ob-btn-generate" onclick="obStartBatchGenerate(false)">⚡ توليد</button>
             <button type="button" class="btn btn-ghost" id="ob-btn-missing" onclick="obStartBatchGenerate(false)">توليد الناقص</button>
             <button type="button" class="btn btn-ghost" onclick="obStartBatchGenerate(true)">إعادة توليد الكل</button>
-            <button type="button" class="btn btn-success" id="ob-btn-pdf" onclick="obBuildPdf()" style="display:none">📄 تحميل PDF</button>
+            <button type="button" class="btn btn-success" id="ob-btn-pdf" onclick="obBuildPdf()" style="display:none">📄 إنشاء PDF</button>
           </div>
         </div>
         <div class="qb-progress" id="ob-progress" style="margin-top:12px;display:none">
@@ -4870,7 +6241,7 @@ function renderOrderColoringBook(o) {
         <div class="ob-slots" id="ob-slots"></div>
         <div class="qb-msg" id="ob-msg"></div>
         <div class="qb-result" id="ob-result" style="margin-top:10px;display:none">
-          <a class="btn btn-success" id="ob-download" href="#" target="_blank">تحميل PDF</a>
+          <a class="btn btn-success" id="ob-download" href="#" target="_blank" style="display:none">تحميل PDF</a>
           <button type="button" class="btn btn-ghost" onclick="openOrderDetailPage(${o.id}, { openBook:true })">رجوع لكتب الطفل</button>
           ${savedPdf}
         </div>
@@ -4893,20 +6264,24 @@ function renderOrderColoringBook(o) {
     _obLastScenes = pack.scenes.map(s => s.id);
     obSelectScenes(_obLastScenes);
   } else {
-  _obPageCount = o.book_page_count && [1, 8, 12].includes(o.book_page_count) ? o.book_page_count : 8;
+  _obPageCount = o.book_page_count
+    ? obNormalizePageCount(o.book_page_count)
+    : (isCustomMix ? 12 : 8);
   obSetPageCount(_obPageCount, null);
   const savedScenes = savedPackMatches ? savedForPack : [];
   if (savedScenes.length) {
-    if ([1, 8, 12].includes(savedScenes.length)) {
-      _obPageCount = savedScenes.length;
-      obSetPageCount(_obPageCount, null);
-    }
+    _obPageCount = obNormalizePageCount(savedScenes.length);
+    obSetPageCount(_obPageCount, null);
     obSelectScenes(savedScenes);
     _obLastScenes = [...savedScenes];
   } else {
     // Different book type than the saved one — start this type fresh.
     _obLastScenes = [];
-    obSelectAuto();
+    if (isCustomMix) {
+      obClearJobs();
+    } else {
+      obSelectAuto();
+    }
   }
   }
   if (o.book_progress_data) {
@@ -4915,11 +6290,18 @@ function renderOrderColoringBook(o) {
       const nameEl = document.getElementById('ob-name');
       if (nameEl && !nameEl.value) nameEl.value = pd.child_name;
     }
+    if (pd.child_gender || o.child_gender) {
+      _obGender = (pd.child_gender || o.child_gender) === 'girl' ? 'girl' : 'boy';
+      obSetGender(_obGender);
+    }
     if (pd.provider) {
       _obProvider = (pd.provider === 'nanobanana' || pd.provider === 'mock')
         ? pd.provider : 'chatgpt';
     }
     if (pd.cover_mode) _obCoverMode = pd.cover_mode;
+  } else if (o.child_gender) {
+    _obGender = o.child_gender === 'girl' ? 'girl' : 'boy';
+    obSetGender(_obGender);
   }
   // re-sync selected provider/cover UI classes
   document.querySelectorAll('#ob-provider-picks .ob-product').forEach(el => {
@@ -4961,7 +6343,8 @@ function obSetProvider(p) {
       hint.remove();
     }
   }
-  obEstimateCost();
+  if (typeof opEstimateCost === 'function' && isPosterPack(_obPackId)) opEstimateCost();
+  else obEstimateCost();
 }
 
 function obSetCoverMode(m) {
@@ -5055,9 +6438,15 @@ function obRenderSlots() {
   const unit = obUnitUsd();
   root.innerHTML = _obSlots.map(s => {
     const src = s.status === 'done' ? obPageSrc(s.scene_id) : '';
+    let placeholder = '○ لم تُولَّد بعد';
+    if (s.status === 'running') placeholder = '⏳ جاري التوليد...';
+    else if (s.status === 'error') {
+      const em = (_obSlotErrors && _obSlotErrors[s.scene_id]) || 'فشل';
+      placeholder = '⚠️ ' + em;
+    }
     const body = src
       ? `<img src="${escHtml(src)}" alt="${escHtml(s.title)}" onclick="openLightbox(this.src)">`
-      : `<div class="slot-placeholder">${s.status === 'running' ? '⏳ جاري التوليد...' : (s.status === 'error' ? '⚠️ فشل' : '○ لم تُولَّد بعد')}</div>`;
+      : `<div class="slot-placeholder">${escHtml(placeholder)}</div>`;
     return `
       <div class="ob-slot ${s.status}" id="ob-slot-${escHtml(s.scene_id)}" data-scene="${escHtml(s.scene_id)}">
         <div class="slot-head">
@@ -5093,20 +6482,72 @@ function obUpdateBatchStats() {
 
 function obUpdatePdfButton() {
   const btn = document.getElementById('ob-btn-pdf');
-  if (!btn) return;
+  const res = document.getElementById('ob-result');
+  const dl = document.getElementById('ob-download');
+  const saved = document.getElementById('ob-saved-pdf');
+
+  const pack = packById(_obPackId);
+  const isPoster = isPosterPack(pack);
   const planned = obPlannedScenes();
   const scenes = planned.length;
-  const { wantCover, wantEnding } = obCoverFlags();
+  const { wantCover, wantEnding } = isPoster ? { wantCover: false, wantEnding: false } : obCoverFlags();
   const need = scenes + (wantCover ? 1 : 0) + (wantEnding ? 1 : 0);
   const okCover = !wantCover || _obState.hasCover;
   const okEnd = !wantEnding || _obState.hasEnding;
   const pagesOk = scenes > 0 && planned.every(s => (_obState.donePages || []).includes(s));
   const allOk = need > 0 && okCover && okEnd && pagesOk;
-  btn.style.display = allOk || _obState.pdfReady ? '' : 'none';
-  if (allOk) {
-    const res = document.getElementById('ob-result');
-    if (res) { res.style.display = 'flex'; res.classList.add('show'); }
+  const hasPdf = obHasSavedPdf();
+  const pdfUrl = hasPdf ? obCurrentPdfUrl() : '';
+
+  // Create/rebuild only when every page is ready — not labeled “download”
+  if (btn) {
+    if (allOk) {
+      btn.style.display = '';
+      if (isPoster) {
+        btn.textContent = hasPdf ? '📄 تحديث PDF · A3' : '📄 إنشاء PDF · A3';
+      } else {
+        btn.textContent = hasPdf ? '📄 تحديث PDF' : '📄 إنشاء PDF';
+      }
+    } else {
+      btn.style.display = 'none';
+    }
   }
+
+  // Download buttons: only if a real PDF file exists for this book
+  if (hasPdf && pdfUrl) {
+    if (res) {
+      res.style.display = 'flex';
+      res.classList.add('show');
+    }
+    if (dl) {
+      dl.href = pdfUrl;
+      dl.style.display = '';
+      if (isPoster) dl.textContent = 'تحميل PDF · A3';
+      dl.removeAttribute('aria-hidden');
+    }
+    if (saved) {
+      saved.href = pdfUrl;
+      saved.style.display = '';
+    }
+  } else {
+    if (res) {
+      // Keep result bar only if we need a non-download action; otherwise hide
+      res.style.display = 'none';
+      res.classList.remove('show');
+    }
+    if (dl) {
+      dl.removeAttribute('href');
+      dl.setAttribute('href', '#');
+      dl.style.display = 'none';
+    }
+    if (saved) {
+      saved.removeAttribute('href');
+      saved.setAttribute('href', '#');
+      saved.style.display = 'none';
+    }
+    _obState.pdfReady = false;
+  }
+  if (hasPdf) _obState.pdfReady = true;
 }
 
 /** Immediate per-slot update when one image finishes — never waits for the batch. */
@@ -5114,6 +6555,7 @@ function obOnSlotDone(sceneId, page) {
   const slot = _obSlots.find(s => s.scene_id === sceneId);
   if (slot) slot.status = 'done';
   _obPageJobs[sceneId] = 'done';
+  if (_obSlotErrors) delete _obSlotErrors[sceneId];
   if (sceneId === 'cover') _obState.hasCover = true;
   else if (sceneId === 'ending') _obState.hasEnding = true;
   else if (!_obState.donePages.includes(sceneId)) _obState.donePages.push(sceneId);
@@ -5172,6 +6614,8 @@ function obOnSlotError(sceneId, msg) {
   const slot = _obSlots.find(s => s.scene_id === sceneId);
   if (slot) slot.status = 'error';
   _obPageJobs[sceneId] = 'error';
+  if (!_obSlotErrors) _obSlotErrors = {};
+  _obSlotErrors[sceneId] = msg || 'فشل';
   const el = document.getElementById('ob-slot-' + sceneId);
   if (el) {
     el.className = 'ob-slot error';
@@ -5181,9 +6625,16 @@ function obOnSlotError(sceneId, msg) {
     if (body) body.innerHTML = `<div class="slot-placeholder">⚠️ ${escHtml(msg || 'فشل')}</div>`;
     const regen = el.querySelector('button');
     if (regen) regen.disabled = false;
+  } else {
+    obRenderSlots();
   }
   if (!_obSlots.some(s => s.status === 'running')) _obBusy = false;
   obUpdateBatchStats();
+  const msgEl = document.getElementById('ob-msg');
+  if (msgEl) {
+    msgEl.textContent = msg || 'فشل التوليد';
+    msgEl.className = 'qb-msg err';
+  }
 }
 
 async function obStartBatchGenerate(forceAll) {
@@ -5345,12 +6796,19 @@ async function obStartBatchGenerate(forceAll) {
             return;
           }
         } catch (_) {}
-        obOnSlotError(sid, e.message || 'فشل');
+        const em = e.message || 'فشل';
+        obOnSlotError(sid, em);
+        // Don't burn the rest of the queue when Kie is out of credits
+        if (/رصيد|credits|Kie\.ai خلص/i.test(em)) {
+          _obAbortBatch = true;
+        }
       }
     };
 
+    _obAbortBatch = false;
     // Process in pairs of OB_PAGE_PARALLEL — never start the next pair until this pair settles
     for (let i = 0; i < todo.length; i += OB_PAGE_PARALLEL) {
+      if (_obAbortBatch) break;
       const chunk = todo.slice(i, i + OB_PAGE_PARALLEL);
       const pairNo = Math.floor(i / OB_PAGE_PARALLEL) + 1;
       const pairs = Math.ceil(todo.length / OB_PAGE_PARALLEL);
@@ -5362,12 +6820,9 @@ async function obStartBatchGenerate(forceAll) {
       await Promise.all(chunk.map(item => runOne(item)));
       // Re-sync disk after every pair before starting the next
       try { await obRefreshBookStatus(); } catch (_) {}
-      const pairFail = chunk.some(c => {
-        const s = _obSlots.find(x => x.scene_id === c.scene_id);
-        return s && s.status === 'error';
-      });
-      if (pairFail) {
-        // still continue remaining? User asked wait-confirm-next; continue so rest of book can finish
+      if (_obAbortBatch) {
+        showToast('رصيد Kie.ai خلص — عبّي من لوحة Kie أو استخدم Mock للتجربة', 'err');
+        break;
       }
       await sleep(400);
     }
@@ -5380,10 +6835,15 @@ async function obStartBatchGenerate(forceAll) {
       try { await obBuildPdf(); } catch (_) {}
     }
     if (msgEl) {
-      msgEl.textContent = fail
-        ? `خلص: ${done} نجح · ${fail} فشل — اضغط إعادة على الفاشل أو توليد الناقص`
-        : `تم توليد ${done} صورة وحفظهم ✓`;
-      msgEl.className = 'qb-msg ' + (fail ? 'err' : 'ok');
+      if (_obAbortBatch) {
+        msgEl.textContent = `توقف التوليد: رصيد Kie.ai خلص. عبّي credits من لوحة Kie، أو اختار «Mock · تجربة» للناقص فقط. جاهز ${done} · فشل ${fail}.`;
+        msgEl.className = 'qb-msg err';
+      } else {
+        msgEl.textContent = fail
+          ? `خلص: ${done} نجح · ${fail} فشل — اضغط إعادة على الفاشل أو توليد الناقص`
+          : `تم توليد ${done} صورة وحفظهم ✓`;
+        msgEl.className = 'qb-msg ' + (fail ? 'err' : 'ok');
+      }
     }
   } catch (e) {
     showToast(e.message || 'فشل', 'err');
@@ -5415,70 +6875,220 @@ async function obStartBatchGenerate(forceAll) {
 }
 
 async function obRegenerateSlot(sceneId) {
+  // Always allow re-click even if a previous job left "running" stuck
   obClearStaleBusy();
-  if (_obPageJobs[sceneId] === 'running') return;
+  obUnstickSlot(sceneId);
+
+  if (_obBusy && obIsActuallyBusy()) {
+    showToast('فيه توليد تاني شغال — استنى يخلص أو حدّث الصفحة', 'err');
+    return;
+  }
+
   const name = obChildName();
-  if (!name) { showToast('اكتب اسم الطفل', 'err'); return; }
-  if (!confirm('تعيد توليد الصفحة دي؟ (≈ $' + obUnitUsd().toFixed(2) + ')')) return;
+  if (!name) { showToast('اكتب اسم الطفل في حقل الاسم فوق', 'err'); return; }
+  if (!_obBookId || !_obOrder) {
+    showToast('مفيش كتاب مفتوح — افتح الطلب وارجع للكتاب', 'err');
+    return;
+  }
+
   const item = _obSlots.find(s => s.scene_id === sceneId) || {
     kind: sceneId === 'cover' ? 'cover' : (sceneId === 'ending' ? 'ending' : 'page'),
     scene_id: sceneId, title: sceneTitle(sceneId),
   };
+  const title = item.title || sceneTitle(sceneId);
+  const alreadyOnDisk =
+    (sceneId === 'cover' && _obState.hasCover) ||
+    (sceneId === 'ending' && _obState.hasEnding) ||
+    (_obState.donePages || []).includes(sceneId);
+
+  // Missing pages: don't ask confirm (user is finishing the book). Existing: confirm re-gen cost.
+  if (alreadyOnDisk) {
+    if (!confirm(`تعيد توليد «${title}»؟ (≈ $${obUnitUsd().toFixed(2)})`)) return;
+  }
+
   _obBusy = true;
+  if (_obSlotErrors) delete _obSlotErrors[sceneId];
+  item.status = 'running';
+  _obPageJobs[sceneId] = 'running';
+  obRenderSlots();
+  showToast(`جاري «${title}»...`, 'ok', 4000);
+  const msgEl = document.getElementById('ob-msg');
+  if (msgEl) {
+    msgEl.textContent = `جاري توليد «${title}»...`;
+    msgEl.className = 'qb-msg ok';
+  }
+
   try {
-    if (!_obSessionId) await obEnsureSession({ forceNew: false });
-    item.status = 'running';
-    _obPageJobs[sceneId] = 'running';
-    obRenderSlots();
+    if (!_obSessionId) {
+      const st = await obEnsureSession({ forceNew: false });
+      if (!st && !_obSessionId) throw new Error('فشل الجلسة — تأكد من صورة الطفل على الطلب');
+    }
+    // Missing pages: force=false is fine. Existing re-gen: force=true.
+    const force = !!alreadyOnDisk;
     let page = null;
     if (item.kind === 'cover' || sceneId === 'cover') {
-      page = await obGenerateCover(name, _obPageCount || obPlannedScenes().length || 8, true);
+      page = await obGenerateCover(name, _obPageCount || obPlannedScenes().length || 8, force);
     } else if (item.kind === 'ending' || sceneId === 'ending') {
-      page = await obGenerateEnding(name, true);
+      page = await obGenerateEnding(name, force);
     } else {
-      page = await obGenerateOnePage(sceneId, true);
+      page = await obGenerateOnePage(sceneId, force);
       if (page && page.error) throw new Error(page.error);
     }
     if (!page || page.error) {
-      if (!(await obIsPageOnDisk(sceneId))) throw new Error((page && page.error) || 'فشل');
-      page = { scene_id: sceneId };
+      throw new Error((page && page.error) || 'فشل التوليد');
     }
     const vis = await obConfirmPageVisible(sceneId, page, { maxMs: 60000 });
     if (vis) page.preview_url = vis;
-    else if (!(await obIsPageOnDisk(sceneId))) throw new Error('الصورة لسة مش ظاهرة');
+    else if (!(await obIsPageOnDisk(sceneId))) {
+      throw new Error('الصورة لسة مش ظاهرة — جرّب تاني بعد ثواني');
+    }
+    if (_obSlotErrors) delete _obSlotErrors[sceneId];
     obOnSlotDone(sceneId, page);
     await obPersistProgress({ scenes: obPlannedScenes() });
+    showToast(`تم «${title}» ✓`, 'ok');
+    if (msgEl) {
+      msgEl.textContent = `تم «${title}» وحُفظ على الطلب ✓`;
+      msgEl.className = 'qb-msg ok';
+    }
   } catch (e) {
-    try {
-      if (await obIsPageOnDisk(sceneId)) {
-        const vis = await obConfirmPageVisible(sceneId, { scene_id: sceneId }, { maxMs: 15000 });
-        obOnSlotDone(sceneId, { scene_id: sceneId, preview_url: vis || obPermanentPageUrl(sceneId) });
-        return;
-      }
-    } catch (_) {}
-    obOnSlotError(sceneId, e.message || 'فشل');
-    showToast(e.message || 'فشل', 'err');
+    const em = (e && e.message) || 'فشل';
+    // Only soft-recover OLD image when redoing an existing page (not for missing work)
+    if (alreadyOnDisk) {
+      try {
+        if (await obIsPageOnDisk(sceneId)) {
+          const vis = await obConfirmPageVisible(sceneId, { scene_id: sceneId }, { maxMs: 8000 });
+          obOnSlotDone(sceneId, { scene_id: sceneId, preview_url: vis || obPermanentPageUrl(sceneId) });
+          const soft = obIsKieCreditError(em)
+            ? `ما اتجددتش — رصيد Kie خلص. الصورة القديمة لسه موجودة. عبّي credits أو Mock.`
+            : `ما اتجددتش: ${em} — الصورة القديمة لسه موجودة.`;
+          showToast(soft, 'err', 9000);
+          if (msgEl) { msgEl.textContent = soft; msgEl.className = 'qb-msg err'; }
+          return;
+        }
+      } catch (_) {}
+    }
+    const finalMsg = obIsKieCreditError(em)
+      ? `رصيد Kie.ai خلص — عبّي من لوحة Kie أو اختار «Mock · تجربة» ثم ↻ إعادة`
+      : em;
+    obOnSlotError(sceneId, finalMsg);
+    showToast(finalMsg, 'err', 9000);
   } finally {
     _obBusy = false;
+    const slot = (_obSlots || []).find(s => s.scene_id === sceneId);
+    if (slot && slot.status === 'running') {
+      slot.status = 'error';
+      _obPageJobs[sceneId] = 'error';
+      obRenderSlots();
+    } else {
+      const el = document.getElementById('ob-slot-' + sceneId);
+      const btn = el && el.querySelector('button');
+      if (btn) btn.disabled = false;
+    }
   }
 }
 
 async function obBuildPdf() {
+  if (_obBusy) {
+    showToast('فيه عملية شغّالة — استنى تخلّص', 'err');
+    return;
+  }
   const name = obChildName();
   const scenes = obPlannedScenes();
   if (!scenes.length) { showToast('مفيش صفحات', 'err'); return; }
+
+  // Client-side check so user gets instant feedback when book incomplete
+  const pack = packById(_obPackId);
+  const isPoster = isPosterPack(pack);
+  if (isPoster) _obCoverMode = 'none';
+  const { wantCover, wantEnding } = isPoster ? { wantCover: false, wantEnding: false } : obCoverFlags();
+  if (wantCover && !_obState.hasCover) {
+    showToast('غلاف البداية مطلوب الأول — ولّده قبل PDF', 'err');
+    return;
+  }
+  if (wantEnding && !_obState.hasEnding) {
+    showToast('غلاف النهاية مطلوب الأول — ولّده قبل PDF', 'err');
+    return;
+  }
+  const missing = scenes.filter(s => !(_obState.donePages || []).includes(s));
+  if (missing.length) {
+    showToast(
+      isPoster
+        ? 'ولّد البوستر الأول قبل PDF'
+        : `لسه ناقص ${missing.length} صفحة — ولّد الناقص قبل PDF`,
+      'err',
+      8000,
+    );
+    return;
+  }
+
+  const btn = document.getElementById('ob-btn-pdf');
+  const msgEl = document.getElementById('ob-msg');
+  const prevLabel = btn ? btn.textContent : '';
+  _obBusy = true;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = isPoster ? '⏳ جاري إنشاء PDF · A3...' : '⏳ جاري إنشاء PDF...';
+  }
+  if (msgEl) {
+    msgEl.textContent = isPoster
+      ? 'جاري كتابة ملف PDF بمقاس A3 — استنى شوية...'
+      : 'جاري تجميع الصفحات وكتابة ملف PDF — استنى شوية...';
+    msgEl.className = 'qb-msg ok';
+  }
+  showToast(isPoster ? 'جاري إنشاء PDF · A3...' : 'جاري إنشاء PDF...', 'ok', 5000);
+  obStartLiveTimer(isPoster ? 'PDF · بوستر A3' : 'إنشاء PDF', 'pdf');
+  obSetProgress(12, isPoster ? 'جاري تجهيز البوستر...' : 'جاري تجهيز الصفحات...');
+  // Fake advance while server works (long PDF can look frozen otherwise)
+  let tick = 12;
+  const pulse = setInterval(() => {
+    tick = Math.min(88, tick + 4);
+    obSetProgress(tick, tick < 40
+      ? 'جاري تجميع الصور...'
+      : (tick < 70 ? 'جاري كتابة PDF...' : 'لسه بنخلّص الحفظ على الطلب...'));
+  }, 900);
+
   try {
+    obSetProgress(20, 'التأكد من الجلسة...');
     if (!_obSessionId) await obEnsureSession({ forceNew: false });
+    if (!_obSessionId) throw new Error('فشل الجلسة — تأكد من صورة الطفل');
+
+    obSetProgress(35, 'تجميع الصفحات وكتابة PDF على السيرفر...');
     await obSaveToOrder(scenes, name);
-    _obState.pdfReady = true;
-    showToast('PDF جاهز ✓', 'ok');
-    const btn = document.getElementById('ob-btn-pdf');
-    if (btn) btn.style.display = '';
-    const res = document.getElementById('ob-result');
-    if (res) { res.style.display = 'flex'; res.classList.add('show'); }
+    clearInterval(pulse);
+    obStopLiveTimer(true);
+    obSetProgress(100, 'PDF جاهز ✓');
+    if (msgEl) {
+      msgEl.textContent = 'PDF جاهز — تقدر تحمّله من الزر الأخضر تحت.';
+      msgEl.className = 'qb-msg ok';
+    }
+    showToast('PDF جاهز ✓', 'ok', 6000);
+    obUpdatePdfButton();
+    // Brief success on button then restore via update
+    if (btn) {
+      btn.disabled = false;
+      // obUpdatePdfButton sets label to تحديث/إنشاء again
+    }
+    setTimeout(() => obHideProgress(), 2800);
   } catch (e) {
-    showToast(e.message || 'فشل PDF', 'err');
-    throw e;
+    clearInterval(pulse);
+    obStopLiveTimer(false);
+    const em = (e && e.message) || 'فشل PDF';
+    obSetProgress(100, 'فشل إنشاء PDF');
+    if (msgEl) {
+      msgEl.textContent = em;
+      msgEl.className = 'qb-msg err';
+    }
+    showToast(em, 'err', 9000);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = prevLabel || '📄 إنشاء PDF';
+    }
+    setTimeout(() => obHideProgress(), 3500);
+    // don't rethrow — user already saw the error
+  } finally {
+    clearInterval(pulse);
+    _obBusy = false;
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -5562,29 +7172,40 @@ function obApplyStatusPayload(data) {
   if (progress.scenes && progress.scenes.length) {
     _obLastScenes = [...progress.scenes];
     if (document.getElementById('ob-jobs')) {
-      if ([1, 8, 12].includes(progress.scenes.length)) {
-        _obPageCount = progress.scenes.length;
-        obSetPageCount(_obPageCount, null);
-      }
+      _obPageCount = obNormalizePageCount(progress.scenes.length);
+      obSetPageCount(_obPageCount, null);
       obSelectScenes(progress.scenes);
     }
   } else if (data.done_pages && data.done_pages.length) {
     _obLastScenes = [...data.done_pages];
   }
-  if (progress.page_count && [1, 8, 12].includes(progress.page_count)) {
-    _obPageCount = progress.page_count;
+  if (progress.page_count) {
+    _obPageCount = obNormalizePageCount(progress.page_count);
     if (document.getElementById('ob-page-opts')) obSetPageCount(_obPageCount, null);
   }
   if (progress.child_name) {
     const nameEl = document.getElementById('ob-name');
     if (nameEl) nameEl.value = progress.child_name;
   }
+  if (progress.child_gender) {
+    _obGender = progress.child_gender === 'girl' ? 'girl' : 'boy';
+    obSetGender(_obGender);
+  }
   if (progress.photo) _obPhoto = progress.photo;
 
-  if (data.download_url) _obPdfUrl = data.download_url;
+  if (data.download_url && (data.pdf_filename || data.pdf_ready)) {
+    _obPdfUrl = data.download_url;
+  } else if (!data.pdf_filename) {
+    _obPdfUrl = null;
+  }
   if (data.pdf_filename) {
     _obPdfFilename = data.pdf_filename;
     if (_obOrder) _obOrder.pdf_filename = data.pdf_filename;
+  } else if ('pdf_filename' in data || 'pdf_ready' in data) {
+    // Explicit empty PDF state for this book — never keep a previous book's file
+    _obPdfFilename = null;
+    _obPdfUrl = null;
+    if (_obOrder) _obOrder.pdf_filename = null;
   }
 
   _obState = {
@@ -5592,7 +7213,7 @@ function obApplyStatusPayload(data) {
     hasEnding: !!(data.has_ending ?? progress.has_ending),
     donePages: [...(data.done_pages || progress.done_pages || [])],
     missingPages: [...(data.missing_pages || progress.missing_pages || [])],
-    pdfReady: !!(data.pdf_ready || data.pdf_filename || _obPdfFilename),
+    pdfReady: !!(data.pdf_filename || (data.pdf_ready && data.download_url)),
   };
   // Seed permanent URLs into cache (don't overwrite fresh data URLs)
   const urls = data.page_urls || {};
@@ -5718,6 +7339,61 @@ function obChildName() {
   return (document.getElementById('ob-name')?.value || '').trim();
 }
 
+function obChildGender() {
+  return (_obGender === 'girl') ? 'girl' : 'boy';
+}
+
+function applyGenderTemplate(text, gender) {
+  const g = (gender === 'girl') ? 'girl' : 'boy';
+  return String(text || '').replace(/\{([^{}|]+)\|([^{}|]+)\}/g, (_, a, b) => (g === 'girl' ? b : a));
+}
+
+function storyBeatPreviewText(raw, name, gender) {
+  const g = (gender === 'girl') ? 'girl' : 'boy';
+  const fallback = g === 'girl' ? 'بطلتنا' : 'بطلنا';
+  return applyGenderTemplate(raw, g).replace(/\{name\}/g, (name || '').trim() || fallback);
+}
+
+function obSetGender(g) {
+  _obGender = (g === 'girl') ? 'girl' : 'boy';
+  const boy = document.getElementById('ob-gender-boy');
+  const girl = document.getElementById('ob-gender-girl');
+  if (boy) {
+    boy.classList.toggle('sel-pending', _obGender === 'boy');
+    boy.classList.toggle('sel-done', false);
+  }
+  if (girl) {
+    girl.classList.toggle('sel-done', _obGender === 'girl');
+    girl.classList.toggle('sel-pending', false);
+  }
+  // Refresh beat previews
+  const name = obChildName() || (_obOrder && _obOrder.child_name) || '';
+  document.querySelectorAll('#ob-story-beats .ob-beat-text[data-beat-text]').forEach(el => {
+    el.textContent = storyBeatPreviewText(el.getAttribute('data-beat-text') || '', name, _obGender);
+  });
+}
+
+function setOrderChildGender(g) {
+  const gender = (g === 'girl') ? 'girl' : 'boy';
+  const boy = document.getElementById('o-gender-boy');
+  const girl = document.getElementById('o-gender-girl');
+  if (boy) {
+    boy.classList.toggle('sel-pending', gender === 'boy');
+    boy.classList.remove('sel-done');
+  }
+  if (girl) {
+    girl.classList.toggle('sel-done', gender === 'girl');
+    girl.classList.remove('sel-pending');
+  }
+  if (boy) boy.dataset.gender = gender === 'boy' ? '1' : '';
+  if (girl) girl.dataset.gender = gender === 'girl' ? '1' : '';
+}
+
+function getOrderChildGender() {
+  if (document.getElementById('o-gender-girl')?.classList.contains('sel-done')) return 'girl';
+  return 'boy';
+}
+
 async function obPersistProgress(extra = {}) {
   if (!_obOrder || !_obSessionId) throw new Error('مفيش جلسة كتاب');
   const base = obBookApiBase();
@@ -5730,6 +7406,7 @@ async function obPersistProgress(extra = {}) {
       session_id: _obSessionId,
       step: extra.step || _obStep,
       child_name: extra.child_name || obChildName(),
+      child_gender: extra.child_gender || obChildGender(),
       scenes,
       page_count: extra.page_count != null ? extra.page_count : _obPageCount,
       photo: _obPhoto,
@@ -5795,22 +7472,14 @@ async function obSaveToOrder(scenes, name) {
   if (!sRes.ok) throw new Error(sData.error || 'فشل حفظ الكتاب على الطلب');
   obApplyStatusPayload(sData);
   _obLastScenes = [...clean];
-  const dl = document.getElementById('ob-download');
-  const resultEl = document.getElementById('ob-result');
-  const saved = document.getElementById('ob-saved-pdf');
-  const url = sData.download_url || obCurrentPdfUrl(sData.pdf_filename);
-  if (dl) {
-    dl.href = url;
-    dl.setAttribute('download', `${name || 'coloring_book'}.pdf`);
+  // Download UI only after a real PDF filename exists (obUpdatePdfButton / save response)
+  if (sData.pdf_filename) {
+    _obPdfFilename = sData.pdf_filename;
+    if (_obOrder) _obOrder.pdf_filename = sData.pdf_filename;
   }
-  if (resultEl) {
-    resultEl.classList.add('show');
-    resultEl.style.display = 'flex';
-  }
-  if (saved) {
-    saved.href = url;
-    saved.style.display = '';
-  }
+  if (sData.download_url) _obPdfUrl = sData.download_url;
+  _obState.pdfReady = !!(sData.pdf_filename || sData.download_url);
+  obUpdatePdfButton();
   return sData;
 }
 
@@ -5821,6 +7490,7 @@ async function obGenerateCover(name, pageCount, force) {
     const cData = await qbPostAsync('/admin/api/quick-book/cover', {
       session_id: _obSessionId,
       child_name: name,
+      child_gender: obChildGender(),
       page_count: pageCount,
       force: !!force,
       pack_id: _obPackId,
@@ -5860,6 +7530,7 @@ async function obGenerateEnding(name, force) {
     const eData = await qbPostAsync('/admin/api/quick-book/ending', {
       session_id: _obSessionId,
       child_name: name,
+      child_gender: obChildGender(),
       force: !!force,
       pack_id: _obPackId,
       order_id: _obOrder && _obOrder.id,
@@ -5907,6 +7578,7 @@ async function obGenerateOnePage(sid, force) {
       book_id: _obBookId,
       provider: _obProvider,
       child_name: obChildName(),
+      child_gender: obChildGender(),
     });
     const secs = Math.round(((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0) / 100) / 10;
     const batch = gData.pages || [];
@@ -6408,9 +8080,129 @@ function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+/* ════════════════ Sales Leads (/buy) ════════════════ */
+let _slFilter = 'all';
+let _slSearchTimer = null;
+let _slAll = [];
+
+function filterSalesLeads(status, btn) {
+  _slFilter = status || 'all';
+  document.querySelectorAll('#section-sales-leads .filter-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-sl-filter') === _slFilter);
+  });
+  loadSalesLeads();
+}
+
+function searchSalesLeads(val) {
+  clearTimeout(_slSearchTimer);
+  _slSearchTimer = setTimeout(() => loadSalesLeads(), 280);
+}
+
+function slStatusLabel(st) {
+  return ({ new: 'جديدة', contacted: 'تم التواصل', done: 'منتهية', archived: 'مؤرشفة' })[st] || st || 'جديدة';
+}
+
+function formatSlDate(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' });
+  } catch (_) { return iso; }
+}
+
+function renderSalesLeads(leads) {
+  const grid = document.getElementById('sl-grid');
+  const note = document.getElementById('sl-results-note');
+  if (!grid) return;
+  if (note) note.textContent = `${leads.length} طلب`;
+  if (!leads.length) {
+    grid.innerHTML = '<div class="so-empty"><span class="so-empty-ico">🛒</span>مفيش طلبات مبيعات حاليًا</div>';
+    return;
+  }
+  grid.innerHTML = leads.map(l => {
+    const st = l.status || 'new';
+    const photo = l.photo_url
+      ? `<img src="${escHtml(l.photo_url)}" alt="" loading="lazy" onclick="openLightbox('${escHtml(l.photo_url)}')">`
+      : '<span class="ph">بدون صورة</span>';
+    const orderBtn = l.special_order_id
+      ? `<button class="btn btn-sm btn-primary" onclick="navigateAdmin('#order/${l.special_order_id}')">فتح الطلب #${l.special_order_id}</button>`
+      : '';
+    const digits = String(l.phone || '').replace(/\D/g, '');
+    let intl = digits;
+    if (intl.startsWith('00')) intl = intl.slice(2);
+    if (intl.startsWith('0') && intl.length >= 10) intl = '20' + intl.slice(1);
+    else if (intl.startsWith('1') && intl.length === 10) intl = '20' + intl;
+    const waLink = intl
+      ? `<a class="btn btn-sm btn-ghost" href="https://wa.me/${intl}" target="_blank" rel="noopener">واتساب</a>`
+      : '';
+    return `<article class="sl-card">
+      <div class="sl-card-photo">${photo}</div>
+      <div class="sl-card-body">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+          <div class="name">${escHtml(l.child_name || '—')}</div>
+          <span class="sl-badge ${escHtml(st)}">${escHtml(slStatusLabel(st))}</span>
+        </div>
+        <div class="meta"><strong>ولي الأمر:</strong> ${escHtml(l.parent_name || '—')}</div>
+        <div class="meta"><strong>موبايل:</strong> <span dir="ltr">${escHtml(l.phone || '—')}</span></div>
+        ${l.governorate || l.address ? `<div class="meta"><strong>العنوان:</strong> ${escHtml([l.governorate, l.address].filter(Boolean).join(' — '))}</div>` : ''}
+        ${l.child_age || l.child_gender || l.theme_pref ? `<div class="meta"><strong>تفاصيل:</strong> ${escHtml([l.child_age ? ('عمر ' + l.child_age) : '', l.child_gender === 'girl' ? 'بنت' : (l.child_gender === 'boy' ? 'ولد' : ''), l.theme_pref || ''].filter(Boolean).join(' · '))}</div>` : ''}
+        ${l.customer_notes ? `<div class="meta"><strong>ملاحظات:</strong> ${escHtml(l.customer_notes)}</div>` : ''}
+        <div class="meta"><strong>التاريخ:</strong> ${escHtml(formatSlDate(l.created_at))}</div>
+        <div class="meta">Lead #${l.id}${l.special_order_id ? ` · Order #${l.special_order_id}` : ''}</div>
+      </div>
+      <div class="sl-card-actions">
+        ${orderBtn}
+        ${waLink}
+        <select class="btn btn-sm btn-ghost" onchange="updateSalesLeadStatus(${l.id}, this.value)" style="cursor:pointer">
+          <option value="new"${st==='new'?' selected':''}>جديدة</option>
+          <option value="contacted"${st==='contacted'?' selected':''}>تم التواصل</option>
+          <option value="done"${st==='done'?' selected':''}>منتهية</option>
+          <option value="archived"${st==='archived'?' selected':''}>مؤرشفة</option>
+        </select>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+async function loadSalesLeads() {
+  const grid = document.getElementById('sl-grid');
+  const q = (document.getElementById('sl-search')?.value || '').trim();
+  const params = new URLSearchParams();
+  if (_slFilter && _slFilter !== 'all') params.set('status', _slFilter);
+  if (q) params.set('q', q);
+  try {
+    const res = await fetch('/admin/api/sales-leads' + (params.toString() ? '?' + params.toString() : ''));
+    if (res.status === 401) { window.location.href = '/admin/login'; return; }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'فشل التحميل');
+    _slAll = data.leads || [];
+    renderSalesLeads(_slAll);
+  } catch (e) {
+    if (grid) grid.innerHTML = `<div class="so-empty"><span class="so-empty-ico">!</span>${escHtml(e.message)}</div>`;
+  }
+}
+
+async function updateSalesLeadStatus(id, status) {
+  try {
+    const res = await fetch('/admin/api/sales-leads/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'فشل التحديث');
+    showToast('تم تحديث الحالة ✓', 'ok');
+    loadSalesLeads();
+  } catch (e) {
+    showToast(e.message, 'err');
+  }
+}
+
 /* Toggle status */
 async function toggleStatus(id, current, btn) {
-  const newStatus = current === 'done' ? 'pending' : 'done';
+  const cur = current || 'pending';
+  const newStatus = cur === 'pending' ? 'shipping' : (cur === 'shipping' ? 'done' : 'pending');
   try {
     const res  = await fetch(`/admin/api/special-orders/${id}`, {
       method: 'PUT', headers:{'Content-Type':'application/json'},
@@ -6418,12 +8210,13 @@ async function toggleStatus(id, current, btn) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'خطأ');
-    showToast(newStatus === 'done' ? '✅ تم تحديد الطلب كمكتمل' : '⏳ الطلب رجع معلّق', 'ok');
+    const msg = newStatus === 'done' ? '✅ الطلب مكتمل' : (newStatus === 'shipping' ? '🚚 الطلب قيد الشحن' : '⏳ الطلب غير مكتمل');
+    showToast(msg, 'ok');
     // refresh list and/or detail
     if (_detailOrderId === id && document.getElementById('section-order-detail')?.classList.contains('active')) {
       openOrderDetailPage(id);
     } else {
-      loadOrders();
+      refreshActiveOrdersView();
     }
   } catch(e) { showToast(e.message, 'err'); }
 }
@@ -6440,9 +8233,7 @@ async function deleteOrder(id) {
       _detailOrderId = null;
       showSection('special-orders');
     } else {
-      const card = document.getElementById(`so-card-${id}`);
-      if (card) { card.style.transition = 'opacity .3s'; card.style.opacity = '0'; setTimeout(()=>card.remove(),320); }
-      loadOrders();
+      refreshActiveOrdersView();
     }
   } catch(e) { showToast(e.message,'err'); }
 }
@@ -6528,14 +8319,142 @@ function removeModalPhoto(idx) {
   });
 })();
 
+function openNewChildForGuardian(guardianId) {
+  _soPrefillGuardianId = guardianId ? Number(guardianId) : null;
+  openOrderFormPage(null);
+}
+
+async function loadGuardiansForForm(selectedId) {
+  const sel = document.getElementById('o-guardian-id');
+  if (!sel) return;
+  try {
+    const res = await fetch('/admin/api/special-guardians');
+    if (res.status === 401) { window.location.href = '/admin/login'; return; }
+    const data = await res.json();
+    _soGuardians = data.guardians || [];
+  } catch (_) {
+    _soGuardians = [];
+  }
+  const cur = selectedId != null ? String(selectedId) : '';
+  const opts = ['<option value="">+ ولي أمر جديد</option>'];
+  for (const g of _soGuardians) {
+    const label = `${g.name || 'بدون اسم'}${g.phone ? ' · ' + g.phone : ''} (${soChildCountLabel(g.child_count || 0)})`;
+    opts.push(`<option value="${g.id}">${escHtml(label)}</option>`);
+  }
+  sel.innerHTML = opts.join('');
+  if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+  else sel.value = '';
+}
+
+function onGuardianSelectChange() {
+  const sel = document.getElementById('o-guardian-id');
+  const id = sel && sel.value ? Number(sel.value) : null;
+  if (!id) return;
+  const g = _soGuardians.find(x => Number(x.id) === id);
+  if (!g) return;
+  document.getElementById('o-client').value = g.name || '';
+  document.getElementById('o-phone').value = g.phone || '';
+  document.getElementById('o-email').value = g.email || '';
+}
+
+function updateParentSummaryBar() {
+  const name = (document.getElementById('o-client')?.value || '').trim() || '—';
+  const phone = (document.getElementById('o-phone')?.value || '').trim();
+  const email = (document.getElementById('o-email')?.value || '').trim();
+  const nameEl = document.getElementById('of-parent-summary-name');
+  const metaEl = document.getElementById('of-parent-summary-meta');
+  if (nameEl) nameEl.textContent = name;
+  if (metaEl) metaEl.textContent = [phone, email].filter(Boolean).join(' · ') || 'مفيش تليفون/إيميل';
+}
+
+function setOrderFormStep(step, opts = {}) {
+  const isEdit = opts.isEdit != null ? opts.isEdit : (_soEditId != null);
+  const layout = document.getElementById('of-layout');
+  const stepsBar = document.getElementById('of-steps');
+  const summary = document.getElementById('of-parent-summary');
+  const nextBtn = document.getElementById('of-next-btn');
+  const backStepBtn = document.getElementById('of-back-step-btn');
+  const saveBtn = document.getElementById('of-save-btn');
+  const anotherBtn = document.getElementById('of-save-another-btn');
+  const pill1 = document.getElementById('of-step-pill-1');
+  const pill2 = document.getElementById('of-step-pill-2');
+  const hSub = document.getElementById('order-form-sub');
+  const msgEl = document.getElementById('order-msg');
+
+  if (isEdit) {
+    if (layout) layout.setAttribute('data-step', 'all');
+    if (stepsBar) stepsBar.hidden = true;
+    if (summary) summary.classList.remove('show');
+    if (nextBtn) nextBtn.hidden = true;
+    if (backStepBtn) backStepBtn.hidden = true;
+    if (saveBtn) saveBtn.hidden = false;
+    if (anotherBtn) anotherBtn.hidden = true;
+    if (hSub) hSub.textContent = 'تعديل بيانات ولي الأمر والطفل معًا';
+    return;
+  }
+
+  const s = Number(step) === 2 ? 2 : 1;
+  if (layout) layout.setAttribute('data-step', String(s));
+  if (stepsBar) stepsBar.hidden = false;
+  if (pill1) {
+    pill1.classList.toggle('active', s === 1);
+    pill1.classList.toggle('done', s === 2);
+  }
+  if (pill2) {
+    pill2.classList.toggle('active', s === 2);
+    pill2.classList.remove('done');
+  }
+  if (summary) {
+    if (s === 2) {
+      updateParentSummaryBar();
+      summary.classList.add('show');
+    } else {
+      summary.classList.remove('show');
+    }
+  }
+  if (nextBtn) nextBtn.hidden = s !== 1;
+  if (backStepBtn) backStepBtn.hidden = s !== 2;
+  if (saveBtn) saveBtn.hidden = s !== 2;
+  if (anotherBtn) anotherBtn.hidden = s !== 2;
+  if (hSub) {
+    hSub.textContent = s === 1
+      ? 'الخطوة 1: سجّل ولي الأمر أو اختار واحد موجود'
+      : 'الخطوة 2: أضف بيانات الطفل والطلب';
+  }
+  if (msgEl && !opts.keepMsg) {
+    msgEl.textContent = '';
+    msgEl.className = 'of-msg modal-msg';
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => {
+    const focusId = s === 1 ? 'o-client' : 'o-child';
+    document.getElementById(focusId)?.focus();
+  }, 60);
+}
+
+function goOrderFormNextStep() {
+  const msgEl = document.getElementById('order-msg');
+  const client_name = (document.getElementById('o-client')?.value || '').trim();
+  if (!client_name) {
+    if (msgEl) {
+      msgEl.textContent = 'اكتب اسم ولي الأمر الأول، أو اختار ولي أمر موجود.';
+      msgEl.className = 'of-msg modal-msg err';
+    }
+    document.getElementById('o-client')?.focus();
+    return;
+  }
+  setOrderFormStep(2);
+}
+
 function openOrderFormPage(id) {
   _soEditId = id;
   _modalFiles = [];
   renderModalPreviews();
   resetPdfZone();
   const isEdit = id !== null && id !== undefined;
+  const prefillG = _soPrefillGuardianId;
+  _soPrefillGuardianId = null;
 
-  // Show form section
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   const sec = document.getElementById('section-order-form');
   if (sec) sec.classList.add('active');
@@ -6546,33 +8465,33 @@ function openOrderFormPage(id) {
   const titleEl = document.getElementById('page-title');
   const subEl   = document.getElementById('page-sub');
   const hTitle  = document.getElementById('order-form-title');
-  const hSub    = document.getElementById('order-form-sub');
   const hIcon   = document.getElementById('of-hero-icon');
   const msgEl   = document.getElementById('order-msg');
 
   if (titleEl) titleEl.textContent = isEdit ? 'تعديل الطلب' : 'طلب جديد';
-  if (subEl)   subEl.textContent   = isEdit ? 'تحديث بيانات الطلب الخاص' : 'إضافة طلب جديد من الواتساب';
+  if (subEl)   subEl.textContent   = isEdit ? 'تحديث بيانات الطفل وولي الأمر' : 'أولاً ولي الأمر — وبعدين الطفل';
   if (hTitle)  hTitle.textContent  = isEdit ? 'تعديل الطلب' + (id ? ' #' + id : '') : 'طلب جديد';
-  if (hSub)    hSub.textContent    = 'اسم الطفل مطلوب، باقي الحقول اختيارية';
-  if (hIcon)   hIcon.textContent   = isEdit ? '✏️' : '📱';
-  if (msgEl) {
-    msgEl.textContent = '';
-    msgEl.className = 'of-msg modal-msg';
-  }
+  if (hIcon)   hIcon.textContent   = isEdit ? '✏️' : '👨‍👩‍👧';
+  if (msgEl) { msgEl.textContent = ''; msgEl.className = 'of-msg modal-msg'; }
 
-  const routeHash = isEdit ? '#order/' + id + '/edit' : '#order/new';
-  if (location.hash !== routeHash) {
-    history.pushState(null, '', routeHash);
-  }
+  const routeHash = isEdit
+    ? '#order/' + id + '/edit'
+    : (prefillG ? '#order/new/g/' + prefillG : '#order/new');
+  if (location.hash !== routeHash) history.pushState(null, '', routeHash);
 
-  const fillFromOrder = (o) => {
+  const fillFromOrder = async (o) => {
+    await loadGuardiansForForm(o.guardian_id || null);
+    const gSel = document.getElementById('o-guardian-id');
+    if (gSel && o.guardian_id) gSel.value = String(o.guardian_id);
     document.getElementById('o-child').value    = o.child_name  || '';
+    setOrderChildGender(o.child_gender || 'boy');
     document.getElementById('o-client').value   = o.client_name || '';
     document.getElementById('o-phone').value    = o.phone       || '';
     document.getElementById('o-email').value    = o.email       || '';
     document.getElementById('o-notes').value    = o.notes       || '';
     document.getElementById('o-assigned').value = o.assigned_to || '';
     setOrderStatus(o.status || 'pending');
+    fillOrderCommerceFields(o);
     renderExistingPhotos(o.id, o.photos || []);
     if (o.pdf_filename) {
       const zone = document.getElementById('o-pdf-zone');
@@ -6583,18 +8502,33 @@ function openOrderFormPage(id) {
     }
   };
 
+  const clearChildFields = () => {
+    document.getElementById('o-child').value = '';
+    setOrderChildGender('boy');
+    document.getElementById('o-notes').value = '';
+    document.getElementById('o-assigned').value = '';
+    setOrderStatus('pending');
+    resetOrderCommerceFields();
+    resetPdfZone();
+    renderExistingPhotos(null, []);
+    _modalFiles = [];
+    renderModalPreviews();
+  };
+
   if (isEdit) {
+    setOrderFormStep(1, { isEdit: true });
     const cached = _soAll.find(x => x.id === id);
-    if (cached) {
-      fillFromOrder(cached);
-    } else {
-      ['o-child','o-client','o-phone','o-email','o-notes','o-assigned'].forEach(fid => {
-        document.getElementById(fid).value = '';
+    if (cached) fillFromOrder(cached);
+    else {
+      loadGuardiansForForm(null).then(() => {
+        ['o-child','o-client','o-phone','o-email','o-notes','o-assigned'].forEach(fid => {
+          document.getElementById(fid).value = '';
+        });
+        setOrderStatus('pending');
+        resetOrderCommerceFields();
+        renderExistingPhotos(null, []);
       });
-      setOrderStatus('pending');
-      renderExistingPhotos(null, []);
     }
-    // Always refresh from server for latest photos/pdf
     fetch(`/admin/api/special-orders/${id}`)
       .then(r => {
         if (r.status === 401) { window.location.href = '/admin/login'; return null; }
@@ -6611,18 +8545,25 @@ function openOrderFormPage(id) {
         if (!cached) showToast('فشل تحميل بيانات الطلب', 'err');
       });
   } else {
-    ['o-child','o-client','o-phone','o-email','o-notes','o-assigned'].forEach(fid => {
-      document.getElementById(fid).value = '';
+    loadGuardiansForForm(prefillG).then(() => {
+      if (!prefillG) {
+        document.getElementById('o-client').value = '';
+        document.getElementById('o-phone').value = '';
+        document.getElementById('o-email').value = '';
+      }
+      clearChildFields();
+      if (prefillG) {
+        const gSel = document.getElementById('o-guardian-id');
+        if (gSel) {
+          gSel.value = String(prefillG);
+          onGuardianSelectChange();
+        }
+        setOrderFormStep(2, { isEdit: false });
+      } else {
+        setOrderFormStep(1, { isEdit: false });
+      }
     });
-    setOrderStatus('pending');
-    renderExistingPhotos(null, []);
   }
-
-  setTimeout(() => {
-    const inp = document.getElementById('o-child');
-    if (inp) inp.focus();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, 80);
 }
 
 // Back-compat alias
@@ -6636,28 +8577,40 @@ function cancelOrderForm() {
   }
 }
 
-async function submitOrderForm() {
+async function submitOrderForm(addAnother) {
   const msgEl = document.getElementById('order-msg');
   const saveBtn = document.getElementById('of-save-btn');
+  const anotherBtn = document.getElementById('of-save-another-btn');
   const child_name  = document.getElementById('o-child').value.trim();
+  const child_gender = getOrderChildGender();
   const client_name = document.getElementById('o-client').value.trim();
   const phone       = document.getElementById('o-phone').value.trim();
   const email       = document.getElementById('o-email').value.trim();
   const notes       = document.getElementById('o-notes').value.trim();
-  const status      = document.getElementById('o-status-done').classList.contains('sel-done') ? 'done' : 'pending';
+  const status      = (typeof getOrderStatus === 'function') ? getOrderStatus() : 'pending';
   const assigned_to = document.getElementById('o-assigned').value.trim();
   const pdfFile     = document.getElementById('o-pdf-input').files[0] || null;
+  const gSel = document.getElementById('o-guardian-id');
+  const guardian_id = gSel && gSel.value ? Number(gSel.value) : null;
 
+  if (!client_name) {
+    msgEl.textContent = 'اسم ولي الأمر مطلوب!'; msgEl.className = 'of-msg modal-msg err'; return;
+  }
   if (!child_name) {
     msgEl.textContent = 'اسم الطفل مطلوب!'; msgEl.className = 'of-msg modal-msg err'; return;
   }
-  const payload = { child_name, client_name, phone, email, notes, status, assigned_to };
+  const payload = {
+    child_name, child_gender, client_name, phone, email, notes, status, assigned_to,
+    guardian_id: guardian_id || null,
+    ...collectOrderCommercePayload(),
+  };
   const isEdit  = _soEditId !== null;
   const url     = isEdit ? `/admin/api/special-orders/${_soEditId}` : '/admin/api/special-orders';
   const method  = isEdit ? 'PUT' : 'POST';
 
   try {
     if (saveBtn) saveBtn.disabled = true;
+    if (anotherBtn) anotherBtn.disabled = true;
     msgEl.textContent = 'جاري الحفظ...'; msgEl.className = 'of-msg modal-msg';
     const res  = await fetch(url, {
       method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload),
@@ -6666,6 +8619,7 @@ async function submitOrderForm() {
     if (!res.ok) throw new Error(data.error || 'خطأ');
 
     const orderId = isEdit ? _soEditId : data.order.id;
+    const savedGuardianId = data.guardian_id || data.order?.guardian_id || guardian_id;
 
     if (_modalFiles.length > 0) {
       msgEl.textContent = `جاري رفع ${_modalFiles.length} صورة...`;
@@ -6693,10 +8647,36 @@ async function submitOrderForm() {
       }
     }
 
+    if (!isEdit && addAnother) {
+      msgEl.textContent = 'تم حفظ الطفل ✓ — سجّل طفل تاني لنفس ولي الأمر';
+      msgEl.className = 'of-msg modal-msg ok';
+      showToast('تم الحفظ — ضيف طفل تاني', 'ok');
+      _soEditId = null;
+      _modalFiles = [];
+      _existingPhotos = [];
+      await loadGuardiansForForm(savedGuardianId);
+      const gEl = document.getElementById('o-guardian-id');
+      if (gEl && savedGuardianId) {
+        gEl.value = String(savedGuardianId);
+        onGuardianSelectChange();
+      }
+      document.getElementById('o-child').value = '';
+      document.getElementById('o-notes').value = '';
+      document.getElementById('o-assigned').value = '';
+      setOrderStatus('pending');
+      resetOrderCommerceFields();
+      resetPdfZone();
+      renderExistingPhotos(null, []);
+      renderModalPreviews();
+      history.replaceState(null, '', '#order/new/g/' + (savedGuardianId || ''));
+      setOrderFormStep(2, { isEdit: false, keepMsg: true });
+      document.getElementById('o-child')?.focus();
+      return;
+    }
+
     msgEl.textContent = isEdit ? 'تم التعديل ✓' : 'تم إضافة الطلب ✓';
     msgEl.className   = 'of-msg modal-msg ok';
     showToast(isEdit ? 'تم تعديل الطلب ✓' : 'تم إضافة الطلب ✓', 'ok');
-    // After successful save → back to special orders list
     setTimeout(() => {
       _soEditId = null;
       _modalFiles = [];
@@ -6712,6 +8692,7 @@ async function submitOrderForm() {
     msgEl.className = 'of-msg modal-msg err';
   } finally {
     if (saveBtn) saveBtn.disabled = false;
+    if (anotherBtn) anotherBtn.disabled = false;
   }
 }
 
@@ -6847,6 +8828,11 @@ function navigateAdmin(hash, opts = {}) {
     setStatusFilterUi(_soFilter || 'all');
     loadOrders();
   }
+  const boardStatus = statusFromSection(route.section);
+  if (boardStatus) {
+    _obView = 'detail';
+    loadStatusBoard(boardStatus);
+  }
   if (route.section === 'users' && typeof loadUsers === 'function') {
     try { loadUsers(); } catch (_) {}
   }
@@ -6868,8 +8854,15 @@ function _renderSectionOnly(id, orderId) {
   if (subEl && sectionMeta[id])   subEl.textContent   = sectionMeta[id].sub;
 }
 
-// Global Event Delegation for data-section nav + guardian chips
+// Global Event Delegation for data-section nav + guardian chips + family toggles
 document.addEventListener('click', (e) => {
+  const familyHead = e.target.closest('[data-family-toggle]');
+  if (familyHead && !e.target.closest('[data-parent-select], a, button.so-family-clear')) {
+    e.preventDefault();
+    toggleFamilyCollapse(familyHead.getAttribute('data-family-toggle'), e);
+    return;
+  }
+
   // Parent / guardian filter chips & name links
   const parentBtn = e.target.closest('[data-parent-select]');
   if (parentBtn) {
@@ -6890,6 +8883,14 @@ document.addEventListener('click', (e) => {
       navigateAdmin('#' + secId, { fromNav: true });
     }
   }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const familyHead = e.target.closest('[data-family-toggle]');
+  if (!familyHead) return;
+  e.preventDefault();
+  toggleFamilyCollapse(familyHead.getAttribute('data-family-toggle'), e);
 });
 
 function applyHashRoute() {
@@ -6916,6 +8917,8 @@ function applyHashRoute() {
       setStatusFilterUi(_soFilter || 'all');
       loadOrders();
     }
+    const boardStatus = statusFromSection(route.section);
+    if (boardStatus) loadStatusBoard(boardStatus);
     if (route.section === 'users' && typeof loadUsers === 'function') {
       try { loadUsers(); } catch (_) {}
     }

@@ -27,6 +27,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from functools import wraps
 from typing import List, Optional, Union
+from urllib.parse import quote
 
 try:
     from dotenv import load_dotenv
@@ -43,7 +44,7 @@ from flask import Flask, jsonify, render_template, request, send_file, abort, se
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from PIL import Image, ImageDraw, ImageFont
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A3, A4, landscape
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas as pdf_canvas
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -62,6 +63,9 @@ from paymob_client import (
     verify_transaction_post_hmac,
 )
 from kie_client import (
+    KIE_POSTER_ASPECT,
+    KIE_POSTER_LANDSCAPE_ASPECT,
+    KIE_POSTER_RESOLUTION,
     generate_image_to_image,
     is_mock_provider,
     kie_configured,
@@ -74,6 +78,9 @@ from kie_client import (
 COST_CHATGPT_USD = float(os.environ.get("COST_CHATGPT_USD") or "0.03")
 COST_NANOBANANA_USD = float(os.environ.get("COST_NANOBANANA_USD") or "0.04")
 COST_MOCK_USD = float(os.environ.get("COST_MOCK_USD") or "0")
+# Poster images use 2K/4K — somewhat higher than book 1K pages
+COST_POSTER_CHATGPT_USD = float(os.environ.get("COST_POSTER_CHATGPT_USD") or "0.06")
+COST_POSTER_NANOBANANA_USD = float(os.environ.get("COST_POSTER_NANOBANANA_USD") or "0.08")
 COST_USD_TO_EGP = float(os.environ.get("COST_USD_TO_EGP") or "50")
 
 COVER_MODES = frozenset({"none", "cover", "ending", "both"})
@@ -84,8 +91,11 @@ def cost_rates_dict() -> dict:
         "chatgpt": COST_CHATGPT_USD,
         "nanobanana": COST_NANOBANANA_USD,
         "mock": COST_MOCK_USD,
+        "poster_chatgpt": COST_POSTER_CHATGPT_USD,
+        "poster_nanobanana": COST_POSTER_NANOBANANA_USD,
+        "poster_mock": COST_MOCK_USD,
         "usd_to_egp": COST_USD_TO_EGP,
-        "note": "تقريبي — أسعار Kie 1K وقد تختلف. Mock = $0 (اختبار بدون Kie).",
+        "note": "تقريبي — كتب 1K؛ بوسترات A3 أعلى (2K/4K). Mock = $0.",
     }
 
 
@@ -117,6 +127,60 @@ GOOGLE_CLIENT_ID = (os.environ.get("GOOGLE_CLIENT_ID") or "").strip()
 GOOGLE_CLIENT_SECRET = (os.environ.get("GOOGLE_CLIENT_SECRET") or "").strip()
 APP_URL = (os.environ.get("APP_URL") or "").rstrip("/")
 
+# Sales landing (/) — WhatsApp funnel (override in .env without code changes)
+SALES_WHATSAPP = (os.environ.get("SALES_WHATSAPP") or "01555119079").strip()
+try:
+    SALES_PRICE_EGP = int(float(os.environ.get("SALES_PRICE_EGP") or "350"))
+except (TypeError, ValueError):
+    SALES_PRICE_EGP = 350
+try:
+    SALES_COMPARE_AT_EGP = int(float(os.environ.get("SALES_COMPARE_AT_EGP") or "699"))
+except (TypeError, ValueError):
+    SALES_COMPARE_AT_EGP = 699
+if SALES_COMPARE_AT_EGP <= SALES_PRICE_EGP:
+    SALES_COMPARE_AT_EGP = 0
+SALES_WHATSAPP_MESSAGE = (
+    os.environ.get("SALES_WHATSAPP_MESSAGE")
+    or "مرحباً لونّي، عايز أطلب كتاب تلوين مخصص. اسم الطفل: ... وجاهز أبعت الصورة."
+).strip()
+PRIVACY_EMAIL = (os.environ.get("PRIVACY_EMAIL") or "").strip()
+PRIVACY_ADDRESS = (os.environ.get("PRIVACY_ADDRESS") or "").strip()
+PRIVACY_COMMERCIAL_REGISTER = (os.environ.get("PRIVACY_COMMERCIAL_REGISTER") or "").strip()
+PRIVACY_TAX_CARD = (os.environ.get("PRIVACY_TAX_CARD") or "").strip()
+PRIVACY_UPDATED = (os.environ.get("PRIVACY_UPDATED") or "13 أغسطس 2026").strip()
+
+# Resend — new sales-order email alerts
+RESEND_API_KEY = (os.environ.get("RESEND_API_KEY") or "").strip()
+RESEND_FROM = (os.environ.get("RESEND_FROM") or "Lony <onboarding@resend.dev>").strip()
+_RESEND_TO_RAW = (
+    os.environ.get("RESEND_NOTIFY_TO")
+    or "atpfreelancer@gmail.com,mahaelkhadry@gmail.com"
+)
+RESEND_NOTIFY_TO = [
+    e.strip() for e in _RESEND_TO_RAW.replace(";", ",").split(",") if e.strip()
+]
+
+# Evolution API — WhatsApp confirmation to customer after /order
+EVOLUTION_API_URL = (
+    os.environ.get("EVOLUTION_API_URL")
+    or "https://evolution.labeltech.site/message/sendText/201002089079"
+).strip()
+EVOLUTION_API_KEY = (os.environ.get("EVOLUTION_API_KEY") or "").strip()
+
+
+def privacy_page_context() -> dict:
+    ctx = sales_page_context()
+    ctx.update(
+        {
+            "privacy_updated": PRIVACY_UPDATED,
+            "privacy_email": PRIVACY_EMAIL,
+            "privacy_address": PRIVACY_ADDRESS,
+            "privacy_commercial_register": PRIVACY_COMMERCIAL_REGISTER,
+            "privacy_tax_card": PRIVACY_TAX_CARD,
+        }
+    )
+    return ctx
+
 
 def google_ready() -> bool:
     return bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
@@ -126,6 +190,272 @@ def app_base_url() -> str:
     if APP_URL:
         return APP_URL
     return request.url_root.rstrip("/")
+
+
+def normalize_egypt_whatsapp(raw: Optional[str]) -> str:
+    """Normalize Egyptian mobile to international digits for wa.me (e.g. 2010...)."""
+    digits = re.sub(r"\D", "", raw or "")
+    if digits.startswith("00"):
+        digits = digits[2:]
+    if digits.startswith("20") and len(digits) >= 12:
+        return digits
+    if digits.startswith("0") and len(digits) >= 10:
+        return "20" + digits[1:]
+    if digits.startswith("1") and len(digits) == 10:
+        return "20" + digits
+    return digits
+
+
+def sales_whatsapp_url(phone: Optional[str] = None, message: Optional[str] = None) -> str:
+    """Build https://wa.me/<intl>?text=... for the sales landing CTA."""
+    intl = normalize_egypt_whatsapp(phone if phone is not None else SALES_WHATSAPP)
+    msg = (message if message is not None else SALES_WHATSAPP_MESSAGE) or ""
+    if not intl:
+        return "https://wa.me/"
+    if msg:
+        return f"https://wa.me/{intl}?text={quote(msg)}"
+    return f"https://wa.me/{intl}"
+
+
+def sales_page_context(lang: str = "ar") -> dict:
+    phone_raw = SALES_WHATSAPP
+    intl = normalize_egypt_whatsapp(phone_raw)
+    display = phone_raw if phone_raw else intl
+    save = max(0, SALES_COMPARE_AT_EGP - SALES_PRICE_EGP) if SALES_COMPARE_AT_EGP else 0
+    lang = "en" if (lang or "").lower().startswith("en") else "ar"
+    if lang == "en":
+        inquiry_msg = "Hi Lony, I have a question about the box."
+    else:
+        inquiry_msg = "مرحباً لونّي، عندي سؤال / استفسار عن البوكس."
+    return {
+        "lang": lang,
+        "sales_price_egp": SALES_PRICE_EGP,
+        "sales_compare_at_egp": SALES_COMPARE_AT_EGP,
+        "sales_save_egp": save,
+        "sales_whatsapp_display": display,
+        "sales_whatsapp_url": sales_whatsapp_url(message=inquiry_msg),
+        "sales_inquiry_whatsapp_url": sales_whatsapp_url(message=inquiry_msg),
+    }
+
+
+def _html_escape(value: str) -> str:
+    return (
+        (value or "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def _resend_send_one(
+    *,
+    to_email: str,
+    subject: str,
+    html: str,
+    text: str,
+    attachments: Optional[list] = None,
+) -> bool:
+    """Send one email via Resend. Returns True on success."""
+    if not RESEND_API_KEY or not to_email:
+        return False
+    payload = {
+        "from": RESEND_FROM,
+        "to": [to_email],
+        "subject": subject,
+        "html": html,
+        "text": text,
+    }
+    if attachments:
+        payload["attachments"] = attachments
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            res = client.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+        if res.status_code >= 400:
+            app.logger.warning(
+                "Resend failed to %s: %s %s",
+                to_email,
+                res.status_code,
+                (res.text or "")[:300],
+            )
+            return False
+        return True
+    except Exception:
+        app.logger.exception("Resend request error for %s", to_email)
+        return False
+
+
+def notify_new_sales_order_email(
+    *,
+    order_id: int,
+    lead_id: int,
+    parent_name: str,
+    child_name: str,
+    phone: str,
+    governorate: str,
+    address: str,
+    customer_notes: str = "",
+    theme_pref: str = "",
+    price_egp: int | float = 0,
+    photo_path: Optional[Path] = None,
+) -> None:
+    """Email admins about a new /order booking. Never raises."""
+    if not RESEND_API_KEY or not RESEND_NOTIFY_TO:
+        return
+
+    admin_url = f"{APP_URL}/admin" if APP_URL else "/admin"
+    subject = f"طلب جديد #{order_id} — {child_name} ({price_egp} ج.م)"
+    rows = [
+        ("رقم الطلب", str(order_id)),
+        ("رقم الليد", str(lead_id)),
+        ("ولي الأمر", parent_name),
+        ("اسم الطفل", child_name),
+        ("الموبايل", phone),
+        ("المحافظة", governorate),
+        ("العنوان", address),
+        ("السعر", f"{price_egp} ج.م"),
+        ("الدفع", "عند الاستلام (COD)"),
+    ]
+    if theme_pref:
+        rows.append(("نوع الكتاب", theme_pref))
+    if customer_notes:
+        rows.append(("ملاحظات", customer_notes))
+
+    trs = "".join(
+        f"<tr><td style='padding:8px 10px;border-bottom:1px solid #eee;color:#666;width:140px'>{_html_escape(k)}</td>"
+        f"<td style='padding:8px 10px;border-bottom:1px solid #eee;font-weight:600'>{_html_escape(v)}</td></tr>"
+        for k, v in rows
+    )
+    html = f"""
+    <div style="font-family:Tahoma,Arial,sans-serif;direction:rtl;text-align:right;color:#2a1f1a;max-width:640px;margin:0 auto">
+      <h2 style="color:#e85d4c;margin:0 0 8px">طلب جديد من صفحة الحجز</h2>
+      <p style="color:#6b5e56;margin:0 0 16px">تم استلام طلب بوكس لونّي جديد.</p>
+      <table style="width:100%;border-collapse:collapse;background:#fffaf6;border:1px solid #eee;border-radius:12px">
+        {trs}
+      </table>
+      <p style="margin:18px 0 0">
+        <a href="{_html_escape(admin_url)}" style="display:inline-block;background:#e85d4c;color:#fff;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:700">فتح لوحة الإدارة</a>
+      </p>
+    </div>
+    """
+    text_lines = ["طلب جديد من صفحة الحجز", ""] + [f"{k}: {v}" for k, v in rows]
+    text_lines.append(f"Admin: {admin_url}")
+    text = "\n".join(text_lines)
+
+    attachments = None
+    if photo_path and photo_path.is_file():
+        try:
+            raw = photo_path.read_bytes()
+            if len(raw) <= 3_000_000:
+                attachments = [
+                    {
+                        "filename": photo_path.name,
+                        "content": base64.b64encode(raw).decode("ascii"),
+                    }
+                ]
+        except Exception:
+            app.logger.exception("Could not attach sales lead photo to email")
+
+    for to_email in RESEND_NOTIFY_TO:
+        _resend_send_one(
+            to_email=to_email,
+            subject=subject,
+            html=html,
+            text=text,
+            attachments=attachments,
+        )
+
+
+def build_order_whatsapp_message(
+    *,
+    parent_name: str,
+    child_name: str,
+    order_id: int,
+    price_egp: int | float = 0,
+    lang: str = "ar",
+) -> str:
+    parent = (parent_name or "").strip() or ("there" if lang == "en" else "حبيبنا")
+    child = (child_name or "").strip() or ("your child" if lang == "en" else "طفلك")
+    if lang == "en":
+        return (
+            f"Hi {parent} 💛\n\n"
+            f"We received the Lony box order for *{child}*, "
+            f"and we’re so happy to help make something special for them 🎨✨\n\n"
+            f"Order *#{order_id}* is confirmed and we’re working on it now "
+            f"to prepare a coloring book with {child}’s name and likeness… "
+            f"a little moment of joy that grows with every page they color.\n\n"
+            f"Someone from the Lony team will contact you soon to finish the details gently.\n\n"
+            f"Thank you for choosing Lony — let {child}’s joy start today 🌈"
+        )
+    return (
+        f"أهلاً {parent} 💛\n\n"
+        f"وصلنا طلب بوكس لونّي الخاص بـ *{child}*، "
+        f"وقلوبنا فرحانة إننا هنشارك في سعادة {child} 🎨✨\n\n"
+        f"إحنا استلمنا الطلب رقم *#{order_id}* وشغالين عليه دلوقتي "
+        f"عشان نحضر لـ {child} كتاب تلوين باسمه وملامحه… "
+        f"لحظة سعادة صغيرة هتكبر مع كل صفحة يلوّنها.\n\n"
+        f"حد من فريق لونّي هيتواصل معاك قريبًا عشان نكمّل التفاصيل معاك بهدوء.\n\n"
+        f"شكرًا إنك اخترت لونّي… خلّي فرحة {child} تبتدي من دلوقتي 🌈"
+    )
+
+
+def send_evolution_whatsapp(*, number: str, text: str) -> bool:
+    """Send WhatsApp text via Evolution API. Returns True on success."""
+    if not EVOLUTION_API_URL or not EVOLUTION_API_KEY:
+        return False
+    digits = normalize_egypt_whatsapp(number)
+    if len(digits) < 11:
+        app.logger.warning("Evolution WhatsApp skipped: invalid number %r", number)
+        return False
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            res = client.post(
+                EVOLUTION_API_URL,
+                headers={
+                    "Content-Type": "application/json",
+                    "apikey": EVOLUTION_API_KEY,
+                },
+                json={"number": digits, "text": text},
+            )
+        if res.status_code >= 400:
+            app.logger.warning(
+                "Evolution WhatsApp failed (%s): %s",
+                res.status_code,
+                (res.text or "")[:300],
+            )
+            return False
+        return True
+    except Exception:
+        app.logger.exception("Evolution WhatsApp request error")
+        return False
+
+
+def notify_customer_order_whatsapp(
+    *,
+    phone: str,
+    parent_name: str,
+    child_name: str,
+    order_id: int,
+    price_egp: int | float = 0,
+    lang: str = "ar",
+) -> None:
+    """WhatsApp the customer right after a new booking. Never raises."""
+    msg = build_order_whatsapp_message(
+        parent_name=parent_name,
+        child_name=child_name,
+        order_id=order_id,
+        price_egp=price_egp,
+        lang=lang,
+    )
+    send_evolution_whatsapp(number=phone, text=msg)
+
 
 # A4 portrait ratio 210:297 — dimensions are multiples of 16 (model-friendly)
 # and stay within Workers AI max 1920px
@@ -489,54 +819,54 @@ OCCASIONS_SCENES = [
 
 TREASURE_BEATS = [
     {"id": "st_tr_1", "emoji": "🗺️", "title": "الخريطة",
-     "text": "لقى {name} خريطة قديمة تحت السرير… مكتوب عليها: كنز!",
+     "text": "{لقى|لقت} {name} خريطة قديمة تحت السرير... مكتوب عليها: كنز!",
      "scene": "kneeling on a bedroom floor unrolling an old treasure map, dust and golden light "
               "coming from under the bed, eyes wide with excitement"},
     {"id": "st_tr_2", "emoji": "🎒", "title": "بداية الرحلة",
-     "text": "حط {name} الخريطة في الشنطة وقال: يلا نبدأ المغامرة!",
+     "text": "{حط|حطت} {name} الخريطة في الشنطة {وقال|وقالت}: يلا نبدأ المغامرة!",
      "scene": "walking out of a cozy house at sunrise wearing a backpack and an explorer hat, "
               "a long winding path stretching ahead toward green hills"},
     {"id": "st_tr_3", "emoji": "🌳", "title": "الغابة",
-     "text": "دخل غابة كبيرة… الشجر عالي والأصوات غريبة، بس {name} كمّل.",
+     "text": "{دخل|دخلت} غابة كبيرة... الشجر عالي والأصوات غريبة، بس {name} {كمّل|كمّلت}.",
      "scene": "walking bravely through a tall dense forest with sunbeams between the trees, "
               "curious eyes of small friendly animals peeking from the bushes"},
     {"id": "st_tr_4", "emoji": "🦊", "title": "الصاحب الجديد",
-     "text": "قابل تعلب صغير تايه… خدّه معاه، وبقوا اتنين.",
+     "text": "{قابل|قابلت} ثعلب صغير تايه... {خدّه|خدّته} {معاه|معاها}، وبقوا اتنين.",
      "scene": "crouching to comfort a small lost fox cub in a forest clearing, the fox looking up "
               "with big trusting eyes"},
     {"id": "st_tr_5", "emoji": "🌉", "title": "النهر",
-     "text": "النهر كان واسع… بس {name} بنى قنطرة من الخشب وعدّى.",
+     "text": "النهر كان واسع... بس {name} {بنى|بنت} قنطرة من الخشب {وعدّى|وعدّت}.",
      "scene": "carefully crossing a wide river on a makeshift wooden log bridge with the fox cub "
               "following, water sparkling below"},
     {"id": "st_tr_6", "emoji": "🕯️", "title": "الكهف",
-     "text": "جوّه الكهف كان ضلمة… شغّل الشمعة ولقى الطريق.",
+     "text": "جوّه الكهف كان ضلمة... {شغّل|شغّلت} الشمعة {ولقى|ولقت} الطريق.",
      "scene": "holding a small lantern inside a dark cave, warm light revealing glittering crystals "
               "on the rocky walls, the fox cub close by"},
     {"id": "st_tr_7", "emoji": "💎", "title": "الكنز",
-     "text": "الكنز مكانش دهب… كان صندوق مليان كتب وألوان!",
+     "text": "الكنز مكانش دهب... كان صندوق مليان كتب وألوان!",
      "scene": "opening a big wooden treasure chest that glows with books, crayons and paint "
               "instead of gold, face lit with wonder"},
     {"id": "st_tr_8", "emoji": "🏡", "title": "الرجوع",
-     "text": "رجع {name} البيت… وأحلى كنز كان المغامرة نفسها ❤️",
+     "text": "{رجع|رجعت} {name} البيت... وأحلى كنز كان المغامرة نفسها",
      "scene": "arriving home at sunset with the fox cub, family waving from the doorway, "
               "the treasure chest carried under one arm, warm golden light"},
 ]
 
 COURAGE_BEATS = [
     {"id": "st_co_1", "emoji": "😟", "title": "الصبح",
-     "text": "أول يوم مدرسة… و{name} قلبه بيدق بسرعة.",
+     "text": "أول يوم مدرسة... و{name} {قلبه|قلبها} بيدق بسرعة.",
      "scene": "sitting on the edge of the bed in the early morning wearing a school uniform, "
               "looking worried, a packed backpack waiting by the door"},
     {"id": "st_co_2", "emoji": "🤗", "title": "حضن ماما",
-     "text": "ماما حضنته وقالت: الشجاعة إنك تخاف… وتروح برضه.",
+     "text": "ماما {حضنته|حضنتها} وقالت: الشجاعة إنك {تخاف... وتروح|تخافي... وتروحي} برضه.",
      "scene": "being hugged warmly by a parent at the front door, soft morning light, "
               "the parent kneeling to eye level, reassuring smile"},
     {"id": "st_co_3", "emoji": "🏫", "title": "الباب الكبير",
-     "text": "باب المدرسة كان كبير أوي… بس {name} دخل.",
+     "text": "باب المدرسة كان كبير أوي... بس {name} {دخل|دخلت}.",
      "scene": "standing small in front of a very large school gate, hand on the strap of the "
               "backpack, taking one brave step forward"},
     {"id": "st_co_4", "emoji": "🪑", "title": "لوحده",
-     "text": "قعد لوحده في الفصل… وكل الوشوش جديدة.",
+     "text": "{قعد لوحده|قعدت لوحدها} في الفصل... وكل الوشوش جديدة.",
      "scene": "sitting alone at a classroom desk among unfamiliar children, holding a pencil, "
               "looking quietly around the bright room"},
     {"id": "st_co_5", "emoji": "🙂", "title": "أول ابتسامة",
@@ -544,162 +874,162 @@ COURAGE_BEATS = [
      "scene": "another child at the next desk turning with a warm friendly smile and offering "
               "a shared box of crayons"},
     {"id": "st_co_6", "emoji": "⚽", "title": "الفسحة",
-     "text": "في الفسحة لعبوا سوا… والخوف راح.",
+     "text": "في الفسحة لعبوا سوا... والخوف راح.",
      "scene": "playing happily with new friends in a sunny school playground, laughing while "
               "running after a ball"},
     {"id": "st_co_7", "emoji": "✋", "title": "رفع إيده",
-     "text": "ورفع إيده في الفصل لأول مرة… وجاوب صح!",
+     "text": "{ورفع إيده|ورفعت إيدها} في الفصل لأول مرة... {وجاوب|وجاوبت} صح!",
      "scene": "raising a hand confidently in class while the teacher smiles at the board, "
               "classmates looking on"},
     {"id": "st_co_8", "emoji": "🌟", "title": "البطل",
-     "text": "رجع البيت وقال: أنا قدرت! و{name} فعلاً بطل ❤️",
+     "text": "{رجع|رجعت} البيت {وقال|وقالت}: أنا قدرت! و{name} فعلاً {بطل|بطلة}",
      "scene": "running into a parent's open arms at home, beaming with pride, backpack "
               "swinging, warm afternoon light through the window"},
 ]
 
 SPACE_BEATS = [
     {"id": "st_sp_1", "emoji": "🌌", "title": "النجوم",
-     "text": "كل ليلة {name} يبص من الشباك… ويسأل: فيه إيه فوق؟",
+     "text": "كل ليلة {name} {يبص|تبص} من الشباك... {ويسأل|وتسأل}: فيه إيه فوق؟",
      "scene": "looking up through a bedroom window at a huge starry night sky, chin resting "
               "on hands, wonder on the face"},
     {"id": "st_sp_2", "emoji": "🔧", "title": "الصاروخ",
-     "text": "قرر يبني صاروخ من الكراتين… واشتغل عليه أسبوع.",
+     "text": "{قرر يبني|قررت تبني} صاروخ من الكراتين... {واشتغل|واشتغلت} عليه أسبوع.",
      "scene": "building a cardboard rocket in a backyard with tape, paint and tools scattered "
               "around, tongue out in concentration"},
     {"id": "st_sp_3", "emoji": "🚀", "title": "الإقلاع",
-     "text": "٣… ٢… ١… انطلق!",
+     "text": "٣... ٢... ١... انطلق!",
      "scene": "blasting off inside the small rocket, flames and smoke below, the house and "
               "garden shrinking underneath"},
     {"id": "st_sp_4", "emoji": "🪐", "title": "بين الكواكب",
-     "text": "عدّى جنب كواكب ملوّنة… وشاف الأرض صغيرة من بعيد.",
+     "text": "{عدّى|عدّت} جنب كواكب ملوّنة... {وشاف|وشافت} الأرض صغيرة من بعيد.",
      "scene": "floating in the rocket window between colorful ringed planets, Earth a small "
               "blue marble far behind"},
     {"id": "st_sp_5", "emoji": "👽", "title": "الصاحب الفضائي",
-     "text": "قابل كائن صغير أخضر… خاف الأول، بعدين ضحكوا.",
+     "text": "{قابل|قابلت} كائن صغير أخضر... {خاف|خافت} الأول، بعدين ضحكوا.",
      "scene": "meeting a small cute green alien with big friendly eyes on a rocky colorful "
               "planet, both waving shyly at each other"},
     {"id": "st_sp_6", "emoji": "🌕", "title": "على القمر",
-     "text": "مشيوا سوا على القمر… وكل خطوة كانت طايرة!",
+     "text": "مشيوا سوا على القمر... وكل خطوة كانت طايرة!",
      "scene": "bouncing in low gravity across the moon surface with the alien friend, "
               "footprints in grey dust, Earth glowing in the black sky"},
     {"id": "st_sp_7", "emoji": "🚩", "title": "العلم",
-     "text": "زرع علم صغير مكتوب عليه اسمه… علشان يفضل هناك.",
+     "text": "{زرع|زرعت} علم صغير مكتوب عليه {اسمه|اسمها}... علشان يفضل هناك.",
      "scene": "planting a small flag on the moon with both hands, standing proudly beside it, "
               "the alien friend clapping"},
     {"id": "st_sp_8", "emoji": "🛏️", "title": "الرجوع",
-     "text": "ورجع ينام… والنجوم بتغمز له من الشباك ✨",
+     "text": "{ورجع ينام|ورجعت تنام}... والنجوم بتغمز {له|لها} من الشباك",
      "scene": "back in bed hugging a toy rocket, smiling in sleep, stars twinkling through "
               "the window and a tiny alien doll on the shelf"},
 ]
 
 SEA_BEATS = [
     {"id": "st_se_1", "emoji": "🤿", "title": "بدلة الغطس",
-     "text": "لبس {name} بدلة الغطس… النهارده هينزل تحت البحر!",
+     "text": "{لبس|لبست} {name} بدلة الغطس... النهارده {هينزل|هتنزل} تحت البحر!",
      "scene": "standing on a sunny boat deck wearing diving goggles and flippers, the blue sea "
               "sparkling all around"},
     {"id": "st_se_2", "emoji": "🌊", "title": "أول نزلة",
-     "text": "نزل الماء… والدنيا تحت كانت أحلى من فوق.",
+     "text": "{نزل|نزلت} الماء... والدنيا تحت كانت أحلى من فوق.",
      "scene": "diving underwater for the first time surrounded by bubbles, shafts of sunlight "
               "cutting through the blue water"},
     {"id": "st_se_3", "emoji": "🐬", "title": "الدولفين",
-     "text": "دولفين لطيف جه يسلّم عليه… وقاله: اتبعني!",
+     "text": "دولفين لطيف جه يسلّم {عليه|عليها}... {وقاله|وقاللها}: اتبعني!",
      "scene": "greeting a smiling dolphin underwater, hand touching its nose, small colorful "
               "fish swirling around them"},
     {"id": "st_se_4", "emoji": "🪸", "title": "المدينة المرجانية",
-     "text": "وصلوا مدينة مبنية من المرجان… بيوت وشوارع وكل حاجة!",
+     "text": "وصلوا مدينة مبنية من المرجان... بيوت وشوارع وكل حاجة!",
      "scene": "swimming into a magical coral city with arches, towers and glowing anemones, "
               "sea creatures going about their day"},
     {"id": "st_se_5", "emoji": "🐢", "title": "السلحفاة",
-     "text": "لقى سلحفاة اتلخبطت في شبكة… فكّها بسرعة.",
+     "text": "{لقى|لقت} سلحفاة اتلخبطت في شبكة... {فكّها|فكّتها} بسرعة.",
      "scene": "carefully freeing a large sea turtle tangled in an old fishing net, gentle "
               "focused expression, the turtle looking grateful"},
     {"id": "st_se_6", "emoji": "🐚", "title": "الصدفة",
-     "text": "السلحفاة شكرته… وودّته لصدفة كبيرة مقفولة.",
+     "text": "السلحفاة {شكرته|شكرتها}... {وودّته|وودّتها} لصدفة كبيرة مقفولة.",
      "scene": "riding on the turtle's back toward a giant closed pearl shell resting on the "
               "glowing seabed"},
     {"id": "st_se_7", "emoji": "🦪", "title": "اللؤلؤة",
-     "text": "الصدفة فتحت… وفيها لؤلؤة بتلمع زي القمر.",
+     "text": "الصدفة فتحت... وفيها لؤلؤة بتلمع زي القمر.",
      "scene": "the giant shell opening to reveal a huge glowing pearl lighting up the child's "
               "amazed face underwater"},
     {"id": "st_se_8", "emoji": "🏖️", "title": "الطلوع",
-     "text": "طلع {name} فوق… ومعاه أحلى ذكرى في البحر ❤️",
+     "text": "{طلع|طلعت} {name} فوق... {ومعه|ومعها} أحلى ذكرى في البحر",
      "scene": "surfacing at sunset next to the boat holding the pearl up high, the dolphin and "
               "turtle waving goodbye from the water"},
 ]
 
 DREAM_BEATS = [
     {"id": "st_dr_1", "emoji": "😴", "title": "الحلم",
-     "text": "نام {name} وهو بيفكر: أنا هبقى إيه لما أكبر؟",
+     "text": "{نام|نامت} {name} {وهو بيفكر|وهي بتفكر}: أنا هبقى إيه لما أكبر؟",
      "scene": "sleeping peacefully in bed with a dreamy cloud of tiny icons — a stethoscope, a "
               "rocket, a paintbrush — floating above the pillow"},
     {"id": "st_dr_2", "emoji": "✨", "title": "كبر فجأة",
-     "text": "وفجأة… لقى نفسه كبير وواقف في مكان جديد!",
+     "text": "وفجأة... {لقى نفسه|لقت نفسها} {كبير وواقف|كبيرة وواقفة} في مكان جديد!",
      "scene": "standing surprised in a bright new workplace, still with the same young face but "
               "wearing a grown-up work uniform, light streaming in"},
     {"id": "st_dr_3", "emoji": "🚪", "title": "أول يوم",
-     "text": "أول يوم شغل… كل حاجة جديدة وصعبة شوية.",
+     "text": "أول يوم شغل... كل حاجة جديدة وصعبة شوية.",
      "scene": "walking into a busy workplace on the first day holding a folder, coworkers "
               "greeting warmly, slightly nervous smile"},
     {"id": "st_dr_4", "emoji": "😧", "title": "المشكلة",
-     "text": "وحصلت مشكلة… وكل الناس بصّت له.",
+     "text": "وحصلت مشكلة... وكل الناس بصّت {له|لها}.",
      "scene": "facing a sudden problem at work with everyone turning to look, worried but "
               "standing firm, papers and tools scattered"},
     {"id": "st_dr_5", "emoji": "💡", "title": "الفكرة",
-     "text": "فكّر شوية… وافتكر حاجة اتعلمها وهو صغير.",
+     "text": "{فكّر|فكّرت} شوية... {وافتكر|وافتكرت} حاجة اتعلمها {وهو صغير|وهي صغيرة}.",
      "scene": "a bright idea moment with a glowing lightbulb above the head, a flashback bubble "
               "showing the same child as a small kid learning"},
     {"id": "st_dr_6", "emoji": "🛠️", "title": "الحل",
-     "text": "اشتغل بإيديه… وحلّها لوحده!",
+     "text": "{اشتغل|اشتغلت} {بإيديه|بإيديها}... {وحلّها|وحلّتها} {لوحده|لوحدها}!",
      "scene": "working intently with both hands to fix the problem, sleeves rolled up, focused "
               "determined expression, tools in use"},
     {"id": "st_dr_7", "emoji": "👏", "title": "الشكر",
-     "text": "كل الناس صفّقوا… وقالوا: شكراً!",
+     "text": "كل الناس صفّقوا... وقالوا: شكراً!",
      "scene": "surrounded by smiling grateful people clapping, receiving a warm handshake, "
               "sunlight and confetti-like sparkle in the air"},
     {"id": "st_dr_8", "emoji": "📚", "title": "صحي",
-     "text": "صحي {name} من النوم وقال: يبقى لازم أذاكر من دلوقتي!",
+     "text": "صحي {name} من النوم {وقال|وقالت}: يبقى لازم أذاكر من دلوقتي!",
      "scene": "waking up in bed with a big determined smile, morning light on the face, reaching "
               "for a school book on the bedside table"},
 ]
 
 RAMADAN_BEATS = [
     {"id": "st_ra_1", "emoji": "🌙", "title": "الهلال",
-     "text": "شاف {name} الهلال في السما… وعرف إن رمضان جه!",
+     "text": "{شاف|شفت} {name} الهلال في السما... {وعرف|وعرفت} إن رمضان جه!",
      "scene": "standing on a balcony at dusk pointing at a thin crescent moon, warm lanterns "
               "glowing on the street below"},
     {"id": "st_ra_2", "emoji": "🏮", "title": "الفانوس",
-     "text": "علّق فانوسه على الشباك… ونوّر البيت كله.",
+     "text": "{علّق|علّقت} {فانوسه|فانوسها} على الشباك... {ونوّر|ونوّرت} البيت كله.",
      "scene": "hanging a big colorful Ramadan lantern by a window, warm golden light spreading "
               "across a cozy room"},
     {"id": "st_ra_3", "emoji": "🥘", "title": "تحضير الفطار",
-     "text": "ساعد ماما في المطبخ… وحط الطبق على السفرة.",
+     "text": "{ساعد|ساعدت} ماما في المطبخ... {وحط|وحطت} الطبق على السفرة.",
      "scene": "helping in a warm kitchen carrying a dish to a full iftar table set with dates, "
               "soup and lanterns"},
     {"id": "st_ra_4", "emoji": "💧", "title": "أول يوم صيام",
-     "text": "أول يوم يصوم… وكان صعب، بس كمّل.",
+     "text": "أول يوم {يصوم|تصوم}... وكان صعب، بس {كمّل|كمّلت}.",
      "scene": "sitting patiently by a window in the afternoon light with a glass of water "
               "waiting on the table, determined little face"},
     {"id": "st_ra_5", "emoji": "🔊", "title": "المدفع",
-     "text": "وسمع المدفع… ألله أكبر! أحلى تمرة في الدنيا.",
+     "text": "وسمع المدفع... ألله أكبر! أحلى تمرة في الدنيا.",
      "scene": "joyfully biting into a date at the iftar table the moment the cannon sounds, "
               "family hands reaching around the table, warm light"},
     {"id": "st_ra_6", "emoji": "🍲", "title": "للجيران",
-     "text": "شال طبق للجيران… وقال: كل سنة وانتوا طيبين!",
+     "text": "{شال|شالت} طبق للجيران... {وقال|وقالت}: كل سنة وانتوا طيبين!",
      "scene": "carrying a covered dish to a neighbor's door in a lit hallway, smiling as the "
               "neighbor opens the door happily"},
     {"id": "st_ra_7", "emoji": "🕌", "title": "التراويح",
-     "text": "وراح مع بابا التراويح… والمسجد كان مليان نور.",
+     "text": "{وراح|وراحت} مع بابا التراويح... والمسجد كان مليان نور.",
      "scene": "walking hand in hand with a parent toward a beautiful lit mosque at night, "
               "minaret and crescent against a deep blue sky"},
     {"id": "st_ra_8", "emoji": "🎁", "title": "العيد",
-     "text": "وجه العيد… وكل سنة و{name} طيب ❤️",
+     "text": "وجه العيد... وكل سنة و{name} {طيب|طيبة}",
      "scene": "wearing new Eid clothes holding gifts and balloons, family celebrating around a "
               "table of sweets, festive decorations everywhere"},
 ]
 
 # Each pack is a separate book type in the admin book picker.
 # Theme keys drive the whole book, not just the scene list:
-#   book_title / tagline / ending_line — Arabic text burned into cover + ending
+#   book_title / tagline / ending_line — Arabic text drawn server-side on cover + ending
 #   cover_scene / ending_scene         — English illustration brief for those two pages
 #   mood / palette                     — style fragments so pages of one book match
 SCENE_PACKS = [
@@ -808,6 +1138,21 @@ SCENE_PACKS = [
      "mood": "festive celebration atmosphere, balloons confetti and decorations in the scene",
      "palette": ["#f43f5e", "#f59e0b"],
      "scenes": OCCASIONS_SCENES},
+
+    # Virtual pack: admin picks a page count and mixes scenes from any coloring packs.
+    {"id": "custom_mix", "emoji": "✨", "title": "كتاب مخصوص",
+     "desc": "عدد صفحات تحدده أنت — وامزج مواقف من المهن والأبطال والحيوانات وأي نوع تاني",
+     "book_title": "كتاب مخصوص",
+     "tagline": "كتابك على مزاجك!",
+     "ending_line": "رحلتك الخاصة",
+     "cover_scene": "standing happily in a colorful magical art studio with floating icons of many "
+                    "adventures — a stethoscope, a cape, a lion cub, a soccer ball and balloons — "
+                    "surrounded by crayons, sketchbooks and soft sparkles",
+     "ending_scene": "sitting on a pile of finished coloring pages waving goodbye, with tiny icons of "
+                     "jobs, heroes, animals and sports floating around like stickers",
+     "mood": "playful varied adventures, one clear fun scene per page",
+     "palette": ["#e85d4c", "#7c3aed"],
+     "scenes": []},
 ]
 
 
@@ -817,7 +1162,7 @@ STORY_PACKS = [
     {"id": "story_treasure", "kind": "story", "emoji": "🗺️", "title": "قصة الكنز المفقود",
      "desc": "خريطة قديمة، غابة، كهف… وكنز مش زي ما تتوقع",
      "book_title": "الكنز المفقود",
-     "tagline": "مغامرة بطلها إنت!",
+     "tagline": "{مغامرة بطلها إنت!|مغامرة بطلتها إنتي!}",
      "ending_line": "تمّت المغامرة",
      "moral": "أحلى كنز هو الرحلة نفسها",
      "art_key": "warm adventurous storybook painting, rich earthy greens and golds, soft painted "
@@ -832,8 +1177,8 @@ STORY_PACKS = [
 
     {"id": "story_courage", "kind": "story", "emoji": "🌟", "title": "قصة أول يوم مدرسة",
      "desc": "الخوف، الحضن، أول صاحب… وأول مرة يرفع إيده",
-     "book_title": "أشجع طفل",
-     "tagline": "الشجاعة إنك تخاف وتروح برضه",
+     "book_title": "{أشجع طفل|أشجع طفلة}",
+     "tagline": "{الشجاعة إنك تخاف وتروح برضه|الشجاعة إنكِ تخافي وتروحي برضه}",
      "ending_line": "أنا قدرت!",
      "moral": "الشجاعة مش عدم الخوف",
      "art_key": "soft gentle storybook illustration, warm pastel palette, cozy morning light, "
@@ -849,7 +1194,7 @@ STORY_PACKS = [
     {"id": "story_space", "kind": "story", "emoji": "🚀", "title": "قصة رحلة الفضاء",
      "desc": "صاروخ كرتون، كواكب، صاحب فضائي، ومشي على القمر",
      "book_title": "رحلة إلى النجوم",
-     "tagline": "٣… ٢… ١… انطلق!",
+     "tagline": "٣... ٢... ١... انطلق!",
      "ending_line": "رحلة النجوم",
      "moral": "الخيال بيوصلك لأبعد مكان",
      "art_key": "vivid cosmic storybook illustration, deep blues and purples with glowing stars, "
@@ -881,7 +1226,7 @@ STORY_PACKS = [
     {"id": "story_dream", "kind": "story", "emoji": "💭", "title": "قصة لما كبرت",
      "desc": "حلم إنه كبر واشتغل… وقابل مشكلة وحلّها",
      "book_title": "لما كبرت",
-     "tagline": "إنت هتبقى إيه لما تكبر؟",
+     "tagline": "{إنت هتبقى إيه لما تكبر؟|إنتي هتبقى إيه لما تكبري؟}",
      "ending_line": "رحلة الحلم",
      "moral": "اللي بتتعلمه دلوقتي بينفعك بكرة",
      "art_key": "bright hopeful storybook illustration, clean modern shapes, warm sunlit "
@@ -898,7 +1243,7 @@ STORY_PACKS = [
      "desc": "الهلال، الفانوس، أول يوم صيام، المدفع… والعيد",
      "book_title": "رمضان كريم",
      "tagline": "أحلى شهر في السنة!",
-     "ending_line": "كل سنة وإنت طيب",
+     "ending_line": "{كل سنة وإنت طيب|كل سنة وإنتي طيبة}",
      "moral": "رمضان فرحة ومشاركة",
      "art_key": "warm nocturnal storybook illustration, deep blue night skies with golden lantern "
                 "glow, Arabic ornamental patterns, cozy family warmth",
@@ -911,16 +1256,252 @@ STORY_PACKS = [
      "scenes": RAMADAN_BEATS},
 ]
 
+
+# A3 coloring posters — one full-page layout each (no cover, no ending, no scene pick).
+# layout focuses on DENSITY (more elements filling A3), same child face repeated N times.
+POSTER_PACKS = [
+    {"id": "poster_jobs_grid", "kind": "poster", "emoji": "🩺", "title": "بوستر شبكة المهن",
+     "desc": "A3 · شبكة 3×3 — الطفل في 9 مهن",
+     "book_title": "بوستر شبكة المهن",
+     "orientation": "portrait",
+     "palette": ["#0ea5e9", "#6366f1"],
+     "scenes": [{
+         "id": "po_jobs_grid", "emoji": "🩺", "title": "شبكة المهن",
+         "scene": (
+             "Black and white line art coloring POSTER for children, A3 portrait, print-ready. "
+             "LAYOUT: a 3x3 grid of nine framed panels filling the entire page, separated by "
+             "clean decorative borders, with a wide ornamental frame around the whole poster. "
+             "THE SAME CHILD from the reference photo appears in ALL NINE panels — identical "
+             "face, identical hairstyle, identical age in every single panel, only the costume "
+             "and pose change. This is critical: nine drawings of ONE child, not nine children. "
+             "Panels: doctor with stethoscope, chef with tall hat, pilot with captain cap, "
+             "firefighter with helmet, teacher at a chalkboard, astronaut in a space suit, "
+             "farmer with a straw hat, artist with a palette, engineer with a hard hat. "
+             "STYLE: clean bold black outlines, uniform line weight, NO shading, NO grey, "
+             "NO fills, pure white background inside every panel. Simple confident shapes a "
+             "child can color inside. Each panel is a half-body composition, large and clear. "
+             "Fill the page edge to edge — no empty corners, no wasted margins. "
+             "NO text, no letters, no numbers, no captions anywhere."
+         ),
+     }]},
+
+    {"id": "poster_seasons", "kind": "poster", "emoji": "🍂", "title": "بوستر الفصول الأربعة",
+     "desc": "A3 · 4 أرباع — نفس الطفل في كل فصل",
+     "book_title": "بوستر الفصول الأربعة",
+     "orientation": "portrait",
+     "palette": ["#16a34a", "#f59e0b"],
+     "scenes": [{
+         "id": "po_seasons", "emoji": "🍂", "title": "الفصول الأربعة",
+         "scene": (
+             "Black and white line art coloring POSTER for children, A3 portrait, print-ready. "
+             "LAYOUT: the page is divided into four large quadrants by two sweeping diagonal "
+             "ribbon dividers that cross at the center, with a decorative border around the "
+             "whole poster and a small empty medallion where the ribbons meet. "
+             "THE SAME CHILD from the reference photo appears once in EACH of the four "
+             "quadrants — identical face, identical hairstyle, identical age in all four, only "
+             "the clothing and activity change. Four drawings of ONE child, not four children. "
+             "Quadrants: SPRING — planting flowers with butterflies and a watering can. "
+             "SUMMER — building a sandcastle on a beach with a bucket, sun and waves. "
+             "AUTUMN — jumping into a pile of fallen leaves with a bare tree and birds. "
+             "WINTER — building a snowman wearing a scarf and mittens with falling snowflakes. "
+             "STYLE: clean bold black outlines, uniform line weight, NO shading, NO grey, "
+             "NO solid black fills, pure white background. Big generous closed shapes. "
+             "Fill each quadrant completely with seasonal detail — no empty corners. "
+             "NO text, no letters, no numbers anywhere."
+         ),
+     }]},
+
+    {"id": "poster_mandala", "kind": "poster", "emoji": "🌀", "title": "بوستر ماندالا الطفل",
+     "desc": "A3 · دائرة 8 قطاعات — 8 أوضاع لنفس الطفل",
+     "book_title": "بوستر ماندالا الطفل",
+     "orientation": "portrait",
+     "palette": ["#a855f7", "#ec4899"],
+     "scenes": [{
+         "id": "po_mandala", "emoji": "🌀", "title": "ماندالا الطفل",
+         "scene": (
+             "Black and white line art coloring POSTER for children, A3 portrait, print-ready. "
+             "LAYOUT: one very large circular mandala filling almost the whole page, divided "
+             "into EIGHT equal pie wedges radiating from a small decorated circle at the "
+             "center. Concentric ornamental rings separate the wedges from the center and from "
+             "the outer rim. The corners outside the circle are filled with colorable doodles: "
+             "stars, swirls, leaves and small hearts. "
+             "THE SAME CHILD from the reference photo appears once inside EACH of the eight "
+             "wedges — identical face, identical hairstyle, identical age in all eight, only "
+             "the pose changes: dancing, reading, running, painting, singing, jumping, "
+             "sleeping, waving. Eight drawings of ONE child, not eight children. "
+             "Each figure is drawn upright within its wedge, facing outward from the center. "
+             "STYLE: clean bold black outlines, uniform line weight, NO shading, NO grey, "
+             "pure white background. Symmetrical, balanced, decorative. Bold simple figures "
+             "against finer ornamental patterning in the rings. "
+             "NO text, no letters, no numbers anywhere."
+         ),
+     }]},
+
+    {"id": "poster_allaboutme", "kind": "poster", "emoji": "⭐", "title": "بوستر «أنا»",
+     "desc": "A3 · بطل مركزي + 6 ميداليات",
+     "book_title": "بوستر أنا",
+     "orientation": "portrait",
+     "palette": ["#f59e0b", "#ef4444"],
+     "scenes": [{
+         "id": "po_allaboutme", "emoji": "⭐", "title": "بوستر أنا",
+         "scene": (
+             "Black and white line art coloring POSTER for children, A3 portrait, print-ready. "
+             "LAYOUT: one large central portrait of the child, standing full-body and smiling, "
+             "occupying the middle third of the page inside a decorative starburst frame. "
+             "Around it, six smaller circular medallion vignettes arranged evenly, connected to "
+             "the center by ribbons and doodles. "
+             "THE SAME CHILD from the reference photo appears in the big portrait AND inside "
+             "all six medallions — identical face, identical hairstyle, identical age in every "
+             "one, only the activity changes: reading a book, playing football, painting, "
+             "riding a bike, hugging a puppy, blowing birthday candles. "
+             "Fill the gaps between medallions with colorable doodles: stars, hearts, clouds, "
+             "swirls, small flowers. "
+             "STYLE: clean bold black outlines, uniform line weight, NO shading, NO grey, "
+             "pure white background. Big simple shapes in the medallions, slightly finer detail "
+             "in the central portrait. Fill the page edge to edge, no empty corners. "
+             "NO text, no letters, no numbers anywhere."
+         ),
+     }]},
+
+    {"id": "poster_dreams", "kind": "poster", "emoji": "💭", "title": "بوستر الأحلام",
+     "desc": "A3 · نوم + 6 فقاعات أحلام",
+     "book_title": "بوستر الأحلام",
+     "orientation": "portrait",
+     "palette": ["#4338ca", "#38bdf8"],
+     "scenes": [{
+         "id": "po_dreams", "emoji": "💭", "title": "بوستر الأحلام",
+         "scene": (
+             "Black and white line art coloring POSTER for children, A3 portrait, print-ready. "
+             "LAYOUT: in the bottom-right corner, the child sleeps peacefully in a cozy bed "
+             "hugging a teddy bear, with a moon and stars in the window behind. From the "
+             "sleeping head, a diagonal chain of SIX dream bubbles rises across the page toward "
+             "the top-left corner, growing larger as they rise, with small trailing bubbles "
+             "between them. The background around the bubbles is filled with colorable night "
+             "doodles: stars, crescents, clouds, swirls. "
+             "THE SAME CHILD from the reference photo appears sleeping in the bed AND inside "
+             "all six dream bubbles — identical face, identical hairstyle, identical age in "
+             "every one, only the dream changes: flying with a cape, riding a dragon, floating "
+             "in space, swimming with a dolphin, standing on a stage, winning a trophy. "
+             "STYLE: clean bold black outlines, uniform line weight, NO shading, NO grey, "
+             "NO solid black night sky — leave it white and open for coloring. Pure white "
+             "background. Fill the page edge to edge, no empty corners. "
+             "NO text, no letters, no numbers anywhere."
+         ),
+     }]},
+
+    {"id": "poster_journey", "kind": "poster", "emoji": "🛤️", "title": "بوستر الرحلة",
+     "desc": "A3 · طريق بسبع محطات لنفس الطفل",
+     "book_title": "بوستر الرحلة",
+     "orientation": "portrait",
+     "palette": ["#0891b2", "#84cc16"],
+     "scenes": [{
+         "id": "po_journey", "emoji": "🛤️", "title": "بوستر الرحلة",
+         "scene": (
+             "Black and white line art coloring POSTER for children, A3 portrait, print-ready. "
+             "LAYOUT: a wide winding path snaking from the bottom of the page to the top like a "
+             "board game trail, passing through seven clear stations marked by simple arches. "
+             "THE SAME CHILD from the reference photo appears at all SEVEN stations — identical "
+             "face, identical hairstyle, identical age every time, only the pose changes: "
+             "waking up in bed, brushing teeth, walking to school, raising a hand in class, "
+             "playing in the park, eating dinner with family, sleeping with a teddy bear. "
+             "Seven drawings of ONE child, not seven children. "
+             "Around the path fill the space with colorable scenery: trees, houses, clouds, "
+             "sun, birds, flowers, fences. "
+             "STYLE: clean bold black outlines, uniform line weight, NO shading, NO grey, "
+             "pure white background. Large friendly shapes. Fill the entire page, no empty "
+             "corners. "
+             "NO text, no letters, no numbers anywhere."
+         ),
+     }]},
+
+    {"id": "poster_busy_town", "kind": "poster", "emoji": "🏙️", "title": "بوستر المدينة المزدحمة",
+     "desc": "A3 · مشهد واحد · الطفل يتكرر 6 مرات",
+     "book_title": "بوستر المدينة المزدحمة",
+     "orientation": "portrait",
+     "palette": ["#dc2626", "#0ea5e9"],
+     "scenes": [{
+         "id": "po_busy_town", "emoji": "🏙️", "title": "المدينة المزدحمة",
+         "scene": (
+             "Black and white line art coloring POSTER for children, A3 portrait, print-ready. "
+             "ONE single large busy scene: a cheerful town square seen from a slightly raised "
+             "viewpoint, with a park, a fountain, a bakery, a school, a fire station, trees, "
+             "benches, balloons, birds and clouds. "
+             "THE SAME CHILD from the reference photo appears SIX times in different spots of "
+             "this one scene — identical face, identical hairstyle, identical age every time, "
+             "only the pose and activity change: riding a bicycle, feeding birds by the "
+             "fountain, licking an ice cream, climbing the playground, waving from a bench, "
+             "carrying a school bag. Six drawings of ONE child, never six different children. "
+             "STYLE: clean bold black outlines, uniform line weight, NO shading, NO grey, "
+             "NO solid black fills, pure white background. Generous closed shapes that are easy "
+             "to color. Rich detail spread evenly across the whole page so nothing is empty, "
+             "but leave clear breathing space between elements. "
+             "NO text, no letters, no numbers, no signage lettering anywhere."
+         ),
+     }]},
+
+    {"id": "poster_panorama", "kind": "poster", "emoji": "🌅", "title": "بوستر بانوراما عرضية",
+     "desc": "A3 عرضي · مشهد ممتد · 5 تكرارات",
+     "book_title": "بوستر بانوراما",
+     "orientation": "landscape",
+     "palette": ["#0d9488", "#f59e0b"],
+     "scenes": [{
+         "id": "po_panorama", "emoji": "🌅", "title": "بانوراما عرضية",
+         "scene": (
+             "Black and white line art coloring POSTER for children, A3 LANDSCAPE (horizontal), "
+             "print-ready. "
+             "ONE continuous panoramic scene stretching across the full width of the page, "
+             "reading left to right: a beach with waves and a sandcastle, then a palm grove, "
+             "then a jungle with vines, then a rocky mountain with a waterfall, ending at a "
+             "campsite with a tent under the stars. "
+             "THE SAME CHILD from the reference photo appears FIVE times along this panorama — "
+             "identical face, identical hairstyle, identical age every time, once in each "
+             "region, only the pose changes: digging in the sand, climbing a palm tree, "
+             "swinging on a vine, standing on a rock with arms raised, sitting by the campfire. "
+             "Five drawings of ONE child, not five children. "
+             "STYLE: clean bold black outlines, uniform line weight, NO shading, NO grey, "
+             "NO solid black fills, pure white background. Wide horizontal composition with a "
+             "clear left-to-right flow. Fill the whole width evenly with colorable detail — "
+             "sky, ground and background all busy, no empty stretches. "
+             "NO text, no letters, no numbers anywhere."
+         ),
+     }]},
+]
+
 # Coloring packs defined above are the default kind.
 for _p in SCENE_PACKS:
     _p.setdefault("kind", "coloring")
 SCENE_PACKS.extend(STORY_PACKS)
+SCENE_PACKS.extend(POSTER_PACKS)
 
 DEFAULT_PACK_ID = "jobs"
 
 
 def is_story_pack(pack: dict) -> bool:
     return (pack or {}).get("kind") == "story"
+
+
+def is_poster_pack(pack: dict) -> bool:
+    return (pack or {}).get("kind") == "poster"
+
+
+def poster_scene_id(pack: dict) -> str:
+    scenes = (pack or {}).get("scenes") or []
+    if scenes and isinstance(scenes[0], dict) and scenes[0].get("id"):
+        return scenes[0]["id"]
+    return "poster"
+
+
+def pdf_pagesize_for_pack(pack: Optional[dict] = None):
+    """A4 books/stories; A3 (optionally landscape) for posters."""
+    if pack and is_poster_pack(pack):
+        if (pack.get("orientation") or "portrait") == "landscape":
+            return landscape(A3)
+        return A3
+    return A4
+
+
+def is_coloring_pack(pack: dict) -> bool:
+    return (pack or {}).get("kind", "coloring") == "coloring"
 
 # ── Book picker presentation ────────────────────────────────────────────────
 # Tags + age hint + card order. Presentation only: nothing below changes any
@@ -933,10 +1514,12 @@ TAG_LABELS = {
     "gift":        "هدية",
     "seasonal":    "موسمي",
     "educational": "تربوي",
+    "poster":      "بوستر A3",
 }
 
 PACK_DISPLAY = {
     "jobs":      {"tags": ["popular"],           "age": "4-8 سنين"},
+    "custom_mix":{"tags": ["new", "gift"],       "age": "كل الأعمار"},
     "heroes":    {"tags": ["new"],               "age": "4-9 سنين"},
     "animals":   {"tags": ["new"],               "age": "3-6 سنين"},
     "girls":     {"tags": ["new"],               "age": "4-8 سنين"},
@@ -951,16 +1534,28 @@ PACK_DISPLAY = {
     "story_sea":      {"tags": ["new"],                    "age": "4-8 سنين"},
     "story_dream":    {"tags": ["new", "educational"],     "age": "6-10 سنين"},
     "story_ramadan":  {"tags": ["new", "seasonal"],        "age": "كل الأعمار"},
+    # Posters
+    "poster_jobs_grid":   {"tags": ["new", "poster"], "age": "4-10 سنين"},
+    "poster_seasons":     {"tags": ["new", "poster"], "age": "4-10 سنين"},
+    "poster_mandala":     {"tags": ["new", "poster"], "age": "5-10 سنين"},
+    "poster_allaboutme":  {"tags": ["new", "poster"], "age": "4-9 سنين"},
+    "poster_dreams":      {"tags": ["new", "poster"], "age": "4-9 سنين"},
+    "poster_journey":     {"tags": ["new", "poster"], "age": "4-8 سنين"},
+    "poster_busy_town":   {"tags": ["new", "poster"], "age": "5-10 سنين"},
+    "poster_panorama":    {"tags": ["new", "poster"], "age": "4-10 سنين"},
 }
 
 # Fun/gift books first, the educational one last. "jobs" must stay at index 0 —
 # it is the fallback pack for pack_by_id() and pack_for_scene().
 PACK_ORDER = [
     # Coloring books
-    "jobs", "heroes", "animals", "girls", "sports", "occasions", "egypt", "daily",
+    "jobs", "custom_mix", "heroes", "animals", "girls", "sports", "occasions", "egypt", "daily",
     # Story books
     "story_courage", "story_treasure", "story_space", "story_sea",
     "story_dream", "story_ramadan",
+    # A3 posters
+    "poster_jobs_grid", "poster_seasons", "poster_mandala", "poster_allaboutme",
+    "poster_dreams", "poster_journey", "poster_busy_town", "poster_panorama",
 ]
 
 SCENE_PACKS.sort(
@@ -984,14 +1579,15 @@ def pack_by_id(pack_id: Optional[str]) -> dict:
 def pack_for_scene(scene_id: str) -> dict:
     """Which book does this scene belong to? Used when the client sends no pack id."""
     for p in SCENE_PACKS:
-        if any(s["id"] == scene_id for s in p["scenes"]):
-            return p
+        for s in p.get("scenes") or []:
+            if isinstance(s, dict) and s.get("id") == scene_id:
+                return p
     return SCENE_PACKS[0]
 
 # Public tool (/app) keeps showing the professions pack only.
 SCENES = JOBS_SCENES
 # Every scene across all packs — used for id lookup and the admin picker.
-ALL_SCENES = [s for pack in SCENE_PACKS for s in pack["scenes"]]
+ALL_SCENES = [s for pack in SCENE_PACKS for s in (pack.get("scenes") or [])]
 
 FONT_CANDIDATES = [
     "/System/Library/Fonts/SFArabic.ttf",
@@ -1011,10 +1607,12 @@ SESSIONS_DIR = DATA_DIR / "sessions"
 SHARES_DIR = DATA_DIR / "shares"
 DB_PATH = DATA_DIR / "analytics.db"
 SPECIAL_ORDERS_DIR = DATA_DIR / "special_orders"
+SALES_LEADS_DIR = DATA_DIR / "sales_leads"
 DATA_DIR.mkdir(exist_ok=True)
 SESSIONS_DIR.mkdir(exist_ok=True)
 SHARES_DIR.mkdir(exist_ok=True)
 SPECIAL_ORDERS_DIR.mkdir(exist_ok=True)
+SALES_LEADS_DIR.mkdir(exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 56 * 1024 * 1024  # 56 MB — covers 50 MB PDF uploads
@@ -1256,8 +1854,89 @@ def init_db():
             ("book_page_count", "book_page_count INTEGER"),
             ("book_updated_at", "book_updated_at TEXT"),
             ("book_progress", "book_progress TEXT"),
+            # Shipping / pricing / delivery (WhatsApp special orders)
+            ("shipping_address", "shipping_address TEXT"),
+            ("recipient_name", "recipient_name TEXT"),
+            ("alt_phone", "alt_phone TEXT"),
+            ("order_price_egp", "order_price_egp REAL"),
+            ("is_free", "is_free INTEGER NOT NULL DEFAULT 0"),
+            ("shipping_price_egp", "shipping_price_egp REAL"),
+            ("payment_method", "payment_method TEXT DEFAULT 'cod'"),
+            ("expected_delivery_at", "expected_delivery_at TEXT"),
+            ("delivered_at", "delivered_at TEXT"),
+            ("priority", "priority TEXT DEFAULT 'normal'"),
+            ("guardian_id", "guardian_id INTEGER"),
+            ("child_gender", "child_gender TEXT DEFAULT 'boy'"),
         ):
             _add_col("special_orders", col, decl)
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS special_guardians (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                name       TEXT NOT NULL,
+                phone      TEXT,
+                email      TEXT,
+                notes      TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT
+            );
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_special_orders_guardian "
+            "ON special_orders(guardian_id)"
+        )
+        # One-time: group existing orders into guardians by phone (preferred) or name
+        try:
+            orphans = conn.execute(
+                """
+                SELECT id, child_name, client_name, phone, email, created_at
+                FROM special_orders
+                WHERE guardian_id IS NULL
+                ORDER BY id ASC
+                """
+            ).fetchall()
+            if orphans:
+                groups: dict = {}
+                for o in orphans:
+                    phone_digits = re.sub(r"\D", "", str(o["phone"] or ""))
+                    if phone_digits.startswith("00"):
+                        phone_digits = phone_digits[2:]
+                    if phone_digits.startswith("20") and len(phone_digits) >= 12:
+                        phone_digits = "0" + phone_digits[2:]
+                    name = (o["client_name"] or "").strip().lower()
+                    name = re.sub(r"\s+", " ", name)
+                    if len(phone_digits) >= 8:
+                        gkey = "p:" + phone_digits
+                    elif name:
+                        gkey = "n:" + name
+                    else:
+                        gkey = "o:" + str(o["id"])
+                    groups.setdefault(gkey, []).append(o)
+                now_iso = datetime.now(timezone.utc).isoformat()
+                for rows in groups.values():
+                    first = rows[0]
+                    gname = (first["client_name"] or "").strip() or "غير محدد"
+                    for r in rows:
+                        nm = (r["client_name"] or "").strip()
+                        if nm and (gname == "غير محدد" or len(nm) > len(gname)):
+                            gname = nm
+                    gphone = next(((r["phone"] or "").strip() for r in rows if (r["phone"] or "").strip()), None)
+                    gemail = next(((r["email"] or "").strip() for r in rows if (r["email"] or "").strip()), None)
+                    cur = conn.execute(
+                        """
+                        INSERT INTO special_guardians (name, phone, email, created_at)
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        (gname, gphone, gemail, first["created_at"] or now_iso),
+                    )
+                    gid = cur.lastrowid
+                    conn.execute(
+                        f"UPDATE special_orders SET guardian_id=? WHERE id IN ({','.join('?' * len(rows))})",
+                        [gid] + [r["id"] for r in rows],
+                    )
+        except Exception:
+            pass
         conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_special_orders_share_token "
             "ON special_orders(share_token) WHERE share_token IS NOT NULL"
@@ -1351,6 +2030,35 @@ def init_db():
                         pass
         except Exception:
             pass
+
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sales_leads (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                parent_name     TEXT NOT NULL,
+                child_name      TEXT NOT NULL,
+                phone           TEXT NOT NULL,
+                photo_filename  TEXT,
+                status          TEXT NOT NULL DEFAULT 'new',
+                special_order_id INTEGER,
+                source          TEXT NOT NULL DEFAULT 'buy',
+                notes           TEXT,
+                created_at      TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_sales_leads_created ON sales_leads(created_at)"
+        )
+        for col, decl in (
+            ("address", "address TEXT"),
+            ("governorate", "governorate TEXT"),
+            ("child_age", "child_age TEXT"),
+            ("child_gender", "child_gender TEXT"),
+            ("theme_pref", "theme_pref TEXT"),
+            ("customer_notes", "customer_notes TEXT"),
+        ):
+            _add_col("sales_leads", col, decl)
         conn.commit()
         conn.close()
 
@@ -1988,10 +2696,80 @@ def monthly_book_count(ip: str) -> int:
     return int(row["c"] if row else 0)
 
 
-def story_page_text(beat: dict, child_name: str = "") -> str:
-    """The Arabic narration for one story page, with {name} filled in."""
-    name = (child_name or "").strip()[:40] or "بطلنا"
-    return (beat.get("text") or "").replace("{name}", name)
+def normalize_child_gender(gender: Optional[str] = None) -> str:
+    """Return 'boy' or 'girl' (default boy)."""
+    s = (gender or "").strip().lower()
+    if s in ("girl", "female", "f", "g", "بنت", "انثى", "أنثى", "بنتة"):
+        return "girl"
+    return "boy"
+
+
+def apply_gender_template(text: str, gender: Optional[str] = None) -> str:
+    """Replace `{ولد|بنت}` / `{boy_form|girl_form}` segments for the chosen gender."""
+    if not text:
+        return text or ""
+    g = normalize_child_gender(gender)
+
+    def repl(m: re.Match) -> str:
+        return m.group(2) if g == "girl" else m.group(1)
+
+    return re.sub(r"\{([^{}|]+)\|([^{}|]+)\}", repl, text)
+
+
+def story_default_hero_name(gender: Optional[str] = None) -> str:
+    return "بطلتنا" if normalize_child_gender(gender) == "girl" else "بطلنا"
+
+
+def story_page_text(beat: dict, child_name: str = "", gender: Optional[str] = None) -> str:
+    """The Arabic narration for one story page, gendered + {name} filled in."""
+    g = normalize_child_gender(gender)
+    name = (child_name or "").strip()[:40] or story_default_hero_name(g)
+    raw = apply_gender_template(beat.get("text") or "", g)
+    return scrub_story_draw_text(raw.replace("{name}", name))
+
+
+def pack_gendered_field(pack: dict, key: str, gender: Optional[str] = None) -> str:
+    """Read a pack string field and apply gender templates."""
+    return scrub_story_draw_text(apply_gender_template((pack or {}).get(key) or "", gender))
+
+
+def scrub_story_draw_text(text: str) -> str:
+    """Strip emoji/symbols that break Arabic caption rendering in Pillow fonts."""
+    # Emoji / symbols image fonts often can't draw → tofu or weird marks on captions.
+    junk = re.compile(
+        "["
+        "\U0001F300-\U0001FAFF"
+        "\U00002700-\U000027BF"
+        "\U00002600-\U000026FF"
+        "\U0000FE0E\U0000FE0F"
+        "\U0000200D"
+        "❤♥♡💖✨🌟⭐🌸🎈🎁🌙"
+        "]+",
+        flags=re.UNICODE,
+    )
+    t = junk.sub("", text or "")
+    # Characters that frequently render as □ with Arabic fonts / reshaper
+    for src, dst in (
+        ("\u2026", "..."),  # …
+        ("\u00a0", " "),
+        ("\u2013", "-"),
+        ("\u2014", "-"),
+        ("\u2018", "'"),
+        ("\u2019", "'"),
+        ("\u201c", '"'),
+        ("\u201d", '"'),
+        ("\u200f", ""),  # RTL mark
+        ("\u200e", ""),  # LTR mark
+    ):
+        t = t.replace(src, dst)
+    t = re.sub(r"[ \t]{2,}", " ", t)
+    t = re.sub(r"\s+([.!?،,])", r"\1", t)
+    return t.strip(" \t\n\r-–—")
+
+
+def story_bakes_arabic_in_model(provider: Optional[str] = None) -> bool:
+    """ChatGPT / GPT Image writes Arabic in-image; other providers use server overlay."""
+    return normalize_provider(provider) == "chatgpt"
 
 
 # Prefer faces that actually contain Arabic glyphs for story captions.
@@ -2116,7 +2894,7 @@ def overlay_story_caption(
     lines = wrap_story_lines(draw, caption, font, max_w)
     # Cap lines so band never overflows
     if len(lines) > 4:
-        lines = lines[:3] + [lines[3] + "…"]
+        lines = lines[:3] + [lines[3] + "..."]
 
     line_gap = int(font_size * 1.35)
     block_h = line_gap * len(lines)
@@ -2132,7 +2910,8 @@ def overlay_story_caption(
         draw.text((x, y), shaped, font=font, fill=(30, 41, 59))
 
     if page_no and total_pages:
-        meta = arabic_text(f"{page_no} / {total_pages}")
+        # Keep Latin digits + slash — do NOT run through arabic_reshaper (causes □ boxes).
+        meta = f"{int(page_no)} / {int(total_pages)}"
         mw = _text_width(draw, meta, font_meta)
         draw.text((w - mw - int(w * 0.08), h - int(h * 0.045)), meta, font=font_meta, fill=(100, 116, 139))
 
@@ -2144,11 +2923,12 @@ def apply_story_caption_to_page(
     scene: dict,
     child_name: str = "",
     pack: Optional[dict] = None,
+    gender: Optional[str] = None,
 ) -> None:
     """Load JPEG, draw Arabic story line, save back atomically."""
     if not path or not Path(path).exists():
         return
-    caption = story_page_text(scene, child_name)
+    caption = story_page_text(scene, child_name, gender=gender)
     if not caption:
         return
     pack = pack or pack_for_scene(scene.get("id") or "")
@@ -2181,23 +2961,73 @@ def build_story_prompt(
     child_name: str = "",
     page_no: int = 0,
     total_pages: int = 0,
+    meaning_en: str = "",
+    bake_arabic: bool = False,
+    gender: Optional[str] = None,
 ) -> str:
     """One full-color story page.
 
-    Three rules matter more than the wording:
-      1. `art_key` is repeated verbatim on every page so the whole book matches.
-      2. The page is fully painted "colored paper" — colour reaches all four edges.
-         A white page would read as an unfinished coloring sheet, not a storybook.
-      3. The image must contain NO text — Arabic narration is drawn on top by the
-         server (arabic_text + load_font), because image models garble Arabic.
+    When bake_arabic=True (ChatGPT / GPT Image): the model paints the Arabic caption.
+    When False: leave a calm bottom band; server overlays Arabic with a font.
     """
+    g = normalize_child_gender(gender)
     name = (child_name or "").strip()[:40]
-    who = f'The hero of the story is a child named "{name}". ' if name else ""
+    kid_en = "girl" if g == "girl" else "boy"
+    pronoun = "She" if g == "girl" else "He"
+    who = (
+        f'The hero of the story is a young {kid_en} named "{name}". '
+        f"{pronoun} must clearly read as a {kid_en} in face, hair and clothing. "
+        if name else
+        f"The hero of the story is a young {kid_en}. "
+        f"The child must clearly read as a {kid_en} in face, hair and clothing. "
+    )
     where = (
         f"This is page {page_no} of {total_pages} of one continuous story. "
         if page_no and total_pages else ""
     )
     colors = pack.get("colors") or ", ".join(pack.get("palette") or []) or "the book's own warm palette"
+    scene_en = (beat.get("scene") or "").strip()
+    meaning = (meaning_en or "").strip() or scene_en
+    caption = story_page_text(beat, child_name, gender=g)
+
+    meaning_block = ""
+    if meaning:
+        meaning_block = (
+            "STORY MEANING TO ILLUSTRATE (match the action, emotion, and moment precisely): "
+            f"{meaning}. "
+        )
+
+    scene_block = (
+        f"VISUAL ACTION: the child is {scene_en}. "
+        if scene_en else
+        "VISUAL ACTION: show the child clearly acting out the story meaning above. "
+    )
+
+    if bake_arabic and caption:
+        text_block = (
+            "ARABIC CAPTION (GPT Image must paint this as clear, correctly connected RTL Arabic "
+            "typography — well shaped letters, natural spacing, highly readable children's book style): "
+            f'Write EXACTLY this Arabic sentence on a soft white/cream rounded caption plate across '
+            f'the bottom fifth of the page: "{caption}". '
+            "The Arabic must be grammatically connected (not isolated letters), right-to-left, "
+            "dark charcoal ink on the light plate. "
+            + (
+                f'Optional tiny Latin page marker in a corner of the plate: "{page_no}/{total_pages}". '
+                if page_no and total_pages else ""
+            )
+            + "Do not invent extra Arabic words. Do not mirror or scramble the letters. "
+            "Composition: illustration in the upper two thirds; caption plate fixed in the bottom fifth. "
+        )
+    else:
+        text_block = (
+            "Composition: keep the child clearly visible in the upper two thirds. "
+            "The bottom fifth must stay a calm PAINTED band — softly colored sky, ground, water or a "
+            "smooth gradient in the book's palette, with no important detail — so a caption can be "
+            "placed over it later. That band is colored, never white. "
+            "ABSOLUTELY NO text, no letters, no words, no numbers, no captions, no speech bubbles, "
+            "no watermark, no signature, no Arabic calligraphy anywhere in the image. "
+        )
+
     return (
         "Children's storybook illustration, FULL COLOR painted page, premium picture-book "
         "quality, Disney/Pixar-grade warmth and appeal. "
@@ -2208,55 +3038,130 @@ def build_story_prompt(
         "This is image-to-image: the child must be the exact same child as the reference photo — "
         "same face, same hairstyle, same age, same skin tone, same identity, clearly recognizable, "
         "and drawn consistently the same across every page. "
-        f"SCENE: the child is {beat['scene']}. "
-        # Colored paper — the single most important difference from a coloring page.
+        f"{meaning_block}{scene_block}{text_block}"
         "THE WHOLE PAGE IS PAINTED: rich saturated color covers the entire sheet from edge to "
         "edge, including all four corners and the background behind the child. This is a printed "
         "colored storybook page, NOT a white page with a drawing on it. "
-        "NEVER leave the background white, blank, empty or unpainted. No white paper anywhere, "
-        "no white frame, no white gutter, no plain white sky, no line art, no black-and-white areas. "
-        "Composition: keep the child clearly visible in the upper two thirds. "
-        "The bottom fifth must stay a calm PAINTED band — softly colored sky, ground, water or a "
-        "smooth gradient in the book's palette, with no important detail — so a caption can be "
-        "placed over it later. That band is colored, never white. "
-        "ABSOLUTELY NO text, no letters, no words, no numbers, no captions, no speech bubbles, "
-        "no watermark, no signature anywhere in the image. "
+        "NEVER leave the background white, blank, empty or unpainted (except the caption plate "
+        "when Arabic text is requested). No white frame, no white gutter, no plain white sky, "
+        "no line art, no black-and-white areas. "
         "Expressive storytelling, readable silhouette, soft cinematic lighting, rich color depth, "
         "no letterboxing, no white borders, no empty margins."
     )
 
 
-def build_story_cover_prompt(pack: dict, child_name: str = "") -> str:
-    """Story front cover — fully painted, and the one page with baked-in Arabic title."""
-    name = (child_name or "").strip()[:40] or "طفلي"
+async def story_beat_meaning_en(
+    beat: dict,
+    child_name: str = "",
+    client: Optional[httpx.AsyncClient] = None,
+    gender: Optional[str] = None,
+) -> str:
+    """English meaning of the Arabic story line — for the image prompt (never drawn as text)."""
+    arabic = story_page_text(beat, child_name, gender=gender)
+    scene_en = (beat.get("scene") or "").strip()
+    if not arabic:
+        return scene_en
+
+    # Prefer live translation of the Arabic narration so the picture matches what the
+    # child will read under the page. Fall back to the hand-written English scene brief.
+    if client is not None and ACCOUNT_ID and API_TOKEN:
+        try:
+            translated = await translate_ar_to_en(arabic, client)
+            translated = (translated or "").strip()
+            if translated:
+                # Keep both: translated Arabic meaning + visual brief for composition detail.
+                if scene_en and scene_en.lower() not in translated.lower():
+                    return f"{translated} Visual details: the child is {scene_en}."
+                return translated
+        except Exception:
+            pass
+
+    if scene_en:
+        return (
+            f"Story moment (from Arabic narration): the child is {scene_en}. "
+            "Match the emotion and action of that beat exactly."
+        )
+    return ""
+
+
+def build_story_cover_prompt(pack: dict, child_name: str = "", *, bake_arabic: bool = False, gender: Optional[str] = None) -> str:
+    """Story front cover. With bake_arabic, GPT Image paints the Arabic titles."""
+    g = normalize_child_gender(gender)
+    name = (child_name or "").strip()[:40] or story_default_hero_name(g)
+    kid_en = "girl" if g == "girl" else "boy"
+    who = (
+        f'The hero of the story is a young {kid_en} named "{name}". '
+        f"The child must clearly read as a {kid_en}. "
+    )
     colors = pack.get("colors") or ", ".join(pack.get("palette") or []) or "the book's own warm palette"
+    title = pack_gendered_field(pack, "book_title", g)
+    hero = scrub_story_draw_text(apply_gender_template(f"{{بطلها|بطلتها}} {name}", g))
+    tagline = pack_gendered_field(pack, "tagline", g)
+
+    if bake_arabic:
+        text_block = (
+            "Clear readable playful Arabic typography (GPT Image), correctly connected RTL letters: "
+            f'Large title at the top on a soft light banner: "{title}". '
+            f'Below the title, smaller: "{hero}". '
+            f'Bottom banner: "{tagline}". '
+            "Do not invent extra Arabic. Do not scramble letters. No watermark beyond the listed text. "
+        )
+    else:
+        text_block = (
+            "Composition: keep the child clearly visible in the middle of the page. "
+            "Leave a calm PAINTED band across the top fifth and bottom fifth — softly colored sky, "
+            "ground or gradient in the book's palette with no important detail — so title text can "
+            "be placed over those bands later. Those bands are colored, never white. "
+            "ABSOLUTELY NO text, no letters, no words, no numbers, no Arabic calligraphy, no titles, "
+            "no captions, no logos, no badges, no watermark, no signature anywhere in the image. "
+        )
+
     return (
         "Premium children's storybook front cover, FULL COLOR painted page, picture-book quality. "
         "Vertical A4 portrait full-bleed, print-ready 300 DPI. "
         f"ART STYLE: {pack['art_key']}. "
         f"DOMINANT COLORS: {colors}. "
+        f"{who}"
         "The child must be the exact same child as the reference photo — same face, hairstyle, "
-        f'age, skin tone and identity. The child is named "{name}". '
+        "age, skin tone and identity. "
         f"Cover illustration: the child {pack['cover_scene']}. "
-        "Clear readable playful Arabic typography, well spaced, correctly shaped and connected: "
-        f'Large title at the top: "{pack["book_title"]}". '
-        f'Below the title, smaller: "بطلها {name}". '
-        f'Bottom banner: "{pack["tagline"]}". '
-        'Small round "لوني" logo badge in a bottom corner. '
+        f"{text_block}"
         "THE WHOLE COVER IS PAINTED: rich color covers the entire sheet edge to edge including "
-        "all four corners and the area behind the title. Never a white or blank background — "
-        "the Arabic text sits on painted artwork or a colored banner, not on white paper. "
-        "Leave generous calm space around the text so it stays readable. "
-        "No watermark, no extra text beyond what is listed. "
+        "all four corners. Never a white or blank background. "
         "Full-page edge-to-edge, no white borders, no letterboxing."
     )
 
 
-def build_story_ending_prompt(pack: dict, child_name: str = "") -> str:
-    """Story last page — the moral, in the same visual identity as the cover."""
+def build_story_ending_prompt(pack: dict, child_name: str = "", *, bake_arabic: bool = False, gender: Optional[str] = None) -> str:
+    """Story last page. With bake_arabic, GPT Image paints the Arabic closing lines."""
+    g = normalize_child_gender(gender)
     name = (child_name or "").strip()[:40]
-    who = f'The child is named "{name}". ' if name else ""
+    kid_en = "girl" if g == "girl" else "boy"
+    who = (
+        f'The child is a young {kid_en} named "{name}". '
+        if name else
+        f"The child is a young {kid_en}. "
+    )
     colors = pack.get("colors") or ", ".join(pack.get("palette") or []) or "the book's own warm palette"
+    ending = pack_gendered_field(pack, "ending_line", g)
+    moral = pack_gendered_field(pack, "moral", g)
+
+    if bake_arabic:
+        text_block = (
+            "Clear readable playful Arabic typography (GPT Image), correctly connected RTL letters: "
+            f'Top on a soft light banner: "{ending}". '
+            f'Center-bottom on a soft banner: "{moral}". '
+            "Do not invent extra Arabic. Do not scramble letters. No watermark. "
+        )
+    else:
+        text_block = (
+            "Composition: keep the child clearly visible in the middle. "
+            "Leave a calm PAINTED band across the top fifth and bottom fifth — soft color, no important "
+            "detail — so closing text can be placed over them later. Those bands are colored, never white. "
+            "ABSOLUTELY NO text, no letters, no words, no numbers, no Arabic calligraphy, no titles, "
+            "no captions, no logos, no badges, no watermark, no signature anywhere in the image. "
+        )
+
     return (
         "Final page of a premium children's storybook, FULL COLOR painted page, picture-book quality. "
         "Vertical A4 portrait full-bleed, print-ready 300 DPI. "
@@ -2266,15 +3171,185 @@ def build_story_ending_prompt(pack: dict, child_name: str = "") -> str:
         "The child must be the exact same child as the reference photo — same face, hairstyle, "
         "age and identity. "
         f"Illustration: the child {pack['ending_scene']}. "
-        "Clear readable playful Arabic typography with generous calm space: "
-        f'Top: "{pack["ending_line"]}". '
-        f'Center-bottom on a soft banner: "{pack["moral"]}". '
-        'Small round "لوني" logo badge at the bottom. '
-        "THE WHOLE PAGE IS PAINTED: rich color edge to edge including all four corners and the "
-        "area behind the text. Never a white or blank background — no white paper anywhere. "
-        "Warm closing mood. No watermark, no extra text. "
-        "Full-page edge-to-edge, no white borders, no letterboxing."
+        f"{text_block}"
+        "THE WHOLE PAGE IS PAINTED: rich color edge to edge including all four corners. "
+        "Never a white or blank background — no white paper anywhere. "
+        "Warm closing mood. Full-page edge-to-edge, no white borders, no letterboxing."
     )
+
+
+def _draw_centered_arabic(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    *,
+    y: int,
+    font,
+    fill,
+    page_w: int,
+    shadow=True,
+) -> int:
+    """Draw one reshaped Arabic line centered; returns text height used."""
+    shaped = arabic_text(scrub_story_draw_text(text))
+    if not shaped:
+        return 0
+    tw = _text_width(draw, shaped, font)
+    x = max(0, (page_w - tw) // 2)
+    if shadow:
+        draw.text((x + 2, y + 2), shaped, font=font, fill=(148, 163, 184))
+    draw.text((x, y), shaped, font=font, fill=fill)
+    try:
+        bbox = draw.textbbox((0, 0), shaped, font=font)
+        return max(1, bbox[3] - bbox[1])
+    except Exception:
+        return max(24, getattr(font, "size", 32))
+
+
+def overlay_story_cover_text(
+    img: Image.Image,
+    pack: dict,
+    child_name: str = "",
+    gender: Optional[str] = None,
+) -> Image.Image:
+    """Paint Arabic cover title/tagline server-side (models mangle Arabic glyphs)."""
+    g = normalize_child_gender(gender)
+    title = pack_gendered_field(pack, "book_title", g) or scrub_story_draw_text((pack or {}).get("title") or "")
+    name = (child_name or "").strip()[:40] or story_default_hero_name(g)
+    hero = scrub_story_draw_text(apply_gender_template(f"{{بطلها|بطلتها}} {name}", g))
+    tagline = pack_gendered_field(pack, "tagline", g)
+    if not title and not tagline:
+        return img.convert("RGB")
+
+    base = img.convert("RGBA")
+    w, h = base.size
+    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+
+    # Soft plates top + bottom
+    top_box = [int(w * 0.06), int(h * 0.04), int(w * 0.94), int(h * 0.22)]
+    bot_box = [int(w * 0.08), int(h * 0.82), int(w * 0.92), int(h * 0.95)]
+    for box in (top_box, bot_box):
+        try:
+            od.rounded_rectangle(box, radius=26, fill=(255, 255, 255, 220), outline=(226, 232, 240, 255), width=2)
+        except Exception:
+            od.rectangle(box, fill=(255, 255, 255, 220), outline=(226, 232, 240, 255), width=2)
+
+    composed = Image.alpha_composite(base, overlay).convert("RGB")
+    draw = ImageDraw.Draw(composed)
+
+    title_font = load_story_font(max(42, min(64, int(w * 0.048))))
+    sub_font = load_story_font(max(28, min(40, int(w * 0.032))))
+    tag_font = load_story_font(max(30, min(44, int(w * 0.034))))
+    fill = (30, 41, 59)
+
+    y = top_box[1] + int(h * 0.025)
+    if title:
+        th = _draw_centered_arabic(draw, title, y=y, font=title_font, fill=fill, page_w=w)
+        y += th + int(h * 0.012)
+    if hero:
+        _draw_centered_arabic(draw, hero, y=y, font=sub_font, fill=(71, 85, 105), page_w=w)
+
+    if tagline:
+        lines = wrap_story_lines(draw, tagline, tag_font, int(w * 0.78))
+        if len(lines) > 2:
+            lines = lines[:2]
+        line_gap = int(getattr(tag_font, "size", 34) * 1.3)
+        block_h = line_gap * len(lines)
+        yb = bot_box[1] + max(14, (bot_box[3] - bot_box[1] - block_h) // 2)
+        for i, line in enumerate(lines):
+            _draw_centered_arabic(draw, line, y=yb + i * line_gap, font=tag_font, fill=fill, page_w=w)
+
+    return composed
+
+
+def overlay_story_ending_text(
+    img: Image.Image,
+    pack: dict,
+    child_name: str = "",
+    gender: Optional[str] = None,
+) -> Image.Image:
+    """Paint Arabic ending line + moral server-side."""
+    g = normalize_child_gender(gender)
+    ending = pack_gendered_field(pack, "ending_line", g)
+    moral = pack_gendered_field(pack, "moral", g)
+    if not ending and not moral:
+        return img.convert("RGB")
+
+    base = img.convert("RGBA")
+    w, h = base.size
+    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+
+    top_box = [int(w * 0.08), int(h * 0.05), int(w * 0.92), int(h * 0.18)]
+    bot_box = [int(w * 0.08), int(h * 0.80), int(w * 0.92), int(h * 0.94)]
+    for box in (top_box, bot_box):
+        try:
+            od.rounded_rectangle(box, radius=26, fill=(255, 255, 255, 220), outline=(226, 232, 240, 255), width=2)
+        except Exception:
+            od.rectangle(box, fill=(255, 255, 255, 220), outline=(226, 232, 240, 255), width=2)
+
+    composed = Image.alpha_composite(base, overlay).convert("RGB")
+    draw = ImageDraw.Draw(composed)
+    title_font = load_story_font(max(40, min(58, int(w * 0.044))))
+    moral_font = load_story_font(max(28, min(42, int(w * 0.033))))
+    fill = (30, 41, 59)
+
+    if ending:
+        lines = wrap_story_lines(draw, ending, title_font, int(w * 0.78))[:2]
+        line_gap = int(getattr(title_font, "size", 48) * 1.3)
+        block_h = line_gap * len(lines)
+        y = top_box[1] + max(12, (top_box[3] - top_box[1] - block_h) // 2)
+        for i, line in enumerate(lines):
+            _draw_centered_arabic(draw, line, y=y + i * line_gap, font=title_font, fill=fill, page_w=w)
+
+    if moral:
+        lines = wrap_story_lines(draw, moral, moral_font, int(w * 0.78))[:3]
+        line_gap = int(getattr(moral_font, "size", 34) * 1.3)
+        block_h = line_gap * len(lines)
+        y = bot_box[1] + max(12, (bot_box[3] - bot_box[1] - block_h) // 2)
+        for i, line in enumerate(lines):
+            _draw_centered_arabic(draw, line, y=y + i * line_gap, font=moral_font, fill=fill, page_w=w)
+
+    return composed
+
+
+def apply_story_cover_text(path: Path, pack: dict, child_name: str = "", gender: Optional[str] = None) -> None:
+    if not path or not Path(path).exists() or not pack:
+        return
+    try:
+        img = Image.open(path).convert("RGB")
+    except Exception:
+        return
+    out = overlay_story_cover_text(img, pack, child_name=child_name, gender=gender)
+    tmp = path.with_name(f".{path.stem}.covertext.jpg")
+    try:
+        out.save(tmp, "JPEG", quality=93)
+        tmp.replace(path)
+    finally:
+        try:
+            if tmp.exists():
+                tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def apply_story_ending_text(path: Path, pack: dict, child_name: str = "", gender: Optional[str] = None) -> None:
+    if not path or not Path(path).exists() or not pack:
+        return
+    try:
+        img = Image.open(path).convert("RGB")
+    except Exception:
+        return
+    out = overlay_story_ending_text(img, pack, child_name=child_name, gender=gender)
+    tmp = path.with_name(f".{path.stem}.endtext.jpg")
+    try:
+        out.save(tmp, "JPEG", quality=93)
+        tmp.replace(path)
+    finally:
+        try:
+            if tmp.exists():
+                tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def build_prompt(
@@ -2301,7 +3376,10 @@ def build_prompt(
 def arabic_text(text: str) -> str:
     if not text:
         return text
-    return get_display(arabic_reshaper.reshape(text))
+    try:
+        return get_display(arabic_reshaper.reshape(text))
+    except Exception:
+        return text
 
 
 def load_font(size: int) -> Union[ImageFont.FreeTypeFont, ImageFont.ImageFont]:
@@ -2458,6 +3536,10 @@ def build_mock_image_bytes(
         bg = (237, 233, 254)
         accent = (109, 40, 217)
         banner = "MOCK STORY · بدون Kie"
+    elif kind == "poster":
+        bg = (254, 243, 199)
+        accent = (180, 83, 9)
+        banner = "MOCK POSTER A3 · بدون Kie"
     else:
         bg = (255, 255, 255)
         accent = (56, 189, 248)
@@ -2543,12 +3625,14 @@ async def generate_cover_page_async(
     pack_id: Optional[str] = None,
     provider: Optional[str] = None,
     model: Optional[str] = None,
+    gender: Optional[str] = None,
 ) -> dict:
     """Generate the premium full-color front cover, themed for the chosen book type."""
     out = cover_page_path(d)
     created = False
     prov = normalize_provider(provider) if (use_kie or is_mock_provider(provider)) else "cloudflare"
     model_id = model or (model_for_provider(prov) if (use_kie or is_mock_provider(provider)) else None)
+    child_gender = normalize_child_gender(gender)
     if force or not out.exists():
         refs = ensure_multi_refs(d)
         if not refs:
@@ -2565,8 +3649,9 @@ async def generate_cover_page_async(
                 subtitle="Cover · free mock",
             )
         else:
+            bake = story_bakes_arabic_in_model(prov)
             prompt = (
-                build_story_cover_prompt(_pack, child_name)
+                build_story_cover_prompt(_pack, child_name, bake_arabic=bake, gender=child_gender)
                 if is_story_pack(_pack)
                 else build_cover_prompt(child_name, page_count=page_count, pack_id=pack_id)
             )
@@ -2584,6 +3669,9 @@ async def generate_cover_page_async(
                 img_bytes = await call_model_async(prompt, refs, client)
         _atomic_jpeg_bytes(out, img_bytes, quality=93)
         created = True
+        # Non-ChatGPT story covers: overlay Arabic locally. ChatGPT bakes it in-image.
+        if is_story_pack(_pack) and not story_bakes_arabic_in_model(prov):
+            apply_story_cover_text(out, _pack, child_name=child_name, gender=child_gender)
     b64 = base64.b64encode(out.read_bytes()).decode()
     return {
         "scene_id": COVER_SCENE_ID,
@@ -2608,12 +3696,14 @@ async def generate_ending_page_async(
     pack_id: Optional[str] = None,
     provider: Optional[str] = None,
     model: Optional[str] = None,
+    gender: Optional[str] = None,
 ) -> dict:
     """Generate the premium full-color ending page, themed for the chosen book type."""
     out = ending_page_path(d)
     created = False
     prov = normalize_provider(provider) if (use_kie or is_mock_provider(provider)) else "cloudflare"
     model_id = model or (model_for_provider(prov) if (use_kie or is_mock_provider(provider)) else None)
+    child_gender = normalize_child_gender(gender)
     if force or not out.exists():
         refs = ensure_multi_refs(d)
         if not refs:
@@ -2630,8 +3720,9 @@ async def generate_ending_page_async(
                 subtitle="Ending · free mock",
             )
         else:
+            bake = story_bakes_arabic_in_model(prov)
             prompt = (
-                build_story_ending_prompt(_pack, child_name)
+                build_story_ending_prompt(_pack, child_name, bake_arabic=bake, gender=child_gender)
                 if is_story_pack(_pack)
                 else build_ending_prompt(child_name, pack_id=pack_id)
             )
@@ -2649,6 +3740,9 @@ async def generate_ending_page_async(
                 img_bytes = await call_model_async(prompt, refs, client)
         _atomic_jpeg_bytes(out, img_bytes, quality=93)
         created = True
+        # Non-ChatGPT story endings: overlay Arabic locally. ChatGPT bakes it in-image.
+        if is_story_pack(_pack) and not story_bakes_arabic_in_model(prov):
+            apply_story_ending_text(out, _pack, child_name=child_name, gender=child_gender)
     b64 = base64.b64encode(out.read_bytes()).decode()
     return {
         "scene_id": ENDING_SCENE_ID,
@@ -2939,7 +4033,12 @@ async def generate_one_kie_async(
         async def _work():
             if is_mock_provider(prov):
                 await asyncio.sleep(0.4)
-                kind = "story" if is_story_pack(_pack) else "page"
+                if is_poster_pack(_pack):
+                    kind = "poster"
+                elif is_story_pack(_pack):
+                    kind = "story"
+                else:
+                    kind = "page"
                 img_bytes = build_mock_image_bytes(
                     scene.get("title") or scene_id,
                     kind=kind,
@@ -2949,15 +4048,53 @@ async def generate_one_kie_async(
                 )
                 _atomic_jpeg_bytes(out, img_bytes, quality=88)
                 return
+            # Poster: dense A3 coloring layout, higher Kie resolution
+            if is_poster_pack(_pack):
+                prompt = (scene.get("scene") or "").strip()
+                if not prompt:
+                    prompt = (
+                        "Black and white line art coloring POSTER for children, A3, print-ready. "
+                        "THE SAME CHILD from the reference photo appears multiple times. "
+                        "Clean bold black outlines, no shading, no text."
+                    )
+                child = (style.get("child_name") or "").strip()
+                if child:
+                    prompt = f"{prompt} The child's name is {child} (do not write the name as text)."
+                is_land = ( _pack.get("orientation") or "portrait") == "landscape"
+                ar = KIE_POSTER_LANDSCAPE_ASPECT if is_land else (
+                    _pack.get("aspect_ratio") or KIE_POSTER_ASPECT
+                )
+                if client is None:
+                    raise RuntimeError("HTTP client مطلوب لتوليد Kie.")
+                img_bytes, _ = await generate_image_to_image(
+                    prompt, refs[0], client,
+                    input_url=ref_url, model=model_id,
+                    aspect_ratio=ar,
+                    resolution=KIE_POSTER_RESOLUTION,
+                )
+                _atomic_jpeg_bytes(out, img_bytes, quality=94)
+                return
             # Story pages: full-colour narrative art (skip line-art coloring prompt).
             if is_story_pack(_pack):
                 _beats = _pack["scenes"]
                 _idx = next((i for i, b in enumerate(_beats) if b["id"] == scene_id), -1)
+                bake = story_bakes_arabic_in_model(prov)
+                child_gender = normalize_child_gender(style.get("child_gender") or style.get("gender"))
+                # Translate Arabic narration → English meaning so the picture matches the caption.
+                meaning_en = await story_beat_meaning_en(
+                    scene,
+                    child_name=style.get("child_name", ""),
+                    client=client,
+                    gender=child_gender,
+                )
                 prompt = build_story_prompt(
                     scene, _pack,
                     child_name=style.get("child_name", ""),
                     page_no=_idx + 1 if _idx >= 0 else 0,
                     total_pages=len(_beats),
+                    meaning_en=meaning_en,
+                    bake_arabic=bake,
+                    gender=child_gender,
                 )
             else:
                 prompt = build_prompt(
@@ -2988,12 +4125,13 @@ async def generate_one_kie_async(
         else:
             await _work()
         created = True
-        # Story narration is drawn by us (models mangle Arabic glyphs).
-        if is_story_pack(_pack):
+        # Story narration: ChatGPT bakes Arabic in-image; other providers get server overlay.
+        if is_story_pack(_pack) and not story_bakes_arabic_in_model(prov):
             apply_story_caption_to_page(
                 out, scene,
                 child_name=style.get("child_name", ""),
                 pack=_pack,
+                gender=normalize_child_gender(style.get("child_gender") or style.get("gender")),
             )
     b64 = base64.b64encode(out.read_bytes()).decode()
     return {
@@ -3005,7 +4143,11 @@ async def generate_one_kie_async(
         "created": created,
         "provider": prov,
         "model": model_id,
-        "caption": story_page_text(scene, style.get("child_name", "")),
+        "caption": story_page_text(
+            scene,
+            style.get("child_name", ""),
+            gender=normalize_child_gender(style.get("child_gender") or style.get("gender")),
+        ),
     }
 
 
@@ -3013,11 +4155,19 @@ def run_async(coro):
     return asyncio.run(coro)
 
 
-def fit_image_to_a4(img: Image.Image, dpi: int = 150) -> Image.Image:
-    """Center-crop / scale image to exact A4 aspect at print resolution."""
-    # A4 mm → pixels at dpi
-    target_w = int(210 / 25.4 * dpi)
-    target_h = int(297 / 25.4 * dpi)
+def fit_image_to_page(
+    img: Image.Image,
+    pagesize=A4,
+    dpi: int = 150,
+) -> Image.Image:
+    """Center-crop / scale image to exact page aspect at print resolution.
+
+    pagesize is a ReportLab (width, height) in points (default A4).
+    A3/A4 share the ISO 216 √2 ratio — only absolute size changes.
+    """
+    page_w_pt, page_h_pt = pagesize
+    target_w = max(1, int(round(float(page_w_pt) / 72.0 * dpi)))
+    target_h = max(1, int(round(float(page_h_pt) / 72.0 * dpi)))
     img = img.convert("RGB")
     iw, ih = img.size
     if iw < 1 or ih < 1:
@@ -3031,13 +4181,25 @@ def fit_image_to_a4(img: Image.Image, dpi: int = 150) -> Image.Image:
     return resized.crop((left, top, left + target_w, top + target_h))
 
 
-def write_pdf_with_margins(images: List[Image.Image], pdf_path: Path):
-    """Build full-bleed A4 PDF — each image covers the entire page (no white margins)."""
-    page_w, page_h = A4
-    c = pdf_canvas.Canvas(str(pdf_path), pagesize=A4)
+def fit_image_to_a4(img: Image.Image, dpi: int = 150) -> Image.Image:
+    """Backward-compatible A4 helper."""
+    return fit_image_to_page(img, pagesize=A4, dpi=dpi)
+
+
+def write_pdf_with_margins(
+    images: List[Image.Image],
+    pdf_path: Path,
+    pagesize=A4,
+    dpi: int = 150,
+):
+    """Build full-bleed PDF — each image covers the entire page (no white margins).
+
+    Default pagesize=A4 for coloring/story books. Pass A3 / landscape(A3) for posters.
+    """
+    page_w, page_h = pagesize
+    c = pdf_canvas.Canvas(str(pdf_path), pagesize=pagesize)
     for img in images:
-        page_img = fit_image_to_a4(img)
-        # Draw edge-to-edge: full A4 background
+        page_img = fit_image_to_page(img, pagesize=pagesize, dpi=dpi)
         c.drawImage(
             ImageReader(page_img),
             0,
@@ -3104,7 +4266,332 @@ def user_dashboard():
 
 @app.route("/")
 def index():
+    """Main domain: WhatsApp sales funnel (printed personalized books)."""
+    return render_template("sales.html", **sales_page_context("ar"))
+
+
+@app.route("/en")
+@app.route("/en/")
+def index_en():
+    """English sales funnel."""
+    return render_template("sales_en.html", **sales_page_context("en"))
+
+
+@app.route("/buy")
+def sales_landing():
+    """Former homepage: digital coloring-book product landing → /app."""
     return render_template("landing.html")
+
+
+@app.route("/privacy")
+def privacy_policy():
+    """Public privacy policy (Arabic)."""
+    return render_template("privacy.html", **privacy_page_context())
+
+
+@app.route("/en/privacy")
+def privacy_policy_en():
+    """Public privacy policy (English)."""
+    return render_template("privacy_en.html", **privacy_page_context())
+
+
+@app.route("/checkout")
+def sales_checkout():
+    """Dedicated checkout / booking page for the Lony box (Arabic)."""
+    return render_template("checkout.html", **sales_page_context("ar"))
+
+
+@app.route("/order")
+def sales_checkout_legacy():
+    """Legacy Arabic checkout URL → /checkout."""
+    return redirect("/checkout", code=301)
+
+
+@app.route("/thankyou")
+def sales_thankyou():
+    """Arabic post-order thank-you page."""
+    order_id = (request.args.get("order") or "").strip()
+    ctx = sales_page_context("ar")
+    ctx["order_id"] = order_id if order_id.isdigit() else ""
+    ctx["child_name"] = (request.args.get("child") or "").strip()[:80]
+    return render_template("thankyou.html", **ctx)
+
+
+@app.route("/en/checkout")
+def sales_checkout_en():
+    """English checkout / booking page."""
+    return render_template("checkout_en.html", **sales_page_context("en"))
+
+
+@app.route("/en/order")
+def sales_checkout_en_legacy():
+    """Legacy English checkout URL → /en/checkout."""
+    return redirect("/en/checkout", code=301)
+
+
+@app.route("/en/thankyou")
+def sales_thankyou_en():
+    """English post-order thank-you page."""
+    order_id = (request.args.get("order") or "").strip()
+    ctx = sales_page_context("en")
+    ctx["order_id"] = order_id if order_id.isdigit() else ""
+    ctx["child_name"] = (request.args.get("child") or "").strip()[:80]
+    return render_template("thankyou_en.html", **ctx)
+
+
+@app.route("/api/sales-lead", methods=["POST"])
+@limiter.limit("8 per hour")
+def sales_lead_submit():
+    """Public homepage lead: rich form → sales_leads + special_orders."""
+    parent_name = (request.form.get("parent_name") or "").strip()
+    child_name = (request.form.get("child_name") or "").strip()
+    phone_raw = (request.form.get("phone") or "").strip()
+    address = (request.form.get("address") or "").strip()
+    governorate = (request.form.get("governorate") or "").strip()
+    theme_pref = (request.form.get("theme_pref") or "").strip()
+    customer_notes = (request.form.get("customer_notes") or "").strip()
+    photo = request.files.get("photo")
+    lang = "en" if (request.form.get("lang") or "").lower().startswith("en") else "ar"
+
+    def err(ar_msg: str, en_msg: str, code: int = 400):
+        return jsonify({"error": en_msg if lang == "en" else ar_msg}), code
+
+    allowed_govs = {"القاهرة", "الجيزة"}
+    allowed_themes = {
+        "كتاب المهن",
+        "كتاب الأبطال",
+        "كتاب الحيوانات",
+        "كتاب مخصوص / مزيج",
+        "قصة",
+        "لسه مش متأكد",
+    }
+
+    if len(parent_name) < 2:
+        return err("اكتب اسم ولي الأمر.", "Please enter the parent/guardian name.")
+    if len(child_name) < 2:
+        return err("اكتب اسم الطفل.", "Please enter the child’s name.")
+    phone_digits = re.sub(r"\D", "", phone_raw)
+    if len(phone_digits) < 10:
+        return err("اكتب رقم موبايل صحيح.", "Please enter a valid mobile number.")
+    if len(address) < 5:
+        return err("اكتب العنوان بالتفصيل عشان التوصيل.", "Please enter the full delivery address.")
+    if governorate not in allowed_govs:
+        return err("اختار المحافظة: القاهرة أو الجيزة.", "Choose a governorate: Cairo or Giza.")
+    if theme_pref and theme_pref not in allowed_themes:
+        return err("اختار نوع كتاب من الخيارات المتاحة.", "Choose a valid book type.")
+    if not photo or not photo.filename:
+        return err("ارفع صورة واضحة لوجه الطفل.", "Please upload a clear photo of the child’s face.")
+
+    safe = _safe_photo_name(photo.filename)
+    if not safe:
+        return err("صيغة الصورة غير مدعومة. استخدم JPG أو PNG.", "Unsupported image type. Use JPG or PNG.")
+
+    photo.seek(0, 2)
+    size = photo.tell()
+    photo.seek(0)
+    if size > MAX_PHOTO_SIZE:
+        return err("حجم الصورة كبير جدًا (الحد 10 ميجا).", "Image is too large (max 10 MB).")
+
+    try:
+        img = Image.open(photo.stream).convert("RGB")
+        if max(img.size) > 1600:
+            img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+    except Exception:
+        return err("مقدرناش نقرأ الصورة. جرّب صورة تانية.", "We couldn’t read that image. Try another photo.")
+
+    now = datetime.now(timezone.utc).isoformat()
+    phone_display = phone_raw
+    notes_parts = [
+        "طلب من صفحة الحجز /en/checkout" if lang == "en" else "طلب من صفحة الحجز /checkout",
+        f"اللغة: {lang}",
+        f"المحافظة: {governorate}",
+        f"العنوان: {address}",
+    ]
+    if theme_pref:
+        notes_parts.append(f"نوع الكتاب المطلوب: {theme_pref}")
+    if customer_notes:
+        notes_parts.append(f"ملاحظات العميل: {customer_notes}")
+    notes = "\n".join(notes_parts)
+    shipping_line = f"{governorate} — {address}"
+
+    with _db_lock:
+        conn = db_connect()
+        cur = conn.execute(
+            """
+            INSERT INTO special_orders
+              (child_name, client_name, phone, notes, status,
+               order_price_egp, payment_method, shipping_address, recipient_name,
+               created_at)
+            VALUES (?, ?, ?, ?, 'pending', ?, 'cod', ?, ?, ?)
+            """,
+            (
+                child_name,
+                parent_name,
+                phone_display,
+                notes,
+                float(SALES_PRICE_EGP),
+                shipping_line,
+                parent_name,
+                now,
+            ),
+        )
+        order_id = int(cur.lastrowid)
+        order_dir = SPECIAL_ORDERS_DIR / str(order_id)
+        order_dir.mkdir(parents=True, exist_ok=True)
+        jpeg_name = safe.rsplit(".", 1)[0] + ".jpg"
+        img.save(order_dir / jpeg_name, "JPEG", quality=92)
+        conn.execute(
+            "INSERT INTO special_order_photos (order_id, filename) VALUES (?, ?)",
+            (order_id, jpeg_name),
+        )
+
+        cur2 = conn.execute(
+            """
+            INSERT INTO sales_leads
+              (parent_name, child_name, phone, photo_filename, status,
+               special_order_id, source, notes, created_at,
+               address, governorate, child_age, child_gender, theme_pref, customer_notes)
+            VALUES (?, ?, ?, ?, 'new', ?, 'web', ?, ?, ?, ?, NULL, NULL, ?, ?)
+            """,
+            (
+                parent_name,
+                child_name,
+                phone_display,
+                jpeg_name,
+                order_id,
+                notes,
+                now,
+                address,
+                governorate,
+                theme_pref or None,
+                customer_notes or None,
+            ),
+        )
+        lead_id = int(cur2.lastrowid)
+        lead_dir = SALES_LEADS_DIR / str(lead_id)
+        lead_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(order_dir / jpeg_name, lead_dir / jpeg_name)
+        conn.commit()
+        conn.close()
+
+    try:
+        notify_new_sales_order_email(
+            order_id=order_id,
+            lead_id=lead_id,
+            parent_name=parent_name,
+            child_name=child_name,
+            phone=phone_display,
+            governorate=governorate,
+            address=address,
+            customer_notes=customer_notes,
+            theme_pref=theme_pref,
+            price_egp=SALES_PRICE_EGP,
+            photo_path=order_dir / jpeg_name,
+        )
+    except Exception:
+        app.logger.exception("Failed to send new-order email notification")
+
+    try:
+        notify_customer_order_whatsapp(
+            phone=phone_display,
+            parent_name=parent_name,
+            child_name=child_name,
+            order_id=order_id,
+            price_egp=SALES_PRICE_EGP,
+            lang=lang,
+        )
+    except Exception:
+        app.logger.exception("Failed to send customer WhatsApp confirmation")
+
+    ok_msg = (
+        "Order received! We’ll review the details and contact you soon on WhatsApp."
+        if lang == "en"
+        else "تم استلام طلبك بنجاح! هنراجع البيانات ونتواصل معاك قريبًا على واتساب."
+    )
+    return jsonify(
+        {
+            "ok": True,
+            "lead_id": lead_id,
+            "order_id": order_id,
+            "message": ok_msg,
+        }
+    ), 201
+
+
+@app.route("/admin/api/sales-leads")
+@admin_required
+def admin_list_sales_leads():
+    """List buy-page form leads (newest first)."""
+    q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "").strip()
+    sql = "SELECT * FROM sales_leads WHERE 1=1"
+    params = []
+    if status and status != "all":
+        sql += " AND status = ?"
+        params.append(status)
+    if q:
+        like = f"%{q}%"
+        sql += " AND (parent_name LIKE ? OR child_name LIKE ? OR phone LIKE ? OR IFNULL(address,'') LIKE ? OR IFNULL(governorate,'') LIKE ? OR CAST(id AS TEXT) LIKE ? OR CAST(special_order_id AS TEXT) LIKE ?)"
+        params.extend([like, like, like, like, like, like, like])
+    sql += " ORDER BY id DESC LIMIT 200"
+    with _db_lock:
+        conn = db_connect()
+        rows = conn.execute(sql, params).fetchall()
+        conn.close()
+    leads = []
+    for r in rows:
+        d = dict(r)
+        fn = d.get("photo_filename")
+        d["photo_url"] = (
+            f"/admin/sales-leads/{d['id']}/photo/{fn}" if fn else None
+        )
+        leads.append(d)
+    return jsonify({"ok": True, "leads": leads, "count": len(leads)})
+
+
+@app.route("/admin/sales-leads/<int:lead_id>/photo/<filename>")
+@admin_required
+def admin_serve_sales_lead_photo(lead_id: int, filename: str):
+    if not re.match(r"^[a-zA-Z0-9_\-]+\.[a-zA-Z]+$", filename or ""):
+        abort(404)
+    path = SALES_LEADS_DIR / str(lead_id) / filename
+    if not path.exists():
+        # fallback: linked special order photo
+        with _db_lock:
+            conn = db_connect()
+            row = conn.execute(
+                "SELECT special_order_id, photo_filename FROM sales_leads WHERE id = ?",
+                (lead_id,),
+            ).fetchone()
+            conn.close()
+        if row and row["special_order_id"] and row["photo_filename"] == filename:
+            alt = SPECIAL_ORDERS_DIR / str(row["special_order_id"]) / filename
+            if alt.exists():
+                return send_file(alt)
+        abort(404)
+    return send_file(path)
+
+
+@app.route("/admin/api/sales-leads/<int:lead_id>", methods=["PATCH"])
+@admin_required
+def admin_update_sales_lead(lead_id: int):
+    data = request.get_json(silent=True) or {}
+    status = (data.get("status") or "").strip()
+    if status not in ("new", "contacted", "done", "archived"):
+        return jsonify({"error": "حالة غير صالحة."}), 400
+    with _db_lock:
+        conn = db_connect()
+        cur = conn.execute(
+            "UPDATE sales_leads SET status = ? WHERE id = ?",
+            (status, lead_id),
+        )
+        if cur.rowcount == 0:
+            conn.close()
+            return jsonify({"error": "الطلب غير موجود."}), 404
+        conn.commit()
+        row = conn.execute("SELECT * FROM sales_leads WHERE id = ?", (lead_id,)).fetchone()
+        conn.close()
+    return jsonify({"ok": True, "lead": dict(row)})
 
 
 @app.route("/app")
@@ -3985,6 +5472,7 @@ def admin_quick_book_generate():
         "art_style": data.get("art_style") or "cartoon",
         # Story pages name the hero inside the prompt; coloring pages ignore this.
         "child_name": (data.get("child_name") or data.get("name") or "").strip()[:40],
+        "child_gender": normalize_child_gender(data.get("child_gender") or data.get("gender")),
     }
 
     scenes = []
@@ -4084,7 +5572,19 @@ def admin_quick_book_generate():
                 conn.close()
         # Permanent save on special order — each page survives disconnects/refreshes
         if order_id and any(not p.get("error") for p in pages):
-            _persist_generated_to_order(order_id, session_id, book_id)
+            try:
+                _persist_generated_to_order(order_id, session_id, book_id)
+            except Exception as persist_err:
+                app.logger.exception(
+                    "persist order book after generate failed order=%s book=%s: %s",
+                    order_id, book_id, persist_err,
+                )
+        elif order_id and book_id is not None:
+            # Still re-scan disk so UI/progress match files even when this batch failed
+            try:
+                _refresh_named_book_progress(int(order_id), int(book_id), session_id)
+            except Exception:
+                pass
         return {
             "ok": True,
             "provider": provider,
@@ -4122,6 +5622,7 @@ def admin_quick_book_cover():
 
     session_id = (data.get("session_id") or "").strip()
     child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
+    child_gender = normalize_child_gender(data.get("child_gender") or data.get("gender"))
     pack_id = pack_by_id((data.get("pack_id") or "").strip())["id"]
     force = bool(data.get("force"))
     use_async = bool(data.get("async") or data.get("background"))
@@ -4164,6 +5665,7 @@ def admin_quick_book_cover():
                     pack_id=pack_id,
                     provider=provider,
                     model=kie_model,
+                    gender=child_gender,
                 )
             timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
             async with httpx.AsyncClient(timeout=timeout) as client:
@@ -4194,6 +5696,7 @@ def admin_quick_book_cover():
                     pack_id=pack_id,
                     provider=provider,
                     model=kie_model,
+                    gender=child_gender,
                 )
 
         page = run_async(_run())
@@ -4234,6 +5737,7 @@ def admin_quick_book_ending():
 
     session_id = (data.get("session_id") or "").strip()
     child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
+    child_gender = normalize_child_gender(data.get("child_gender") or data.get("gender"))
     pack_id = pack_by_id((data.get("pack_id") or "").strip())["id"]
     force = bool(data.get("force"))
     use_async = bool(data.get("async") or data.get("background"))
@@ -4271,6 +5775,7 @@ def admin_quick_book_ending():
                     pack_id=pack_id,
                     provider=provider,
                     model=kie_model,
+                    gender=child_gender,
                 )
             timeout = httpx.Timeout(60.0, read=300.0, write=120.0, connect=30.0)
             async with httpx.AsyncClient(timeout=timeout) as client:
@@ -4300,6 +5805,7 @@ def admin_quick_book_ending():
                     pack_id=pack_id,
                     provider=provider,
                     model=kie_model,
+                    gender=child_gender,
                 )
 
         page = run_async(_run())
@@ -4730,7 +6236,10 @@ def _book_to_dict(row: sqlite3.Row) -> dict:
         "title": pack.get("title") or pack.get("book_title"),
         "emoji": pack.get("emoji"),
         "desc": pack.get("desc"),
+        "kind": pack.get("kind") or "coloring",
+        "orientation": pack.get("orientation"),
     }
+    d["product_kind"] = pack.get("kind") or "coloring"
     if not d.get("title"):
         d["title"] = pack.get("book_title") or pack.get("title") or "كتاب تلوين"
     return d
@@ -4744,7 +6253,10 @@ def _list_order_books(conn: sqlite3.Connection, order_id: int) -> list:
     out = []
     for r in rows:
         b = _book_to_dict(r)
+        pack = pack_by_id(b.get("pack_id"))
         planned = b.get("scenes_list") or []
+        if is_poster_pack(pack) and not planned:
+            planned = [poster_scene_id(pack)]
         snap = _session_book_snapshot(
             b.get("session_id"), planned, order_id=order_id, book_id=b["id"]
         )
@@ -4753,9 +6265,11 @@ def _list_order_books(conn: sqlite3.Connection, order_id: int) -> list:
         b["done_pages"] = snap["done_planned"] if planned else snap["generated_scenes"]
         b["missing_pages"] = snap["missing_pages"]
         b["pdf_ready"] = bool(b.get("pdf_filename"))
+        b["product_kind"] = pack.get("kind") or "coloring"
         step = _infer_book_step(
             {
                 **(b.get("progress_data") or {}),
+                "pack_id": b.get("pack_id") or pack.get("id"),
                 "scenes": planned,
                 "has_cover": snap["has_cover"],
                 "has_ending": snap["has_ending"],
@@ -4769,10 +6283,19 @@ def _list_order_books(conn: sqlite3.Connection, order_id: int) -> list:
             "setup": "الإعداد", "cover": "غلاف البداية", "pages": "صفحات التلوين",
             "ending": "غلاف النهاية", "pdf": "حفظ PDF", "done": "مكتمل",
         }
+        if is_poster_pack(pack):
+            labels["pages"] = "توليد البوستر"
+            labels["pdf"] = "PDF · A3"
+            labels["done"] = "بوستر جاهز"
         b["current_step_label"] = labels.get(step, step)
-        done_n = len(b["done_pages"] or [])
-        total = len(planned) if planned else (b.get("page_count") or 0)
-        b["pages_summary"] = f"{done_n}/{total}" if total else f"{done_n}"
+        if is_poster_pack(pack):
+            orient = "عرضي" if (pack.get("orientation") == "landscape") else "طولي"
+            done = bool(b["done_pages"])
+            b["pages_summary"] = f"بوستر A3 {orient}" + (" · جاهز" if done else " · صورة واحدة")
+        else:
+            done_n = len(b["done_pages"] or [])
+            total = len(planned) if planned else (b.get("page_count") or 0)
+            b["pages_summary"] = f"{done_n}/{total}" if total else f"{done_n}"
         out.append(b)
     return out
 
@@ -5143,14 +6666,46 @@ def _order_share_active(token: Optional[str], expires_raw: Optional[str]) -> boo
 def _order_to_dict(row: sqlite3.Row, photos: list) -> dict:
     d = dict(row)
     d["photos"] = photos
-    # pdf_filename / assigned_to / share / book fields may not exist in older rows
+    # pdf_filename / assigned_to / share / book / commerce fields may not exist in older rows
     for key in (
         "pdf_filename", "assigned_to", "share_token", "share_expires_at",
         "book_session_id", "book_scenes", "book_page_count", "book_updated_at",
         "book_progress",
+        "shipping_address", "recipient_name", "alt_phone",
+        "order_price_egp", "is_free", "shipping_price_egp", "payment_method",
+        "expected_delivery_at", "delivered_at", "priority",
+        "guardian_id",
+        "child_gender",
     ):
         if key not in d:
             d[key] = None
+    try:
+        d["guardian_id"] = int(d["guardian_id"]) if d.get("guardian_id") is not None else None
+    except (TypeError, ValueError):
+        d["guardian_id"] = None
+    d["child_gender"] = normalize_child_gender(d.get("child_gender"))
+    # Normalize commerce fields for the admin UI
+    try:
+        d["is_free"] = bool(int(d["is_free"] or 0))
+    except (TypeError, ValueError):
+        d["is_free"] = False
+    try:
+        order_price = float(d["order_price_egp"]) if d.get("order_price_egp") is not None else None
+    except (TypeError, ValueError):
+        order_price = None
+    try:
+        ship_price = float(d["shipping_price_egp"]) if d.get("shipping_price_egp") is not None else None
+    except (TypeError, ValueError):
+        ship_price = None
+    d["order_price_egp"] = order_price
+    d["shipping_price_egp"] = ship_price
+    product = 0.0 if d["is_free"] else float(order_price or 0)
+    shipping = float(ship_price or 0)
+    d["order_total_egp"] = round(product + shipping, 2)
+    pay = (d.get("payment_method") or "cod").strip().lower()
+    d["payment_method"] = pay if pay in ("cod", "transfer", "other") else "cod"
+    pri = (d.get("priority") or "normal").strip().lower()
+    d["priority"] = pri if pri in ("normal", "urgent") else "normal"
     token = d.get("share_token")
     d["share_active"] = _order_share_active(token, d.get("share_expires_at"))
     d["share_url"] = f"{app_base_url()}/so/{token}" if token else None
@@ -5179,6 +6734,119 @@ def _order_to_dict(row: sqlite3.Row, photos: list) -> dict:
         sid and (SESSIONS_DIR / str(sid)).exists() and (SESSIONS_DIR / str(sid) / "input_0.png").exists()
     ) if sid else False
     return d
+
+
+def _guardian_to_dict(row: sqlite3.Row, child_count: int = 0) -> dict:
+    d = dict(row)
+    d["child_count"] = int(child_count or 0)
+    return d
+
+
+def _norm_phone_digits(phone: Optional[str]) -> str:
+    d = re.sub(r"\D", "", str(phone or ""))
+    if d.startswith("00"):
+        d = d[2:]
+    if d.startswith("20") and len(d) >= 12:
+        d = "0" + d[2:]
+    return d
+
+
+def _upsert_guardian(conn: sqlite3.Connection, data: dict, guardian_id: Optional[int] = None) -> tuple:
+    """Create/update guardian. Returns (guardian_id, name, phone, email)."""
+    now = datetime.now(timezone.utc).isoformat()
+    name = (data.get("client_name") or data.get("name") or "").strip() or "غير محدد"
+    phone = (data.get("phone") or "").strip() or None
+    email = (data.get("email") or "").strip() or None
+    notes = (data.get("guardian_notes") or data.get("parent_notes") or "").strip() or None
+
+    if guardian_id:
+        row = conn.execute("SELECT * FROM special_guardians WHERE id = ?", (guardian_id,)).fetchone()
+        if not row:
+            raise ValueError("ولي الأمر مش موجود.")
+        # Prefer incoming non-empty values; keep existing otherwise
+        name = (data.get("client_name") or data.get("name") or row["name"] or "غير محدد").strip() or row["name"]
+        if "phone" in data:
+            phone = (data.get("phone") or "").strip() or None
+        else:
+            phone = row["phone"]
+        if "email" in data:
+            email = (data.get("email") or "").strip() or None
+        else:
+            email = row["email"]
+        if "guardian_notes" in data or "parent_notes" in data:
+            notes = (data.get("guardian_notes") or data.get("parent_notes") or "").strip() or None
+        else:
+            notes = row["notes"] if "notes" in row.keys() else None
+        conn.execute(
+            """
+            UPDATE special_guardians
+            SET name=?, phone=?, email=?, notes=?, updated_at=?
+            WHERE id=?
+            """,
+            (name, phone, email, notes, now, guardian_id),
+        )
+        return guardian_id, name, phone, email
+
+    cur = conn.execute(
+        """
+        INSERT INTO special_guardians (name, phone, email, notes, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (name, phone, email, notes, now),
+    )
+    return cur.lastrowid, name, phone, email
+
+
+def _parse_optional_money(raw) -> Optional[float]:
+    if raw is None or raw == "":
+        return None
+    try:
+        val = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if val < 0:
+        return None
+    return round(val, 2)
+
+
+def _parse_optional_date(raw) -> Optional[str]:
+    """Accept YYYY-MM-DD (or ISO start) and store as YYYY-MM-DD."""
+    s = (str(raw) if raw is not None else "").strip()
+    if not s:
+        return None
+    s = s[:10]
+    try:
+        datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        return None
+    return s
+
+
+def _parse_order_commerce(data: dict) -> dict:
+    """Normalize shipping/pricing fields from admin JSON body."""
+    is_free = bool(data.get("is_free") in (True, 1, "1", "true", "yes", "on"))
+    order_price = _parse_optional_money(data.get("order_price_egp"))
+    shipping_price = _parse_optional_money(data.get("shipping_price_egp"))
+    if is_free:
+        order_price = 0.0
+    pay = (data.get("payment_method") or "cod").strip().lower()
+    if pay not in ("cod", "transfer", "other"):
+        pay = "cod"
+    pri = (data.get("priority") or "normal").strip().lower()
+    if pri not in ("normal", "urgent"):
+        pri = "normal"
+    return {
+        "shipping_address": (data.get("shipping_address") or "").strip() or None,
+        "recipient_name": (data.get("recipient_name") or "").strip() or None,
+        "alt_phone": (data.get("alt_phone") or "").strip() or None,
+        "order_price_egp": order_price,
+        "is_free": 1 if is_free else 0,
+        "shipping_price_egp": shipping_price,
+        "payment_method": pay,
+        "expected_delivery_at": _parse_optional_date(data.get("expected_delivery_at")),
+        "delivered_at": _parse_optional_date(data.get("delivered_at")),
+        "priority": pri,
+    }
 
 
 def _session_book_snapshot(
@@ -5252,6 +6920,19 @@ def _infer_book_step(progress: dict, snap: dict, has_pdf: bool) -> str:
     if not isinstance(planned, list):
         planned = []
     planned = [s for s in planned if isinstance(s, str)]
+    pack = pack_by_id(progress.get("pack_id"))
+    # Poster: single page product — no cover / no ending wizard
+    if is_poster_pack(pack):
+        if not planned and not snap.get("generated_scenes") and not snap.get("done_planned"):
+            return "setup"
+        missing = snap.get("missing_pages") if planned else []
+        if planned and missing:
+            return "pages"
+        if planned and not snap.get("done_planned") and not snap.get("generated_scenes"):
+            return "pages"
+        if not has_pdf:
+            return "pdf"
+        return "done"
     want_cover, want_ending = cover_mode_flags(progress.get("cover_mode"))
     if not planned and not snap.get("generated_scenes"):
         return "setup"
@@ -5299,6 +6980,8 @@ def _build_book_status(row: sqlite3.Row, photos: list) -> dict:
         progress["page_count"] = order["book_page_count"]
     if order.get("child_name") and not progress.get("child_name"):
         progress["child_name"] = order["child_name"]
+    if order.get("child_gender") and not progress.get("child_gender"):
+        progress["child_gender"] = normalize_child_gender(order.get("child_gender"))
     step = _infer_book_step(progress, snap, bool(order.get("pdf_filename")))
     progress["step"] = step
     labels = {
@@ -5387,6 +7070,8 @@ def _build_named_book_status(order_row: sqlite3.Row, book_row: sqlite3.Row, phot
         progress["page_count"] = book["page_count"]
     if order.get("child_name") and not progress.get("child_name"):
         progress["child_name"] = order["child_name"]
+    if order.get("child_gender") and not progress.get("child_gender"):
+        progress["child_gender"] = normalize_child_gender(order.get("child_gender"))
     if book.get("pack_id") and not progress.get("pack_id"):
         progress["pack_id"] = book["pack_id"]
     step = _infer_book_step(progress, snap, bool(book.get("pdf_filename")))
@@ -5461,6 +7146,8 @@ def admin_create_order_book(order_id: int):
     pack = pack_by_id(pack_id)
     title = (data.get("title") or pack.get("book_title") or pack.get("title") or "كتاب تلوين")[:80]
     now = datetime.now(timezone.utc).isoformat()
+    is_poster = is_poster_pack(pack)
+    poster_sid = poster_scene_id(pack) if is_poster else None
     with _db_lock:
         conn = db_connect()
         row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
@@ -5477,29 +7164,53 @@ def admin_create_order_book(order_id: int):
         if not photos:
             conn.close()
             return jsonify({"error": "ارفع صورة للطفل على الطلب الأول."}), 400
-        progress = {
-            "step": "setup",
-            "pack_id": pack["id"],
-            "child_name": (row["child_name"] or "")[:40],
-            "photo": photos[0],
-            "scenes": [],
-            "page_count": None,
-            "has_cover": False,
-            "has_ending": False,
-            "done_pages": [],
-            "updated_at": now,
-        }
+        if is_poster:
+            progress = {
+                "step": "setup",
+                "pack_id": pack["id"],
+                "product_kind": "poster",
+                "child_name": (row["child_name"] or "")[:40],
+                "photo": photos[0],
+                "scenes": [poster_sid],
+                "page_count": 1,
+                "has_cover": False,
+                "has_ending": False,
+                "cover_mode": "none",
+                "done_pages": [],
+                "missing_pages": [poster_sid],
+                "updated_at": now,
+            }
+            scenes_json = json.dumps([poster_sid], ensure_ascii=False)
+            page_count = 1
+        else:
+            progress = {
+                "step": "setup",
+                "pack_id": pack["id"],
+                "product_kind": pack.get("kind") or "coloring",
+                "child_name": (row["child_name"] or "")[:40],
+                "photo": photos[0],
+                "scenes": [],
+                "page_count": None,
+                "has_cover": False,
+                "has_ending": False,
+                "done_pages": [],
+                "updated_at": now,
+            }
+            scenes_json = None
+            page_count = None
         conn.execute(
             """
             INSERT INTO special_order_books
             (order_id, pack_id, title, session_id, scenes, page_count, progress,
              pdf_filename, created_at, updated_at, book_updated_at)
-            VALUES (?, ?, ?, NULL, NULL, NULL, ?, NULL, ?, ?, ?)
+            VALUES (?, ?, ?, NULL, ?, ?, ?, NULL, ?, ?, ?)
             """,
             (
                 order_id,
                 pack["id"],
                 title,
+                scenes_json,
+                page_count,
                 json.dumps(progress, ensure_ascii=False),
                 now, now, now,
             ),
@@ -5534,8 +7245,29 @@ def admin_get_order_book(order_id: int, book_id: int):
                 (order_id,),
             ).fetchall()
         ]
+        # Build status outside lock? Snap only reads disk; keep row/brow until build.
         status = _build_named_book_status(row, brow, photos)
         conn.close()
+    # Reconcile DB progress from disk (don't nest under _db_lock — refresh takes the lock).
+    try:
+        sid = status.get("session_id")
+        _refresh_named_book_progress(order_id, book_id, sid)
+        with _db_lock:
+            conn = db_connect()
+            row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
+            brow = _get_book_row(conn, order_id, book_id)
+            photos = [
+                r["filename"]
+                for r in conn.execute(
+                    "SELECT filename FROM special_order_photos WHERE order_id = ? ORDER BY id ASC",
+                    (order_id,),
+                ).fetchall()
+            ] if row else []
+            if row and brow:
+                status = _build_named_book_status(row, brow, photos)
+            conn.close()
+    except Exception:
+        pass
     return jsonify({"ok": True, **status})
 
 
@@ -5724,6 +7456,9 @@ def admin_order_book_progress_by_id(order_id: int, book_id: int):
     session_id = (data.get("session_id") or "").strip()
     step = (data.get("step") or "").strip() or None
     child_name = (data.get("child_name") or data.get("name") or "").strip()[:40]
+    child_gender = normalize_child_gender(data.get("child_gender") or data.get("gender")) if (
+        "child_gender" in data or "gender" in data
+    ) else None
     photo = (data.get("photo") or "").strip() or None
     scenes = data.get("scenes") if isinstance(data.get("scenes"), list) else None
     try:
@@ -5782,6 +7517,9 @@ def admin_order_book_progress_by_id(order_id: int, book_id: int):
             **existing,
             "step": step or existing.get("step") or "setup",
             "child_name": child_name or existing.get("child_name") or (row["child_name"] or ""),
+            "child_gender": child_gender or existing.get("child_gender") or normalize_child_gender(
+                row["child_gender"] if "child_gender" in row.keys() else None
+            ),
             "photo": photo or existing.get("photo"),
             "pack_id": pack_id or existing.get("pack_id") or brow["pack_id"],
             "provider": prov,
@@ -5815,6 +7553,11 @@ def admin_order_book_progress_by_id(order_id: int, book_id: int):
                 pack_id, now, now, book_id, order_id,
             ),
         )
+        if child_gender:
+            conn.execute(
+                "UPDATE special_orders SET child_gender = ?, updated_at = ? WHERE id = ?",
+                (child_gender, now, order_id),
+            )
         conn.execute(
             """
             UPDATE special_orders
@@ -5875,6 +7618,11 @@ def admin_order_book_save_by_id(order_id: int, book_id: int):
             except (json.JSONDecodeError, TypeError):
                 progress_peek = {}
         cover_mode = normalize_cover_mode(data.get("cover_mode") or progress_peek.get("cover_mode"))
+        pack = pack_by_id(brow["pack_id"] or progress_peek.get("pack_id"))
+        if is_poster_pack(pack):
+            cover_mode = "none"
+            if not clean:
+                clean = [poster_scene_id(pack)]
         want_cover, want_ending = cover_mode_flags(cover_mode)
 
         def _ensure_page_on_session(scene_id: str) -> bool:
@@ -5910,7 +7658,10 @@ def admin_order_book_save_by_id(order_id: int, book_id: int):
             return jsonify({"error": "مفيش صفحات جاهزة. ولّد الكتاب الأول."}), 400
 
         pdf_path = d / "coloring_book.pdf"
-        write_pdf_with_margins(all_pages, pdf_path)
+        pagesize = pdf_pagesize_for_pack(pack)
+        # Posters print larger — use slightly higher resample dpi
+        pdf_dpi = 200 if is_poster_pack(pack) else 150
+        write_pdf_with_margins(all_pages, pdf_path, pagesize=pagesize, dpi=pdf_dpi)
         odir = _order_photo_dir(order_id)
         fname = f"book_{order_id}_{book_id}_{secrets.token_hex(6)}.pdf"
         dest = odir / fname
@@ -5983,6 +7734,20 @@ def admin_order_book_save_by_id(order_id: int, book_id: int):
     })
 
 
+def _send_admin_jpeg(path: Path):
+    """Serve a stored page JPEG with a reliable body (avoid empty sendfile edge cases)."""
+    if not path.exists() or not path.is_file():
+        abort(404, "Page not found")
+    # conditional=False so proxies/browsers always get full bytes with Content-Length
+    return send_file(
+        path,
+        mimetype="image/jpeg",
+        max_age=60,
+        conditional=False,
+        etag=False,
+    )
+
+
 @app.route("/admin/special-orders/<int:order_id>/books/<int:book_id>/page/<scene_id>")
 @admin_required
 def admin_serve_named_book_page(order_id: int, book_id: int, scene_id: str):
@@ -5998,9 +7763,9 @@ def admin_serve_named_book_page(order_id: int, book_id: int, scene_id: str):
         if brow and brow["session_id"]:
             sess = page_path(SESSIONS_DIR / str(brow["session_id"]), scene_id)
             if sess.exists():
-                return send_file(sess, mimetype="image/jpeg", max_age=60)
+                return _send_admin_jpeg(sess)
         abort(404, "Page not found")
-    return send_file(p, mimetype="image/jpeg", max_age=60)
+    return _send_admin_jpeg(p)
 
 
 @app.route("/admin/special-orders/<int:order_id>/books/<int:book_id>/pdf/<filename>")
@@ -6461,22 +8226,61 @@ def admin_order_book_save(order_id: int):
     })
 
 
+@app.route("/admin/api/special-guardians", methods=["GET"])
+@admin_required
+def admin_list_special_guardians():
+    """List guardians (parents) with child counts for the admin picker."""
+    q = (request.args.get("q") or "").strip()
+    with _db_lock:
+        conn = db_connect()
+        if q:
+            like = f"%{q}%"
+            rows = conn.execute(
+                """
+                SELECT g.*,
+                       (SELECT COUNT(*) FROM special_orders o WHERE o.guardian_id = g.id) AS child_count
+                FROM special_guardians g
+                WHERE g.name LIKE ? OR IFNULL(g.phone,'') LIKE ? OR IFNULL(g.email,'') LIKE ?
+                ORDER BY g.id DESC
+                """,
+                (like, like, like),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT g.*,
+                       (SELECT COUNT(*) FROM special_orders o WHERE o.guardian_id = g.id) AS child_count
+                FROM special_guardians g
+                ORDER BY g.id DESC
+                """
+            ).fetchall()
+        conn.close()
+    return jsonify({
+        "guardians": [_guardian_to_dict(r, r["child_count"]) for r in rows],
+        "total": len(rows),
+    })
+
+
 @app.route("/admin/api/special-orders", methods=["GET"])
 @admin_required
 def admin_list_special_orders():
-    """List special orders. Supports ?status=pending|done and ?q= / ?client=<search>."""
+    """List special orders. Supports ?status=pending|shipping|done and ?q= / ?client=<search>."""
     status_filter = request.args.get("status", "").strip().lower()
     # Accept both ?q= and legacy ?client=
     search = (
         request.args.get("q") or request.args.get("client") or ""
     ).strip()
+    guardian_id_raw = (request.args.get("guardian_id") or "").strip()
     with _db_lock:
         conn = db_connect()
         conditions = []
         params: list = []
-        if status_filter in ("pending", "done"):
+        if status_filter in ("pending", "shipping", "done"):
             conditions.append("status = ?")
             params.append(status_filter)
+        if guardian_id_raw.isdigit():
+            conditions.append("guardian_id = ?")
+            params.append(int(guardian_id_raw))
         if search:
             like = f"%{search}%"
             conditions.append(
@@ -6487,10 +8291,13 @@ def admin_list_special_orders():
                 "phone LIKE ? OR "
                 "email LIKE ? OR "
                 "assigned_to LIKE ? OR "
-                "notes LIKE ?"
+                "notes LIKE ? OR "
+                "IFNULL(shipping_address,'') LIKE ? OR "
+                "IFNULL(recipient_name,'') LIKE ? OR "
+                "IFNULL(alt_phone,'') LIKE ?"
                 ")"
             )
-            params.extend([like] * 7)
+            params.extend([like] * 10)
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
         rows = conn.execute(
             f"SELECT * FROM special_orders {where} ORDER BY id DESC",
@@ -6522,37 +8329,76 @@ def admin_get_special_order(order_id: int):
         photo_rows = conn.execute(
             "SELECT filename FROM special_order_photos WHERE order_id = ?", (order_id,)
         ).fetchall()
+        guardian = None
+        gid = row["guardian_id"] if "guardian_id" in row.keys() else None
+        if gid:
+            grow = conn.execute("SELECT * FROM special_guardians WHERE id = ?", (gid,)).fetchone()
+            if grow:
+                guardian = _guardian_to_dict(grow)
         conn.close()
     photos = [r["filename"] for r in photo_rows]
-    return jsonify({"ok": True, "order": _order_to_dict(row, photos)})
+    order = _order_to_dict(row, photos)
+    if guardian:
+        order["guardian"] = guardian
+    return jsonify({"ok": True, "order": order})
 
 
 @app.route("/admin/api/special-orders", methods=["POST"])
 @admin_required
 def admin_create_special_order():
-    """Create a new special order. JSON body (child_name required)."""
+    """Create a new special order (child) under a guardian/parent."""
     data = request.get_json(silent=True) or {}
     child_name = (data.get("child_name") or "").strip()
     if not child_name:
         return jsonify({"error": "اسم الطفل مطلوب."}), 400
+    child_gender = normalize_child_gender(data.get("child_gender") or data.get("gender"))
 
+    commerce = _parse_order_commerce(data)
     now = datetime.now(timezone.utc).isoformat()
+    raw_gid = data.get("guardian_id")
+    try:
+        guardian_id = int(raw_gid) if raw_gid not in (None, "", 0, "0") else None
+    except (TypeError, ValueError):
+        guardian_id = None
+
     with _db_lock:
         conn = db_connect()
+        try:
+            guardian_id, client_name, phone, email = _upsert_guardian(conn, data, guardian_id)
+        except ValueError as exc:
+            conn.close()
+            return jsonify({"error": str(exc)}), 400
+
         cur = conn.execute(
             """
             INSERT INTO special_orders
-              (child_name, client_name, phone, email, notes, status, assigned_to, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              (child_name, child_gender, client_name, phone, email, notes, status, assigned_to,
+               shipping_address, recipient_name, alt_phone,
+               order_price_egp, is_free, shipping_price_egp, payment_method,
+               expected_delivery_at, delivered_at, priority,
+               guardian_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 child_name,
-                (data.get("client_name") or "").strip() or None,
-                (data.get("phone") or "").strip() or None,
-                (data.get("email") or "").strip() or None,
+                child_gender,
+                client_name,
+                phone,
+                email,
                 (data.get("notes") or "").strip() or None,
-                data.get("status", "pending") if data.get("status") in ("pending", "done") else "pending",
+                data.get("status", "pending") if data.get("status") in ("pending", "shipping", "done") else "pending",
                 (data.get("assigned_to") or "").strip() or None,
+                commerce["shipping_address"],
+                commerce["recipient_name"],
+                commerce["alt_phone"],
+                commerce["order_price_egp"],
+                commerce["is_free"],
+                commerce["shipping_price_egp"],
+                commerce["payment_method"],
+                commerce["expected_delivery_at"],
+                commerce["delivered_at"],
+                commerce["priority"],
+                guardian_id,
                 now,
             ),
         )
@@ -6560,13 +8406,15 @@ def admin_create_special_order():
         conn.commit()
         row = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
         conn.close()
-    return jsonify({"ok": True, "order": _order_to_dict(row, [])}), 201
+    order = _order_to_dict(row, [])
+    order["guardian_id"] = guardian_id
+    return jsonify({"ok": True, "order": order, "guardian_id": guardian_id}), 201
 
 
 @app.route("/admin/api/special-orders/<int:order_id>", methods=["PUT"])
 @admin_required
 def admin_update_special_order(order_id: int):
-    """Update fields of an existing special order."""
+    """Update fields of an existing special order (+ linked guardian)."""
     data = request.get_json(silent=True) or {}
     now = datetime.now(timezone.utc).isoformat()
 
@@ -6578,24 +8426,91 @@ def admin_update_special_order(order_id: int):
             return jsonify({"error": "الطلب مش موجود."}), 404
 
         child_name  = (data.get("child_name") or row["child_name"]).strip()
-        client_name = (data.get("client_name") if "client_name" in data else row["client_name"])
-        phone       = (data.get("phone")       if "phone"       in data else row["phone"])
-        email       = (data.get("email")       if "email"       in data else row["email"])
         notes       = (data.get("notes")       if "notes"       in data else row["notes"])
         status      = (data.get("status")      if "status"      in data else row["status"])
         assigned_to = (data.get("assigned_to") if "assigned_to" in data else row["assigned_to"])
-        if status not in ("pending", "done"):
+        if status not in ("pending", "shipping", "done"):
             status = row["status"]
+        if "child_gender" in data or "gender" in data:
+            child_gender = normalize_child_gender(data.get("child_gender") or data.get("gender"))
+        else:
+            child_gender = normalize_child_gender(row["child_gender"] if "child_gender" in row.keys() else None)
+
+        # Resolve / update guardian
+        raw_gid = data.get("guardian_id") if "guardian_id" in data else (
+            row["guardian_id"] if "guardian_id" in row.keys() else None
+        )
+        try:
+            guardian_id = int(raw_gid) if raw_gid not in (None, "", 0, "0") else None
+        except (TypeError, ValueError):
+            guardian_id = None
+
+        parent_keys = ("client_name", "name", "phone", "email", "guardian_notes", "parent_notes", "guardian_id")
+        if guardian_id or any(k in data for k in parent_keys):
+            try:
+                guardian_id, client_name, phone, email = _upsert_guardian(conn, data, guardian_id)
+            except ValueError as exc:
+                conn.close()
+                return jsonify({"error": str(exc)}), 400
+        else:
+            client_name = row["client_name"]
+            phone = row["phone"]
+            email = row["email"]
+
+        commerce_keys = (
+            "shipping_address", "recipient_name", "alt_phone",
+            "order_price_egp", "is_free", "shipping_price_egp", "payment_method",
+            "expected_delivery_at", "delivered_at", "priority",
+        )
+        if any(k in data for k in commerce_keys):
+            merged = {k: (data[k] if k in data else row[k] if k in row.keys() else None) for k in commerce_keys}
+            if "is_free" not in data and "is_free" in row.keys():
+                merged["is_free"] = row["is_free"]
+            commerce = _parse_order_commerce(merged)
+        else:
+            commerce = {
+                "shipping_address": row["shipping_address"] if "shipping_address" in row.keys() else None,
+                "recipient_name": row["recipient_name"] if "recipient_name" in row.keys() else None,
+                "alt_phone": row["alt_phone"] if "alt_phone" in row.keys() else None,
+                "order_price_egp": row["order_price_egp"] if "order_price_egp" in row.keys() else None,
+                "is_free": int(row["is_free"] or 0) if "is_free" in row.keys() else 0,
+                "shipping_price_egp": row["shipping_price_egp"] if "shipping_price_egp" in row.keys() else None,
+                "payment_method": row["payment_method"] if "payment_method" in row.keys() else "cod",
+                "expected_delivery_at": row["expected_delivery_at"] if "expected_delivery_at" in row.keys() else None,
+                "delivered_at": row["delivered_at"] if "delivered_at" in row.keys() else None,
+                "priority": row["priority"] if "priority" in row.keys() else "normal",
+            }
 
         conn.execute(
             """
             UPDATE special_orders
-            SET child_name=?, client_name=?, phone=?, email=?, notes=?, status=?, assigned_to=?, updated_at=?
+            SET child_name=?, child_gender=?, client_name=?, phone=?, email=?, notes=?, status=?, assigned_to=?,
+                shipping_address=?, recipient_name=?, alt_phone=?,
+                order_price_egp=?, is_free=?, shipping_price_egp=?, payment_method=?,
+                expected_delivery_at=?, delivered_at=?, priority=?,
+                guardian_id=?, updated_at=?
             WHERE id=?
             """,
-            (child_name, client_name or None, phone or None, email or None,
-             notes or None, status, assigned_to or None, now, order_id),
+            (
+                child_name, child_gender, client_name or None, phone or None, email or None,
+                notes or None, status, assigned_to or None,
+                commerce["shipping_address"], commerce["recipient_name"], commerce["alt_phone"],
+                commerce["order_price_egp"], commerce["is_free"], commerce["shipping_price_egp"],
+                commerce["payment_method"], commerce["expected_delivery_at"],
+                commerce["delivered_at"], commerce["priority"],
+                guardian_id, now, order_id,
+            ),
         )
+        # Keep sibling denormalized contact fields in sync with guardian
+        if guardian_id:
+            conn.execute(
+                """
+                UPDATE special_orders
+                SET client_name=?, phone=?, email=?
+                WHERE guardian_id=?
+                """,
+                (client_name or None, phone or None, email or None, guardian_id),
+            )
         conn.commit()
         updated = conn.execute("SELECT * FROM special_orders WHERE id = ?", (order_id,)).fetchone()
         photos  = [r["filename"] for r in conn.execute(

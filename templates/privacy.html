@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سياسة الخصوصية — لونّي | Lony</title>
+<meta name="description" content="سياسة خصوصية لونّي: كيف نجمع ونستخدم ونحمي بيانات وصور الأطفال عند طلب منتجاتنا المخصصة.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --display: "Baloo Bhaijaan 2", "SF Arabic", sans-serif;
+  --font: "IBM Plex Sans Arabic", "SF Arabic", Tahoma, sans-serif;
+  --ink: #2a1f1a;
+  --muted: #6b5e56;
+  --coral: #e85d4c;
+  --coral-deep: #d24a3a;
+  --peach: #fff1ea;
+  --cream: #fffaf6;
+  --paper: #ffffff;
+  --line: rgba(42, 31, 26, 0.1);
+  --wa: #128c7e;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(900px 420px at 100% -10%, rgba(232,93,76,.12), transparent 55%),
+    radial-gradient(700px 360px at 0% 20%, rgba(18,140,126,.08), transparent 50%),
+    var(--cream);
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--coral); text-decoration: none; }
+a:hover { color: var(--coral-deep); }
+.wrap { width: min(820px, calc(100% - 40px)); margin-inline: auto; }
+
+.nav {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(255,246,240,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(42,31,26,.04);
+}
+.nav-inner {
+  width: min(1120px, calc(100% - 40px));
+  margin-inline: auto;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 16px 0; min-height: 68px;
+}
+.brand {
+  display: inline-flex; align-items: center; line-height: 1;
+}
+.brand img {
+  height: 56px;
+  width: auto;
+  display: block;
+}
+.nav-links { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nav-links a {
+  padding: 8px 14px; font-size: 14px; font-weight: 600;
+  color: var(--ink); border-radius: 10px; opacity: .85;
+}
+.nav-links a:hover { opacity: 1; background: rgba(42,31,26,.04); color: var(--ink); }
+
+.hero {
+  padding: 48px 0 28px;
+  text-align: center;
+}
+.kicker {
+  display: inline-block;
+  font-size: 12px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--coral); margin-bottom: 10px;
+}
+.hero h1 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(32px, 5vw, 48px);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  margin-bottom: 10px;
+}
+.hero .sub {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 42ch;
+  margin-inline: auto;
+}
+.updated {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(232,93,76,.1);
+  color: var(--coral-deep);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.policy {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: clamp(24px, 4vw, 40px);
+  box-shadow: 0 18px 40px rgba(42,31,26,.06);
+  margin-bottom: 28px;
+}
+.policy > p.lead {
+  color: var(--muted);
+  font-size: 16px;
+  margin-bottom: 28px;
+}
+.policy h2 {
+  font-family: var(--display);
+  font-size: clamp(20px, 2.6vw, 26px);
+  line-height: 1.35;
+  margin: 28px 0 10px;
+  letter-spacing: -0.02em;
+}
+.policy h2:first-of-type { margin-top: 0; }
+.policy p, .policy li {
+  color: var(--ink);
+  font-size: 15.5px;
+}
+.policy ul {
+  margin: 10px 0 14px;
+  padding-inline-start: 22px;
+  display: grid;
+  gap: 6px;
+}
+.policy li::marker { color: var(--coral); }
+.policy strong { font-weight: 700; }
+
+.note {
+  margin-top: 28px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff1ea, #fff8f4);
+  border: 1px solid rgba(232,93,76,.18);
+}
+.note h3 {
+  font-family: var(--display);
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: var(--coral-deep);
+}
+.note p { color: var(--ink); font-size: 15px; }
+
+.contact-box {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+}
+.contact-box div { font-size: 15px; }
+.contact-box a { font-weight: 700; }
+
+.foot {
+  padding: 8px 0 40px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.foot-row {
+  display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.foot-row a { color: var(--muted); font-weight: 600; }
+.foot-row a:hover { color: var(--coral); }
+
+@media (max-width: 640px) {
+  .nav-links a:not(.home-link) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/" aria-label="لوني">
+      <img src="{{ url_for('static', filename='img/lony-logo.png') }}" alt="لوني" width="48" height="60">
+    </a>
+    <nav class="nav-links" aria-label="تنقل">
+      <a href="/en" hreflang="en" lang="en">English</a>
+      <a class="home-link" href="/">الصفحة الرئيسية</a>
+      <a href="/#order">احجز دلوقتي</a>
+      <a href="{{ sales_whatsapp_url }}" target="_blank" rel="noopener">واتساب</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="kicker">لوني | Lony</div>
+    <h1>سياسة الخصوصية</h1>
+    <p class="sub">كيف نتعامل مع بياناتك وصور طفلك بعناية ومسؤولية.</p>
+    <div class="updated">آخر تحديث: {{ privacy_updated }}</div>
+  </div>
+</section>
+
+<main class="wrap">
+  <article class="policy">
+    <p class="lead">
+      في <strong>لوني | Lony</strong> نحترم خصوصية عملائنا، ونلتزم بالتعامل مع البيانات الشخصية،
+      وخاصة صور وبيانات الأطفال، بعناية ومسؤولية.
+      توضح هذه السياسة نوع البيانات التي نجمعها، وكيف نستخدمها، وكيف نحافظ عليها، والحقوق المتعلقة بها.
+    </p>
+
+    <h2>1. البيانات التي نجمعها</h2>
+    <p>عند طلب أحد منتجات Lony، قد نطلب:</p>
+    <ul>
+      <li>اسم ولي الأمر.</li>
+      <li>رقم الهاتف وWhatsApp.</li>
+      <li>اسم الطفل.</li>
+      <li>عمر الطفل.</li>
+      <li>صورة الطفل.</li>
+      <li>المهنة أو الشخصية التي يرغب ولي الأمر في ظهور الطفل بها.</li>
+      <li>المحافظة والعنوان وبيانات التوصيل.</li>
+      <li>أي ملاحظات ضرورية لتنفيذ الطلب.</li>
+    </ul>
+    <p>نقوم بجمع البيانات اللازمة فقط لتنفيذ الطلب والتواصل مع العميل وتقديم الخدمات المرتبطة به.</p>
+
+    <h2>2. استخدام صورة الطفل</h2>
+    <p>
+      يتم استخدام صورة الطفل التي يقدمها ولي الأمر لغرض تصميم وإنتاج
+      <strong>Personalized Color Book</strong> أو أي منتج مخصص تم طلبه من Lony.
+    </p>
+    <p>ولا يعني إرسال الصورة إلى Lony موافقة تلقائية على استخدامها في الإعلانات أو وسائل التواصل الاجتماعي.</p>
+
+    <h2>3. موافقة ولي الأمر</h2>
+    <p>
+      يجب أن يكون الشخص الذي يقدم صورة الطفل وبياناته هو ولي الأمر أو الوصي القانوني،
+      أو لديه الصلاحية القانونية اللازمة لتقديمها.
+    </p>
+    <p>ويقر العميل بأنه مسؤول عن صحة البيانات والصورة التي يقدمها إلى Lony.</p>
+
+    <h2>4. استخدام الصور في التسويق</h2>
+    <p>إذا رغبت Lony في استخدام صورة الطفل أو التصميم النهائي في:</p>
+    <ul>
+      <li>Facebook</li>
+      <li>Instagram</li>
+      <li>TikTok</li>
+      <li>الإعلانات</li>
+      <li>الموقع الإلكتروني</li>
+      <li>أي محتوى تسويقي آخر</li>
+    </ul>
+    <p>فسيتم طلب <strong>موافقة منفصلة واختيارية</strong> من ولي الأمر.</p>
+    <p>عدم الموافقة على استخدام الصورة في التسويق <strong>لا يؤثر على إمكانية شراء المنتج أو تنفيذ الطلب</strong>.</p>
+
+    <h2>5. استخدام الذكاء الاصطناعي</h2>
+    <p>
+      قد تستخدم Lony تقنيات الذكاء الاصطناعي وأدوات التصميم الرقمي للمساعدة في تحويل صورة الطفل
+      إلى شخصية كرتونية وإنشاء التصميمات المخصصة.
+    </p>
+    <p>
+      قد تختلف النتيجة النهائية عن الصورة الأصلية من حيث الأسلوب الفني وبعض التفاصيل،
+      ولا نضمن التطابق الكامل بنسبة 100%.
+    </p>
+
+    <h2>6. لماذا نستخدم البيانات؟</h2>
+    <p>قد نستخدم البيانات المقدمة من العميل من أجل:</p>
+    <ul>
+      <li>تصميم المنتج المخصص.</li>
+      <li>تنفيذ وتجهيز الطلب.</li>
+      <li>التواصل مع العميل.</li>
+      <li>تأكيد بيانات الطلب.</li>
+      <li>الشحن والتوصيل.</li>
+      <li>خدمة ما بعد البيع.</li>
+      <li>معالجة طلبات الاستبدال أو حل مشكلات الطلب.</li>
+    </ul>
+    <p>ولا نستخدم البيانات لأغراض غير مرتبطة بالخدمة دون الحصول على الموافقات اللازمة.</p>
+
+    <h2>7. مشاركة البيانات</h2>
+    <p>قد نشارك الحد الأدنى من البيانات الضرورية مع الجهات التي تساعدنا في تنفيذ الطلب، مثل:</p>
+    <ul>
+      <li>شركات الشحن والتوصيل.</li>
+      <li>مزودي الخدمات التقنية والاستضافة.</li>
+      <li>مزودي خدمات الدفع، عند الحاجة.</li>
+      <li>الجهات التي تساعد في تنفيذ المنتج.</li>
+    </ul>
+    <p>ولا تقوم Lony ببيع أو تأجير صور الأطفال أو البيانات الشخصية للعملاء لأغراض تجارية.</p>
+
+    <h2>8. الاحتفاظ بالصور والبيانات</h2>
+    <p>
+      نحتفظ بالصور والبيانات للفترة اللازمة لتنفيذ الطلب، وخدمة ما بعد البيع،
+      ومعالجة أي مشكلة متعلقة بالطلب أو إعادة الطباعة عند الحاجة.
+    </p>
+    <p>
+      بعد انتهاء الحاجة إليها، يتم حذف أو إتلاف البيانات وفقًا لإجراءات الاحتفاظ بالبيانات المعمول بها،
+      ما لم يوجد سبب قانوني مشروع يستوجب الاحتفاظ بها.
+    </p>
+
+    <h2>9. حماية البيانات</h2>
+    <p>
+      تتخذ Lony إجراءات تقنية وتنظيمية مناسبة لحماية البيانات من الوصول أو الاستخدام أو الكشف غير المصرح به قدر الإمكان.
+    </p>
+    <p>ومع ذلك، لا يمكن ضمان أمان أي نظام إلكتروني بنسبة 100%.</p>
+
+    <h2>10. حقوق العميل</h2>
+    <p>يمكن لولي الأمر التواصل معنا لطلب:</p>
+    <ul>
+      <li>تصحيح البيانات غير الصحيحة.</li>
+      <li>الاستفسار عن البيانات المقدمة.</li>
+      <li>طلب حذف البيانات عندما لا توجد حاجة مشروعة للاحتفاظ بها.</li>
+      <li>سحب الموافقة الخاصة بالاستخدام التسويقي.</li>
+    </ul>
+    <p>ويتم التعامل مع هذه الطلبات وفقًا للقوانين واللوائح المعمول بها.</p>
+
+    <h2>11. التواصل عبر WhatsApp</h2>
+    <p>قد تستخدم Lony تطبيق WhatsApp للتواصل مع العميل من أجل:</p>
+    <ul>
+      <li>تأكيد الطلب.</li>
+      <li>استكمال البيانات.</li>
+      <li>متابعة حالة الطلب.</li>
+      <li>خدمة ما بعد البيع.</li>
+    </ul>
+    <p>ننصح العميل بعدم إرسال أي بيانات شخصية إضافية غير ضرورية عبر WhatsApp.</p>
+
+    <h2>12. ملفات تعريف الارتباط والتقنيات المشابهة</h2>
+    <p>
+      قد يستخدم الموقع Cookies وتقنيات مشابهة لتحسين تجربة المستخدم، وتحليل أداء الموقع، وقياس الحملات الإعلانية.
+    </p>
+    <p>
+      وقد يتم استخدام أدوات مثل <strong>Meta Pixel</strong> أو <strong>Google Analytics</strong>
+      وفقًا للإعدادات والموافقات المطلوبة.
+    </p>
+
+    <h2>13. الروابط الخارجية</h2>
+    <p>
+      قد يحتوي الموقع على روابط لمواقع أو خدمات خارجية مثل WhatsApp أو منصات التواصل الاجتماعي.
+    </p>
+    <p>
+      Lony ليست مسؤولة عن سياسات الخصوصية الخاصة بهذه الجهات، وننصح بمراجعة سياسات الخصوصية الخاصة بها عند استخدامها.
+    </p>
+
+    <h2>14. تحديث سياسة الخصوصية</h2>
+    <p>
+      قد يتم تحديث هذه السياسة من وقت لآخر لمواكبة أي تغييرات في الخدمات أو الإجراءات أو المتطلبات القانونية.
+    </p>
+    <p>سيتم نشر النسخة المحدثة على هذه الصفحة مع توضيح تاريخ آخر تحديث.</p>
+
+    <h2>15. التواصل معنا</h2>
+    <p>لأي استفسار متعلق بالخصوصية أو بيانات الطلب:</p>
+    <div class="contact-box">
+      <div><strong>البراند:</strong> لوني | Lony</div>
+      <div>
+        <strong>WhatsApp:</strong>
+        <a href="{{ sales_whatsapp_url }}" target="_blank" rel="noopener">{{ sales_whatsapp_display }}</a>
+      </div>
+      {% if privacy_email %}
+      <div><strong>Email:</strong> <a href="mailto:{{ privacy_email }}">{{ privacy_email }}</a></div>
+      {% endif %}
+      {% if privacy_address %}
+      <div><strong>العنوان:</strong> {{ privacy_address }}</div>
+      {% endif %}
+      {% if privacy_commercial_register %}
+      <div><strong>السجل التجاري:</strong> {{ privacy_commercial_register }}</div>
+      {% endif %}
+      {% if privacy_tax_card %}
+      <div><strong>البطاقة الضريبية:</strong> {{ privacy_tax_card }}</div>
+      {% endif %}
+    </div>
+
+    <aside class="note" aria-label="ملاحظة مهمة">
+      <h3>ملاحظة مهمة</h3>
+      <p>
+        <strong>نستخدم صورة الطفل والبيانات المقدمة فقط في حدود تنفيذ الطلب والخدمات المرتبطة به، وفقًا لسياسة الخصوصية.</strong>
+      </p>
+      <p style="margin-top:8px">
+        ولا يتم استخدام صورة الطفل في المحتوى التسويقي إلا بعد الحصول على موافقة منفصلة واختيارية من ولي الأمر.
+      </p>
+    </aside>
+  </article>
+</main>
+
+<footer class="foot">
+  <div class="foot-row">
+    <a href="/">الموقع الرئيسي</a>
+    <a href="/buy">اصنع كتابك أونلاين</a>
+    <a href="/privacy">سياسة الخصوصية</a>
+  </div>
+  <div>Lony — كتب أطفال مخصصة © 2026</div>
+</footer>
+
+</body>
+</html>

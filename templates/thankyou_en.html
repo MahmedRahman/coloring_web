@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thank you — Lony</title>
+<meta name="description" content="We received your Lony order and we’re already working on your child’s coloring book.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --display: "Baloo 2", "Nunito", system-ui, sans-serif;
+  --font: "Nunito", system-ui, sans-serif;
+  --ink: #2a1f1a;
+  --muted: #6b5e56;
+  --coral: #e85d4c;
+  --coral-deep: #d24a3a;
+  --cream: #fffaf6;
+  --paper: #ffffff;
+  --line: rgba(42, 31, 26, 0.1);
+  --wa: #128c7e;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(900px 420px at 100% -10%, rgba(232,93,76,.14), transparent 55%),
+    radial-gradient(700px 380px at 0% 40%, rgba(18,140,126,.08), transparent 50%),
+    var(--cream);
+  line-height: 1.65;
+  min-height: 100svh;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+.wrap { width: min(720px, calc(100% - 32px)); margin-inline: auto; }
+
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(255,246,240,.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(42,31,26,.05);
+}
+.nav-inner {
+  width: min(1120px, calc(100% - 32px));
+  margin-inline: auto;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 14px 0; min-height: 64px;
+}
+.brand img { height: 56px; width: auto; }
+.nav-back {
+  font-weight: 700; font-size: 14px; color: var(--muted);
+  padding: 8px 12px; border-radius: 999px;
+}
+.nav-back:hover { background: rgba(42,31,26,.05); color: var(--ink); }
+
+.hero {
+  padding: 48px 0 56px;
+  text-align: center;
+}
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  box-shadow: 0 18px 40px rgba(42,31,26,.08);
+  padding: clamp(28px, 5vw, 40px) clamp(20px, 4vw, 36px);
+  display: grid; gap: 14px;
+  animation: rise .55s ease both;
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.emoji {
+  font-size: 48px; line-height: 1;
+  animation: pop .55s ease .08s both;
+}
+@keyframes pop {
+  0% { transform: scale(.55); opacity: 0; }
+  70% { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.kicker {
+  color: var(--coral); font-weight: 800; font-size: 13px;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+h1 {
+  font-family: var(--display);
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1.2; font-weight: 800;
+}
+.lead { color: var(--muted); font-size: 16px; max-width: 38ch; margin-inline: auto; }
+.order-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-inline: auto;
+  padding: 8px 14px; border-radius: 999px;
+  background: rgba(232,93,76,.08);
+  color: var(--coral-deep);
+  font-weight: 800; font-size: 14px;
+}
+.steps { list-style: none; display: grid; gap: 10px; text-align: start; margin-top: 8px; }
+.steps li {
+  display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start;
+  background: rgba(232,93,76,.06);
+  border-radius: 16px; padding: 14px 16px;
+  font-size: 15px; font-weight: 600;
+}
+.steps .n {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--coral); color: #fff; font-weight: 800; font-size: 13px;
+}
+.actions {
+  display: grid; gap: 10px; margin-top: 8px;
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 14px 24px; border-radius: 999px;
+  font-family: var(--font); font-weight: 700; font-size: 16px; border: 0;
+}
+.btn-coral {
+  background: var(--coral); color: #fff;
+  box-shadow: 0 10px 24px rgba(232,93,76,.28);
+}
+.btn-coral:hover { background: var(--coral-deep); }
+.btn-ghost {
+  background: #fff; color: var(--ink);
+  border: 1.5px solid rgba(42,31,26,.14);
+}
+.foot {
+  text-align: center; color: var(--muted); font-size: 13px; padding: 0 0 36px;
+}
+.foot a { font-weight: 700; color: var(--ink); }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/en" aria-label="Lony">
+      <img src="{{ url_for('static', filename='img/lony-logo.png') }}" alt="Lony" width="48" height="60" fetchpriority="high">
+    </a>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a class="nav-back" href="/" hreflang="ar" lang="ar">العربية</a>
+      <a class="nav-back" href="/en">Home</a>
+    </div>
+  </div>
+</header>
+
+<main class="hero wrap">
+  <div class="card">
+    <div class="emoji" aria-hidden="true">🎨✨</div>
+    <div class="kicker">Order received</div>
+    <h1>We got it — thank you!</h1>
+    <p class="lead" id="thank-lead">
+      Your order is in. Our team is already starting on a joyful coloring book for your little one.
+    </p>
+    {% if order_id %}
+    <div class="order-chip">Order #{{ order_id }}</div>
+    {% endif %}
+    <ul class="steps">
+      <li><span class="n">1</span><span>We received the photo & details safely.</span></li>
+      <li><span class="n">2</span><span>We’re designing the book with your child’s name & likeness.</span></li>
+      <li><span class="n">3</span><span>Someone from Lony will contact you soon on WhatsApp.</span></li>
+    </ul>
+    <div class="actions">
+      <a class="btn btn-coral" href="/en">Back to Lony</a>
+      <a class="btn btn-ghost" href="{{ sales_inquiry_whatsapp_url }}" target="_blank" rel="noopener">Chat on WhatsApp</a>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <a href="/en">Home</a> ·
+    <a href="/en/checkout">Checkout</a> ·
+    Lony © 2026
+  </div>
+</footer>
+
+<script>
+(function () {
+  const params = new URLSearchParams(location.search);
+  const child = (params.get('child') || '').trim();
+  const lead = document.getElementById('thank-lead');
+  if (child && lead) {
+    lead.textContent =
+      'Your order for ' + child + ' is in. We’re already starting on a joyful coloring book with their name and likeness.';
+  }
+})();
+</script>
+</body>
+</html>

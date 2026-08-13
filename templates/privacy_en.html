@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Lony</title>
+<meta name="description" content="How Lony collects, uses, and protects personal data — especially children’s photos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --display: "Baloo 2", "Nunito", system-ui, sans-serif;
+  --font: "Nunito", system-ui, sans-serif;
+  --ink: #2a1f1a;
+  --muted: #6b5e56;
+  --coral: #e85d4c;
+  --coral-deep: #d24a3a;
+  --cream: #fffaf6;
+  --paper: #ffffff;
+  --line: rgba(42, 31, 26, 0.1);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(900px 420px at 100% -10%, rgba(232,93,76,.12), transparent 55%),
+    var(--cream);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+.wrap { width: min(860px, calc(100% - 32px)); margin-inline: auto; }
+.nav {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(255,246,240,.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(42,31,26,.05);
+}
+.nav-inner {
+  width: min(1120px, calc(100% - 32px));
+  margin-inline: auto;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 14px 0; min-height: 64px;
+}
+.brand img {
+  height: 56px;
+  width: auto;
+  display: block;
+}
+.nav-links { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.nav-links a {
+  padding: 8px 12px; font-size: 13px; font-weight: 700;
+  border-radius: 999px; border: 1.5px solid rgba(42,31,26,.12); background: #fff;
+  color: var(--muted);
+}
+.nav-links a:hover { color: var(--ink); }
+.hero { padding: 40px 0 20px; text-align: center; }
+.kicker {
+  display: inline-block; font-size: 12px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--coral); margin-bottom: 10px;
+}
+.hero h1 {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(30px, 5vw, 44px); line-height: 1.2; margin-bottom: 10px;
+}
+.hero .sub { color: var(--muted); font-size: 16px; max-width: 46ch; margin-inline: auto; }
+.updated {
+  display: inline-block; margin-top: 14px; padding: 6px 12px; border-radius: 999px;
+  background: rgba(232,93,76,.1); color: var(--coral-deep); font-size: 13px; font-weight: 700;
+}
+.policy {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 24px;
+  padding: clamp(22px, 4vw, 36px); box-shadow: 0 18px 40px rgba(42,31,26,.06);
+  margin-bottom: 28px;
+}
+.policy > p.lead { color: var(--muted); font-size: 16px; margin-bottom: 18px; }
+.policy h2 {
+  font-family: var(--display); font-size: 22px; margin: 22px 0 10px;
+}
+.policy p, .policy li { color: var(--ink); font-size: 15px; margin-bottom: 8px; }
+.policy ul { padding-inline-start: 1.2em; margin: 8px 0 14px; }
+.policy strong { font-weight: 700; }
+.foot {
+  text-align: center; color: var(--muted); font-size: 13px; padding: 8px 0 36px;
+}
+.foot a { font-weight: 700; color: var(--ink); }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/en" aria-label="Lony">
+      <img src="{{ url_for('static', filename='img/lony-logo.png') }}" alt="Lony" width="48" height="60">
+    </a>
+    <div class="nav-links">
+      <a href="/" hreflang="ar" lang="ar">العربية</a>
+      <a href="/en">Back to site</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero wrap">
+  <div class="kicker">Lony</div>
+  <h1>Privacy Policy</h1>
+  <p class="sub">How we handle personal data — especially children’s photos — with care.</p>
+  <div class="updated">Last updated: {{ privacy_updated }}</div>
+</section>
+
+<article class="wrap policy">
+  <p class="lead">
+    At <strong>Lony</strong> we respect our customers’ privacy and handle personal data,
+    especially children’s photos and information, carefully and responsibly.
+    This policy explains what we collect, how we use it, how we protect it, and related rights.
+  </p>
+
+  <h2>1. Data we collect</h2>
+  <p>When ordering a Lony product, we may ask for:</p>
+  <ul>
+    <li>Parent/guardian name</li>
+    <li>Phone number and WhatsApp</li>
+    <li>Child’s name and age</li>
+    <li>Child’s photo</li>
+    <li>Preferred theme or character</li>
+    <li>Governorate, address, and delivery details</li>
+    <li>Notes needed to fulfill the order</li>
+  </ul>
+  <p>We only collect what is needed to fulfill the order, communicate with you, and provide related services.</p>
+
+  <h2>2. Use of the child’s photo</h2>
+  <p>
+    The child’s photo is used to design and produce a personalized coloring book
+    or other customized Lony product you ordered.
+  </p>
+  <p>
+    Sending a photo to Lony does <strong>not</strong> mean automatic consent for ads or social media use.
+  </p>
+
+  <h2>3. Accuracy of information</h2>
+  <p>You are responsible for the accuracy of the data and photo you provide to Lony.</p>
+
+  <h2>4. Marketing use</h2>
+  <p>If Lony wants to use the child’s photo or final design in:</p>
+  <ul>
+    <li>Ads or marketing</li>
+    <li>Social media</li>
+    <li>Public samples or portfolios</li>
+  </ul>
+  <p>we will ask for clear consent first.</p>
+
+  <h2>5. AI and design tools</h2>
+  <p>
+    Lony may use AI and digital design tools to help transform the child’s photo into
+    coloring pages and personalized designs for the ordered product.
+  </p>
+
+  <h2>6. Sharing with third parties</h2>
+  <p>
+    We do not sell or rent children’s photos or customers’ personal data for commercial purposes.
+    Data may be shared only when needed with service providers (for example printing or delivery),
+    under appropriate safeguards.
+  </p>
+
+  <h2>7. Security</h2>
+  <p>
+    We take reasonable technical and organizational measures to protect data from unauthorized
+    access, use, or disclosure.
+  </p>
+
+  <h2>8. WhatsApp communication</h2>
+  <p>We may use WhatsApp to:</p>
+  <ul>
+    <li>Confirm order details</li>
+    <li>Share previews for approval</li>
+    <li>Coordinate delivery</li>
+  </ul>
+
+  <h2>9. Third-party services</h2>
+  <p>
+    Some tools we use (payments, messaging, hosting) have their own privacy policies.
+    Please review those policies when relevant.
+  </p>
+
+  <h2>10. Contact</h2>
+  <p><strong>Brand:</strong> Lony</p>
+  {% if privacy_email %}<p><strong>Email:</strong> {{ privacy_email }}</p>{% endif %}
+  {% if privacy_address %}<p><strong>Address:</strong> {{ privacy_address }}</p>{% endif %}
+  <p>For privacy questions, contact us on WhatsApp via the site or email us if listed above.</p>
+</article>
+
+<footer class="foot">
+  <div class="wrap">
+    <a href="/en">Home</a> ·
+    <a href="/en/checkout">Order</a> ·
+    Lony — personalized kids’ books © 2026
+  </div>
+</footer>
+</body>
+</html>

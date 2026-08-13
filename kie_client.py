@@ -21,9 +21,13 @@ KIE_UPLOAD_URL = (
 KIE_I2I_MODEL = os.environ.get("KIE_I2I_MODEL") or "gpt-image-2-image-to-image"
 # Google Nano Banana via Kie (image-to-image)
 KIE_NANOBANANA_MODEL = os.environ.get("KIE_NANOBANANA_MODEL") or "google/nano-banana"
-# A4-ish portrait pages
+# A4-ish portrait pages (same 1:√2 ratio as A3 — no separate aspect enum needed)
 KIE_ASPECT_RATIO = os.environ.get("KIE_ASPECT_RATIO") or "3:4"  # closest to A4 among enum
 KIE_RESOLUTION = os.environ.get("KIE_RESOLUTION") or "1K"
+# Posters print at A3 — use higher res without changing book defaults
+KIE_POSTER_RESOLUTION = (os.environ.get("KIE_POSTER_RESOLUTION") or "2K").strip() or "2K"
+KIE_POSTER_ASPECT = os.environ.get("KIE_POSTER_ASPECT") or "3:4"
+KIE_POSTER_LANDSCAPE_ASPECT = os.environ.get("KIE_POSTER_LANDSCAPE_ASPECT") or "4:3"
 KIE_POLL_INTERVAL = float(os.environ.get("KIE_POLL_INTERVAL") or "3")
 KIE_POLL_TIMEOUT = float(os.environ.get("KIE_POLL_TIMEOUT") or "300")
 
@@ -242,10 +246,14 @@ async def generate_image_to_image(
     *,
     input_url: Optional[str] = None,
     model: Optional[str] = None,
+    aspect_ratio: Optional[str] = None,
+    resolution: Optional[str] = None,
 ) -> tuple[bytes, str]:
     """
     Full pipeline: upload (if needed) → create task → poll → download bytes.
     Returns (image_bytes, input_url_used).
+
+    Books use default 1K + portrait ratio. Pass resolution/aspect_ratio for posters.
     """
     if not kie_configured():
         raise RuntimeError("KIE_API_KEY مش مضبوط.")
@@ -254,7 +262,14 @@ async def generate_image_to_image(
     if not url:
         url = await upload_image(image_path, client)
 
-    task_id = await create_i2i_task(prompt, [url], client, model=model)
+    task_id = await create_i2i_task(
+        prompt,
+        [url],
+        client,
+        model=model,
+        aspect_ratio=aspect_ratio or KIE_ASPECT_RATIO,
+        resolution=resolution or KIE_RESOLUTION,
+    )
     task_data = await poll_task(task_id, client)
     result_url = extract_result_url(task_data)
     img_bytes = await download_image_bytes(result_url, client)
